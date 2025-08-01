@@ -19,7 +19,7 @@ logging.getLogger('transformers').setLevel(logging.ERROR)
 MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct" 
 # A middle layer is a great place to start for interventions.
 INTERVENTION_LAYER = 30
-INTERVENTION_STRENGTH = 30.0 # How strongly to apply the correction vector.
+INTERVENTION_STRENGTH = 100.0 # How strongly to apply the correction vector.
 
 # --- Prompts ---
 # We will use two very similar prompts to create a "correction vector".
@@ -59,16 +59,16 @@ with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
             # Tokenize the prompt to get sequence length
             unprimed_tokens = model.tokenizer(unprimed_prompt, return_tensors="pt")
             last_token_idx = unprimed_tokens['input_ids'].shape[1] - 1
+            
             #Get the activations for the last token. 
-            unprimed_activations = model.model.layers[INTERVENTION_LAYER].mlp.output[:, last_token_idx, :].save()
+            unprimed_activations = model.model.layers[INTERVENTION_LAYER].self_attn.o_proj.output[:, last_token_idx, :].save()
 
         #Get primed activations
         with generator.invoke(primed_prompt) as invoker:
             # Tokenize the prompt to get sequence length
             primed_tokens = model.tokenizer(primed_prompt, return_tensors="pt")
             last_token_idx = primed_tokens['input_ids'].shape[1] - 1
-            #Get the activations for the last token. 
-            primed_activations = model.model.layers[INTERVENTION_LAYER].mlp.output[:, last_token_idx, :].save()
+            primed_activations = model.model.layers[INTERVENTION_LAYER].self_attn.o_proj.output[:, last_token_idx, :].save()
 
 print("✅ Activations for both pathways recorded.")
 
@@ -102,15 +102,15 @@ with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
     with model.generate(max_new_tokens=45, temperature=0.2) as generator:
         # We are now intervening on the UNPRIMED prompt to see if we can fix it
         with generator.invoke(unprimed_prompt):
-            # Tokenize the prompt to get sequence length for intervention
+            # Re-calculating last_token_idx for intervention scope
             unprimed_tokens = model.tokenizer(unprimed_prompt, return_tensors="pt")
             last_token_idx = unprimed_tokens['input_ids'].shape[1] - 1
-            
-            # SURGERY: ADD the clean "correction vector" with a bit more strength
+
+            # SURGERY: Add the correction vector to the self-attention output.
             # We .clone() the activations to prevent a self-referential loop in the computation graph.
-            original_activations = model.model.layers[INTERVENTION_LAYER].mlp.output[:, last_token_idx, :].clone()
-            model.model.layers[INTERVENTION_LAYER].mlp.output[:, last_token_idx, :] = original_activations + (INTERVENTION_STRENGTH * contamination_vector)
-            
+            original_activations = model.model.layers[INTERVENTION_LAYER].self_attn.o_proj.output[:, last_token_idx, :].clone()
+            model.model.layers[INTERVENTION_LAYER].self_attn.o_proj.output[:, last_token_idx, :] = original_activations + (INTERVENTION_STRENGTH * contamination_vector)
+
             intervened_output = model.generator.output.save()
 
 
