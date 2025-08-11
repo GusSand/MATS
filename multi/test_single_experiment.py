@@ -82,14 +82,8 @@ def test_counting_bug():
     print("-"*40)
     
     output_before = model.generate(chat_prompt, max_new_tokens=20, temperature=0)
-    print(f"Debug - output type: {type(output_before)}, shape: {output_before.shape if hasattr(output_before, 'shape') else 'N/A'}")
-    
-    # The generate function returns tokens, we need to decode them
-    # If output_before is a tensor of shape [batch, seq_len], we need to handle it properly
-    if len(output_before.shape) == 2:
-        text_before = model.to_string(output_before[0])  # Take first batch item
-    else:
-        text_before = model.to_string(output_before)
+    # model.generate() already returns a string, not tokens!
+    text_before = output_before
     
     print(f"Input: {chat_prompt}")
     print(f"Output: {text_before}")
@@ -123,10 +117,8 @@ def test_counting_bug():
     
     # Generate with intervention
     output_after = model.generate(chat_prompt, max_new_tokens=20, temperature=0)
-    if len(output_after.shape) == 2:
-        text_after = model.to_string(output_after[0])  # Take first batch item
-    else:
-        text_after = model.to_string(output_after)
+    # model.generate() already returns a string, not tokens!
+    text_after = output_after
     
     print(f"Output with intervention: {text_after}")
     

@@ -90,7 +90,8 @@ def run_positive_control(gpu_id, control_name, control_config, result_queue):
     
     # Generate without intervention
     output_before = model.generate(chat_prompt, max_new_tokens=20, temperature=0)
-    text_before = model.to_string(output_before)
+    # model.generate() already returns a string
+    text_before = output_before
     has_bug = correct.lower() not in text_before.lower()
     
     # Apply fix based on control type
@@ -121,7 +122,8 @@ def run_positive_control(gpu_id, control_name, control_config, result_queue):
     
     # Test after intervention
     output_after = model.generate(chat_prompt, max_new_tokens=20, temperature=0)
-    text_after = model.to_string(output_after)
+    # model.generate() already returns a string
+    text_after = output_after
     is_fixed = correct.lower() in text_after.lower()
     
     result = {
@@ -314,7 +316,8 @@ def ablation_sweep_chunk(gpu_id, ablation_values, config, result_queue):
         
         # Generate
         output = model.generate(buggy_prompt, max_new_tokens=20, temperature=0)
-        text = model.to_string(output)
+        # model.generate() already returns a string
+        text = output
         
         # Classify output
         has_bug = "9.11" in text and "bigger" in text.lower()
