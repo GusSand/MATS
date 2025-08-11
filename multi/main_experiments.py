@@ -37,13 +37,17 @@ def load_model_on_gpu(gpu_id):
     Load model on specific GPU
     """
     torch.cuda.set_device(gpu_id)
+    
+    # Load from cache (already downloaded)
     model = HookedTransformer.from_pretrained(
-        "meta-llama/Meta-Llama-3.1-8B-Instruct",
+        "meta-llama/Llama-3.1-8B-Instruct",
         device=f"cuda:{gpu_id}",
         torch_dtype=torch.float16,
-        low_cpu_mem_usage=True
+        low_cpu_mem_usage=True,
+        local_files_only=True  # Use cached version
     )
     print(f"✓ Model loaded on GPU {gpu_id}")
+    
     return model
 
 # ============= EXPERIMENT 1: POSITIVE CONTROLS (1 hour) =============
