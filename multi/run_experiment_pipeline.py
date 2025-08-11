@@ -126,24 +126,29 @@ def wait_and_shutdown(wait_minutes=10):
     """
     Wait specified minutes then shutdown
     """
-    logger.info(f"Waiting {wait_minutes} minutes before shutdown...")
+    logger.info(f"SHUTDOWN DISABLED - Experiments finished, keeping machine running")
+    logger.info("You can safely run more experiments or check results")
+    return
     
-    # Countdown timer
-    for remaining in range(wait_minutes * 60, 0, -60):
-        minutes_left = remaining // 60
-        logger.info(f"Shutdown in {minutes_left} minutes...")
-        time.sleep(60)
-    
-    logger.info("Initiating shutdown...")
-    
-    # Use sudo shutdown (will require proper permissions)
-    result = subprocess.run(['sudo', 'shutdown', '-h', 'now'], capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        logger.error(f"Shutdown failed: {result.stderr}")
-        logger.info("Please shutdown manually")
-    else:
-        logger.info("Shutdown command issued successfully")
+    # SHUTDOWN CODE DISABLED - Uncomment below to re-enable
+    # logger.info(f"Waiting {wait_minutes} minutes before shutdown...")
+    # 
+    # # Countdown timer
+    # for remaining in range(wait_minutes * 60, 0, -60):
+    #     minutes_left = remaining // 60
+    #     logger.info(f"Shutdown in {minutes_left} minutes...")
+    #     time.sleep(60)
+    # 
+    # logger.info("Initiating shutdown...")
+    # 
+    # # Use sudo shutdown (will require proper permissions)
+    # result = subprocess.run(['sudo', 'shutdown', '-h', 'now'], capture_output=True, text=True)
+    # 
+    # if result.returncode != 0:
+    #     logger.error(f"Shutdown failed: {result.stderr}")
+    #     logger.info("Please shutdown manually")
+    # else:
+    #     logger.info("Shutdown command issued successfully")
 
 def main():
     """
@@ -222,8 +227,10 @@ Check the error logs:
 The machine will shutdown in 10 minutes.
 """
         
-        logger.info(f"Sending notification email to gussand@gmail.com...")
-        send_email_notification("gussand@gmail.com", subject, body)
+        logger.info(f"Email notification disabled - logging completion status instead")
+        logger.info(f"Status: {subject}")
+        logger.info(f"Details:\n{body}")
+        # send_email_notification("gussand@gmail.com", subject, body)
         
         # Step 5: Wait and shutdown
         wait_and_shutdown(wait_minutes=10)
@@ -238,12 +245,14 @@ The machine will shutdown in 10 minutes.
         logger.error(traceback.format_exc())
         monitor_process.terminate()
         
-        # Send emergency notification
-        send_email_notification(
-            "gussand@gmail.com",
-            "❌ Pipeline Critical Error",
-            f"Critical error in experiment pipeline:\n{e}\n\nPlease check the system manually."
-        )
+        # Log emergency notification
+        logger.error("❌ Pipeline Critical Error")
+        logger.error(f"Critical error in experiment pipeline:\n{e}\n\nPlease check the system manually.")
+        # send_email_notification(
+        #     "gussand@gmail.com",
+        #     "❌ Pipeline Critical Error",
+        #     f"Critical error in experiment pipeline:\n{e}\n\nPlease check the system manually."
+        # )
         
         # Still try to shutdown
         wait_and_shutdown(wait_minutes=10)

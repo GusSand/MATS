@@ -34,9 +34,14 @@ logger = logging.getLogger(__name__)
 
 def load_model_on_gpu(gpu_id):
     """
-    Load model on specific GPU
+    Load model on specific GPU with memory monitoring
     """
     torch.cuda.set_device(gpu_id)
+    
+    # Log memory before loading
+    mem_before = torch.cuda.memory_allocated(gpu_id) / 1e9
+    max_mem = torch.cuda.get_device_properties(gpu_id).total_memory / 1e9
+    logger.info(f"GPU {gpu_id}: Memory before load: {mem_before:.1f}GB / {max_mem:.1f}GB")
     
     # Load from cache (already downloaded)
     model = HookedTransformer.from_pretrained(
@@ -46,7 +51,21 @@ def load_model_on_gpu(gpu_id):
         low_cpu_mem_usage=True,
         local_files_only=True  # Use cached version
     )
-    print(f"✓ Model loaded on GPU {gpu_id}")
+    
+    # Ensure attention result hooks are available
+    model.cfg.use_attn_result = True
+    model.setup()  # Re-setup hooks with the new config
+    
+    # Log memory after loading
+    mem_after = torch.cuda.memory_allocated(gpu_id) / 1e9
+    logger.info(f"GPU {gpu_id}: Memory after load: {mem_after:.1f}GB / {max_mem:.1f}GB (used {mem_after-mem_before:.1f}GB for model)")
+    
+    # Warn if memory usage is high
+    usage_percent = (mem_after / max_mem) * 100
+    if usage_percent > 80:
+        logger.warning(f"GPU {gpu_id}: High memory usage: {usage_percent:.1f}%")
+    
+    print(f"✓ Model loaded on GPU {gpu_id} ({mem_after:.1f}/{max_mem:.1f}GB used)")
     
     return model
 
@@ -71,7 +90,7 @@ def run_positive_control(gpu_id, control_name, control_config, result_queue):
     
     # Generate without intervention
     output_before = model.generate(chat_prompt, max_new_tokens=20, temperature=0)
-    text_before = model.to_string(output_before[0])
+    text_before = model.to_string(output_before)
     has_bug = correct.lower() not in text_before.lower()
     
     # Apply fix based on control type
@@ -102,7 +121,7 @@ def run_positive_control(gpu_id, control_name, control_config, result_queue):
     
     # Test after intervention
     output_after = model.generate(chat_prompt, max_new_tokens=20, temperature=0)
-    text_after = model.to_string(output_after[0])
+    text_after = model.to_string(output_after)
     is_fixed = correct.lower() in text_after.lower()
     
     result = {
@@ -295,7 +314,7 @@ def ablation_sweep_chunk(gpu_id, ablation_values, config, result_queue):
         
         # Generate
         output = model.generate(buggy_prompt, max_new_tokens=20, temperature=0)
-        text = model.to_string(output[0])
+        text = model.to_string(output)
         
         # Classify output
         has_bug = "9.11" in text and "bigger" in text.lower()
@@ -474,13 +493,26 @@ def main():
     """
     start_time = time.time()
     
+    # Detect GPU configuration
+    gpu_count = torch.cuda.device_count()
+    gpu_name = torch.cuda.get_device_name(0) if gpu_count > 0 else "No GPU"
+    
     logger.info("="*60)
-    logger.info("STARTING 4× A5000 PARALLEL EXPERIMENTS")
+    logger.info(f"STARTING {gpu_count}× {gpu_name.split()[1]} PARALLEL EXPERIMENTS")
     logger.info(f"Start time: {datetime.now()}")
+    
+    # Log GPU memory info
+    total_vram = 0
+    for i in range(gpu_count):
+        mem = torch.cuda.get_device_properties(i).total_memory / 1e9
+        total_vram += mem
+        logger.info(f"GPU {i}: {torch.cuda.get_device_name(i)} - {mem:.1f}GB")
+    logger.info(f"Total VRAM available: {total_vram:.1f}GB")
     logger.info("="*60)
     
     print("="*60)
-    print("STARTING 4× A5000 PARALLEL EXPERIMENTS")
+    print(f"STARTING {gpu_count}× {gpu_name.split()[1]} PARALLEL EXPERIMENTS")
+    print(f"Total VRAM: {total_vram:.1f}GB across {gpu_count} GPUs")
     print("="*60)
     
     # Load config
@@ -551,27 +583,63 @@ def generate_summary(results):
     """
     Generate summary for paper
     """
+    # Handle positive controls with safety checks
+    pc_results = results.get('positive_controls', [])
+    pc_section = "1. POSITIVE CONTROLS:\n"
+    if pc_results:
+        bug_names = ['Counting bug', 'Arithmetic bug', 'IOI bug', 'River bug']
+        for i, name in enumerate(bug_names):
+            if i < len(pc_results):
+                pc_section += f"    - {name}: {pc_results[i].get('is_fixed', 'N/A')}\n"
+            else:
+                pc_section += f"    - {name}: Not tested\n"
+    else:
+        pc_section += "    - No positive control results available\n"
+    
+    # Handle causal tracing with safety checks
+    ct_section = "2. CAUSAL TRACING:\n"
+    ct_results = results.get('causal_tracing', {})
+    if ct_results:
+        critical_layers = len([l for l, effects in ct_results.items() if max(effects) > 0.1])
+        max_effect = max([max(effects) for effects in ct_results.values()])
+        ct_section += f"    - Critical layers identified: {critical_layers}\n"
+        ct_section += f"    - Max effect size: {max_effect:.3f}\n"
+    else:
+        ct_section += "    - No causal tracing results available\n"
+    
+    # Handle phase transition with safety checks
+    pt_section = "3. PHASE TRANSITION:\n"
+    pt_results = results.get('phase_transition')
+    if pt_results is not None and len(pt_results) > 0:
+        no_bug = pt_results[pt_results['has_bug'] == False]
+        if len(no_bug) > 0:
+            transition_point = no_bug.iloc[0]['ablation_value']
+        else:
+            transition_point = 'Not found'
+        pt_section += f"    - Transition point: {transition_point}\n"
+    else:
+        pt_section += "    - No phase transition results available\n"
+    
+    # Handle path patching with safety checks
+    pp_section = "4. PATH PATCHING:\n"
+    pp_results = results.get('path_patching')
+    if pp_results is not None and len(pp_results) > 0:
+        pp_section += f"    - Significant heads: {len(pp_results)}\n"
+        if 'effect' in pp_results.columns:
+            pp_section += f"    - Max head effect: {pp_results['effect'].max():.3f}\n"
+        else:
+            pp_section += "    - Effect data not available\n"
+    else:
+        pp_section += "    - No path patching results available\n"
+    
     summary = f"""
     EXPERIMENT SUMMARY
     ==================
     
-    1. POSITIVE CONTROLS:
-    - Counting bug: {results['positive_controls'][0]['is_fixed']}
-    - Arithmetic bug: {results['positive_controls'][1]['is_fixed']}  
-    - IOI bug: {results['positive_controls'][2]['is_fixed']}
-    - River bug: {results['positive_controls'][3]['is_fixed']}
-    
-    2. CAUSAL TRACING:
-    - Critical layers identified: {len([l for l, effects in results['causal_tracing'].items() if max(effects) > 0.1])}
-    - Max effect size: {max([max(effects) for effects in results['causal_tracing'].values()]):.3f}
-    
-    3. PHASE TRANSITION:
-    - Transition point: {results['phase_transition'][results['phase_transition']['has_bug'] == False].iloc[0]['ablation_value'] if any(~results['phase_transition']['has_bug']) else 'Not found'}
-    
-    4. PATH PATCHING:
-    - Significant heads: {len(results['path_patching'])}
-    - Max head effect: {results['path_patching']['effect'].max():.3f}
-    
+    {pc_section}
+    {ct_section}
+    {pt_section}
+    {pp_section}
     CONCLUSION: Bug shows entangled circuit resistant to intervention.
     """
     
