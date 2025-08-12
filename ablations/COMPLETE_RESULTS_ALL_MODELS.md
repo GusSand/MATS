@@ -8,9 +8,9 @@ Models are asked: "Which is bigger: 9.8 or 9.11?"
 ## Complete Results - All Models Tested
 
 ### Summary Statistics
-- **Total models tested**: 26
-- **Models with bug**: 5 (19%)
-- **Models without bug**: 16 (62%)
+- **Total models tested**: 27
+- **Models with bug**: 6 (22%)
+- **Models without bug**: 16 (59%)
 - **Models with access issues**: 5 (19%)
 
 ### Detailed Results by Model Family
@@ -36,14 +36,16 @@ Models are asked: "Which is bigger: 9.8 or 9.11?"
 | | Gemma-2-9B | 9B | ✅ No | 0% | No bug |
 | | Gemma-2-9B-IT | 9B | ✅ No | 0% | No bug |
 | **Llama** | Llama-3-8B | 8B | ⚠️ | N/A | Requires access |
+| | **Llama-3.1-8B** | 8B | **❌ Yes** | **90%** | **Strong bug!** |
 | | **Llama-3.1-8B-Instruct** | 8B | **❌ Yes** | **~100%** | **Strong bug!** |
 
 ## Key Findings
 
-### 1. Models WITH the Bug (5 total)
+### 1. Models WITH the Bug (6 total)
 - **Pythia-160M**: 40% error rate
 - **Gemma-2B** (base): 90% error rate ⚠️
 - **Gemma-7B** (base): 10% error rate
+- **Llama-3.1-8B** (base): 90% error rate ⚠️
 - **Llama-3.1-8B-Instruct**: ~100% error rate ⚠️
 
 ### 2. Bug Patterns
@@ -63,7 +65,7 @@ Models are asked: "Which is bigger: 9.8 or 9.11?"
 - **GPT-2/OPT/GPT-Neo**: No bug at any scale
 - **Gemma v1**: Base models have bug, IT versions fix it
 - **Gemma v2**: No bug in any version
-- **Llama**: Instruction-tuned version has strong bug
+- **Llama**: Both base and instruction-tuned versions have strong bug
 
 ### 3. Hypotheses
 
@@ -74,7 +76,9 @@ Models are asked: "Which is bigger: 9.8 or 9.11?"
 
 #### Hypothesis 2: Instruction Tuning Effects (CONTRADICTORY)
 - **Gemma**: IT FIXES the bug (2B: 90%→0%, 7B: 10%→0%)
-- **Llama**: IT CAUSES the bug (base: unknown, IT: ~100%)
+- **Llama**: Both versions have bug (base: 90%, IT: ~100%)
+  - Base model already has 90% bug rate
+  - Instruction tuning slightly worsens it to ~100%
 - Different instruction tuning approaches have opposite effects!
 
 #### Hypothesis 3: Architecture/Training Specifics
