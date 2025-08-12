@@ -153,7 +153,7 @@ As noted in the submission materials, this bug exhibits "irremediable entangleme
    - Shows clear progression to correct answer
 
 5. **Combined Comparison** (`viz_5_combined_comparison_*`)
-   - Overview of all metrics in one figure
+   - Overview of all metrics in one figureg
    - Useful for paper presentations
 
 ## Conclusions
