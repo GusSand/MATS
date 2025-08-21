@@ -45,9 +45,9 @@ def create_final_figure():
                   height_ratios=[1.2, 1],
                   left=0.08, right=0.95, top=0.90, bottom=0.10)
     
-    # Super title
+    # Super title - moved higher to give more space
     fig.suptitle('SAE Feature Analysis: Decimal Comparison Bug in Llama-3.1-8B Layer 10', 
-                 fontsize=20, fontweight='bold', y=0.96)
+                 fontsize=20, fontweight='bold', y=0.98)
     
     # ========== Panel A: Feature List ==========
     ax1 = fig.add_subplot(gs[0, :2])
@@ -170,7 +170,7 @@ def create_final_figure():
                       annot=False, fmt='.2f',
                       ax=ax2)
     
-    ax2.set_title('B. Feature-Head Correlations', fontsize=16, fontweight='bold', pad=15)
+    ax2.set_title('B. Feature-Head Correlations', fontsize=16, fontweight='bold', pad=25)
     ax2.set_xlabel('Head Properties', fontsize=13)
     ax2.set_ylabel('SAE Feature', fontsize=13)
     ax2.tick_params(axis='both', which='major', labelsize=12)
@@ -233,7 +233,7 @@ def create_final_figure():
         layer_7_idx = layers.index(7)
         ax3.annotate('L7-8: Min overlap\n(Discrimination)', 
                     xy=(layer_7_idx + 0.5, 15),
-                    xytext=(layer_7_idx + 0.5, 35),
+                    xytext=(layer_7_idx + 0.5, 65),
                     fontsize=12, ha='center',
                     arrowprops=dict(arrowstyle='->', color='orange', lw=1.5))
         
