@@ -170,7 +170,7 @@ def create_final_figure():
                       annot=False, fmt='.2f',
                       ax=ax2)
     
-    ax2.set_title('B. Feature-Head Correlations', fontsize=16, fontweight='bold', pad=40)
+    ax2.set_title('B. Feature-Head Correlations', fontsize=16, fontweight='bold', pad=15)
     ax2.set_xlabel('Head Properties', fontsize=13)
     ax2.set_ylabel('SAE Feature', fontsize=13)
     ax2.tick_params(axis='both', which='major', labelsize=12)
@@ -233,7 +233,7 @@ def create_final_figure():
         layer_7_idx = layers.index(7)
         ax3.annotate('L7-8: Min overlap\n(Discrimination)', 
                     xy=(layer_7_idx + 0.5, 15),
-                    xytext=(layer_7_idx + 0.5, 75),
+                    xytext=(layer_7_idx + 0.5, 85),
                     fontsize=12, ha='center',
                     arrowprops=dict(arrowstyle='->', color='orange', lw=1.5))
         
