@@ -1,0 +1,93 @@
+\documentclass[border=10pt]{standalone}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usetikzlibrary{shapes,arrows,positioning,shadows,backgrounds,decorations.pathmorphing}
+
+\begin{document}
+\begin{tikzpicture}[
+    node distance=2cm,
+    box/.style={rectangle, rounded corners=5pt, minimum width=6cm, minimum height=1.2cm, 
+                text centered, draw=white, line width=2pt, 
+                drop shadow={shadow xshift=2pt, shadow yshift=-2pt}},
+    flow/.style={thick, white, line width=3pt, decoration={snake, amplitude=2pt, segment length=10pt}, decorate},
+    arrow/.style={thick, line width=3pt, ->, >=stealth},
+    particle/.style={circle, fill=white, draw=cyan, line width=2pt, minimum size=0.8cm},
+    intervention/.style={cross out, draw=red, line width=4pt, minimum size=1cm}
+]
+
+% Background gradient
+\fill[top color=blue!20!black, bottom color=purple!20!black] (-1,-1) rectangle (11,35);
+
+% Main flow line with wave effect
+\draw[flow] (5,0) -- (5,32);
+
+% Flow particles
+\node[particle] at (5,2) {};
+\node[particle] at (5,8) {};
+\node[particle] at (5,14) {};
+\node[particle] at (5,20) {};
+\node[particle] at (5,26) {};
+
+% Layer boxes
+\node[box, fill=red!80!black] at (5,6) {
+    \textbf{\Large 🔥 FORMAT DETECTION} \\
+    \textit{Path divergence point • 2.499 KL divergence}
+};
+
+\node[box, fill=teal!80!black] at (5,14) {
+    \textbf{\Large 🧠 ENTANGLED FEATURES} \\
+    \textit{L14/N12639 activates • Decimal+Date features}
+};
+
+\node[box, fill=blue!80!black] at (5,23) {
+    \textbf{\Large ⚖️ HEDGING BEGINS} \\
+    \textit{Both tokens emerge • N290, N2742 active}
+};
+
+\node[box, fill=green!80!black] at (5,25) {
+    \textbf{\Large 🎯 COMMITMENT POINT} \\
+    \textit{Simple: 22.1\% P(9) • Q\&A: 12.9\% P(Both)}
+};
+
+\node[box, fill=yellow!80!black] at (5,30) {
+    \textbf{\Large 🔒 FINAL AMPLIFICATION} \\
+    \textit{Path locked in • No recovery possible}
+};
+
+% Format split arrows
+\draw[arrow, color=lime] (5,6) to[bend left=30] (2,8);
+\draw[arrow, color=red] (5,6) to[bend right=30] (8,8);
+
+% Path labels
+\node[text width=3cm, text centered, color=lime, font=\bfseries] at (2,9) {
+    Simple Format \\
+    ✅ Correct Path
+};
+
+\node[text width=3cm, text centered, color=red, font=\bfseries] at (8,9) {
+    Q\&A Format \\
+    ❌ Wrong Path
+};
+
+% Failed interventions
+\node[intervention] at (8.5,23) {};
+\node[intervention] at (8.5,24) {};
+\node[intervention] at (8.5,25) {};
+\node[intervention] at (8.5,26) {};
+\node[intervention] at (8.5,27) {};
+
+% Intervention label
+\node[rotate=90, color=red, font=\bfseries] at (8.5,22) {Failed Interventions};
+
+% Layer numbers
+\foreach \i in {0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32} {
+    \node[color=white!70] at (0.5,\i) {L\i};
+}
+
+% Title
+\node[text width=10cm, text centered, color=white, font=\Huge\bfseries] at (5,33) {
+    The Complete Cascade: From Format Detection to Failure
+};
+
+\end{tikzpicture}
+\end{document}

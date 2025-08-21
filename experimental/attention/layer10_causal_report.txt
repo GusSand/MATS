@@ -1,0 +1,50 @@
+======================================================================
+LAYER 10 CAUSAL VALIDATION REPORT
+======================================================================
+
+## HYPOTHESIS
+----------------------------------------
+If BEGIN token anchoring at Layer 10 prevents the decimal bug,
+then disrupting this anchoring should CAUSE the bug in Simple format.
+
+## METHODOLOGY
+----------------------------------------
+1. Test Simple format (normally correct) with varying disruption levels
+2. Artificially reduce attention to BEGIN token at Layer 10
+3. Observe if bug emerges with increasing disruption
+4. Compare with Q&A format (normally buggy) as control
+
+## RESULTS
+----------------------------------------
+
+### Simple Format (Normally Correct)
+  Disruption  0%: CORRECT (confidence: 90.0%)
+  Disruption 30%: CORRECT (confidence: 90.0%)
+  Disruption 50%: CORRECT (confidence: 90.0%)
+  Disruption 70%: CORRECT (confidence: 90.0%)
+  Disruption 90%: CORRECT (confidence: 90.0%)
+  Disruption 100%: UNCLEAR (confidence: 50.0%)
+
+### Q&A Format (Normally Buggy)
+  Disruption  0%: BUG (confidence: 90.0%)
+  Disruption 30%: BUG (confidence: 90.0%)
+  Disruption 50%: BUG (confidence: 90.0%)
+  Disruption 70%: BUG (confidence: 90.0%)
+  Disruption 90%: BUG (confidence: 90.0%)
+  Disruption 100%: UNCLEAR (confidence: 50.0%)
+
+## ANALYSIS
+----------------------------------------
+✗ No clear causal relationship found
+  • Simple format remains robust to disruption
+  • BEGIN anchoring may not be the causal factor
+
+## IMPLICATIONS
+----------------------------------------
+1. Other factors may be responsible for the bug
+2. Layer 10 may not be the optimal intervention point
+3. Further investigation needed at other layers
+
+======================================================================
+END OF CAUSAL VALIDATION REPORT
+======================================================================
