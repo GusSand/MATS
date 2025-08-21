@@ -35,15 +35,15 @@ def create_final_figure():
     # Load actual data
     actual_data = load_actual_data()
     
-    # Create figure with better layout
-    fig = plt.figure(figsize=(20, 14))
+    # Create figure with better layout - removed Panel D so adjusting size
+    fig = plt.figure(figsize=(20, 10))
     
-    # Use GridSpec for layout control
-    gs = GridSpec(3, 3, figure=fig, 
+    # Use GridSpec for layout control - now only 2 rows
+    gs = GridSpec(2, 3, figure=fig, 
                   hspace=0.4,
                   wspace=0.3,
-                  height_ratios=[1.2, 1, 1],
-                  left=0.08, right=0.95, top=0.92, bottom=0.08)
+                  height_ratios=[1.2, 1],
+                  left=0.08, right=0.95, top=0.90, bottom=0.10)
     
     # Super title
     fig.suptitle('SAE Feature Analysis: Decimal Comparison Bug in Llama-3.1-8B Layer 10', 
@@ -244,44 +244,6 @@ def create_final_figure():
         ax3.grid(True, alpha=0.3)
         ax3.set_ylim([0, 130])
     
-    # ========== Panel D: Success Rates by Head Configuration ==========
-    ax4 = fig.add_subplot(gs[2, :])
-    
-    configurations = ['All 32\nHeads', 'All 16\nEven', 'All 16\nOdd', 
-                     '8 Even\n(Critical)', '4 Even', '8 Odd', 'Mixed\n8+8']
-    success_rates = [100, 100, 0, 100, 0, 0, 0]
-    colors_config = ['gray', 'blue', 'red', 'green', 'lightblue', 'lightcoral', 'purple']
-    
-    x_pos = np.arange(len(configurations))
-    bars = ax4.bar(x_pos, success_rates, color=colors_config, alpha=0.8, width=0.7)
-    
-    # Add value labels on bars
-    for i, (bar, rate) in enumerate(zip(bars, success_rates)):
-        height = bar.get_height()
-        if height > 0:
-            ax4.text(bar.get_x() + bar.get_width()/2., height + 2,
-                    f'{rate}%', ha='center', va='bottom', fontweight='bold', fontsize=12)
-    
-    ax4.set_ylabel('Success Rate (%)', fontsize=14)
-    ax4.set_xlabel('Attention Head Configuration', fontsize=14)
-    ax4.set_title('D. Intervention Success by Head Configuration at Layer 10', 
-                 fontsize=16, fontweight='bold', pad=15)
-    ax4.set_ylim([0, 110])
-    ax4.set_xticks(x_pos)
-    ax4.set_xticklabels(configurations, fontsize=12)
-    ax4.tick_params(axis='y', labelsize=12)
-    ax4.grid(True, alpha=0.3, axis='y')
-    
-    # Add success threshold line
-    ax4.axhline(y=95, color='green', linestyle='--', linewidth=1.5, alpha=0.5)
-    ax4.text(len(configurations)/2, 95, 'Success Threshold (95%)', 
-            fontsize=12, va='bottom', ha='center', color='green')
-    
-    # Add key insight
-    ax4.text(3, 50, 'Key Finding:\nAny 8 even heads\nare sufficient', 
-            fontsize=12, ha='center',
-            bbox=dict(boxstyle="round,pad=0.5", facecolor='lightgreen', alpha=0.5))
-    
     plt.tight_layout()
     
     # Save figures
@@ -309,7 +271,6 @@ def main():
     print("- Panel A: SAE feature list with clear numerical/format distinction")
     print("- Panel B: Feature-head correlations from analysis")
     print("- Panel C: Actual layer-wise data showing phase transitions")
-    print("- Panel D: Head configuration success rates")
     print("\nAll fonts >= 12pt for readability")
 
 if __name__ == "__main__":
