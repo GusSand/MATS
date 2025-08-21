@@ -226,7 +226,7 @@ def create_final_figure():
         layer_10_idx = layers.index(10)
         ax3.annotate('Layer 10: 80% Overlap\n(Re-entanglement)', 
                     xy=(layer_10_idx, overlaps[layer_10_idx]),
-                    xytext=(layer_10_idx + 2, 120),
+                    xytext=(layer_10_idx + 2, 110),
                     fontsize=12, fontweight='bold', ha='center',
                     arrowprops=dict(arrowstyle='->', color='black', lw=1.5))
         
