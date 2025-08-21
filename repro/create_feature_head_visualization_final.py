@@ -226,14 +226,14 @@ def create_final_figure():
         layer_10_idx = layers.index(10)
         ax3.annotate('Layer 10: 80% Overlap\n(Re-entanglement)', 
                     xy=(layer_10_idx, overlaps[layer_10_idx]),
-                    xytext=(layer_10_idx, 120),
+                    xytext=(layer_10_idx + 2, 120),
                     fontsize=12, fontweight='bold', ha='center',
                     arrowprops=dict(arrowstyle='->', color='black', lw=1.5))
         
         layer_7_idx = layers.index(7)
         ax3.annotate('L7-8: Min overlap\n(Discrimination)', 
                     xy=(layer_7_idx + 0.5, 15),
-                    xytext=(layer_7_idx + 0.5, 85),
+                    xytext=(layer_7_idx + 0.5, 95),
                     fontsize=12, ha='center',
                     arrowprops=dict(arrowstyle='->', color='orange', lw=1.5))
         
