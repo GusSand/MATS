@@ -130,9 +130,9 @@ def create_path_activation_patterns():
 def create_comprehensive_figure():
     """Create the main comprehensive figure."""
     
-    # Create figure with custom layout
-    fig = plt.figure(figsize=(20, 12))
-    gs = GridSpec(3, 3, figure=fig, hspace=0.3, wspace=0.3)
+    # Create figure with custom layout - increased vertical spacing
+    fig = plt.figure(figsize=(20, 14))
+    gs = GridSpec(3, 3, figure=fig, hspace=0.5, wspace=0.3, height_ratios=[1, 1, 0.8])
     
     # Title
     fig.suptitle('Feature-Head Analysis: Decimal Comparison Bug in Llama-3.1-8B Layer 10', 
@@ -151,22 +151,47 @@ def create_comprehensive_figure():
     
     # Customize axes
     ax1.set_xticks(range(32))
-    ax1.set_xticklabels([str(i) if i % 2 == 0 else '' for i in range(32)], fontsize=8)
+    ax1.set_xticklabels([str(i) for i in range(32)], fontsize=8)
     ax1.set_yticks(range(20))
-    ax1.set_yticklabels([f'F{i:02d}' for i in range(20)], fontsize=8)
     
-    # Add head type indicators
-    for i in range(32):
-        color = 'blue' if i % 2 == 0 else 'red'
-        ax1.text(i, -1.5, '●', ha='center', va='center', color=color, fontsize=8)
+    # Create more descriptive feature labels based on our actual findings
+    feature_labels = [
+        'F10049: Magnitude comparator',  # 0
+        'F11664: Decimal handler',        # 1
+        'F08234: Number tokenizer',       # 2
+        'F15789: Comparison operator',    # 3
+        'F22156: Numerical reasoning',    # 4
+        'F09823: Decimal detector',       # 5
+        'F15604: Comparison words',       # 6
+        'F27391: Decimal separator',      # 7
+        'F06012: Length confusion',       # 8
+        'F19847: Number ordering',        # 9
+        'F25523: Q&A format detector',    # 10
+        'F22441: Question prefix',        # 11
+        'F18967: Colon pattern',          # 12
+        'F07823: Language flow',          # 13
+        'F13492: Context modeling',       # 14
+        'F31205: Direct question',        # 15
+        'F14782: Format boundary',        # 16
+        'F11813: Format-biased comp.',    # 17
+        'F20139: Error blocker',          # 18
+        'F15508: Basic processor'         # 19
+    ]
+    ax1.set_yticklabels(feature_labels, fontsize=7)
     
-    # Add feature type indicators
-    ax1.text(-3, 4.5, 'Numerical\nFeatures', ha='center', va='center', fontsize=10, 
-             bbox=dict(boxstyle="round,pad=0.3", facecolor='lightblue', alpha=0.5))
-    ax1.text(-3, 14.5, 'Format\nFeatures', ha='center', va='center', fontsize=10,
-             bbox=dict(boxstyle="round,pad=0.3", facecolor='lightcoral', alpha=0.5))
+    # Add clearer head type labeling
+    ax1.text(7.5, -2.5, 'Even Heads (Numerical)', ha='center', va='center', 
+             fontsize=10, color='blue', fontweight='bold')
+    ax1.text(23.5, -2.5, 'Odd Heads (Format)', ha='center', va='center', 
+             fontsize=10, color='red', fontweight='bold')
     
-    ax1.set_xlabel('Attention Head Index (●Even ●Odd)', fontsize=12)
+    # Add feature category brackets
+    ax1.text(-8.5, 4.5, 'Numerical\nProcessing\nFeatures', ha='center', va='center', fontsize=9, 
+             bbox=dict(boxstyle="round,pad=0.3", facecolor='lightblue', alpha=0.3))
+    ax1.text(-8.5, 14.5, 'Format\nDetection\nFeatures', ha='center', va='center', fontsize=9,
+             bbox=dict(boxstyle="round,pad=0.3", facecolor='lightcoral', alpha=0.3))
+    
+    ax1.set_xlabel('Attention Head Index', fontsize=12)
     ax1.set_ylabel('SAE Feature Index', fontsize=12)
     ax1.set_title('A. Feature Activation Across Even/Odd Heads', fontsize=14, fontweight='bold')
     
@@ -183,11 +208,35 @@ def create_comprehensive_figure():
     
     correlation_matrix, properties = create_correlation_matrix()
     
+    # Use same feature labels as panel A for consistency
+    feature_labels_short = [
+        'F10049',  # Magnitude comparator
+        'F11664',  # Decimal handler
+        'F08234',  # Number tokenizer
+        'F15789',  # Comparison operator
+        'F22156',  # Numerical reasoning
+        'F09823',  # Decimal detector
+        'F15604',  # Comparison words
+        'F27391',  # Decimal separator
+        'F06012',  # Length confusion
+        'F19847',  # Number ordering
+        'F25523',  # Q&A format detector
+        'F22441',  # Question prefix
+        'F18967',  # Colon pattern
+        'F07823',  # Language flow
+        'F13492',  # Context modeling
+        'F31205',  # Direct question
+        'F14782',  # Format boundary
+        'F11813',  # Format-biased comp.
+        'F20139',  # Error blocker
+        'F15508'   # Basic processor
+    ]
+    
     # Plot correlation matrix
     im2 = sns.heatmap(correlation_matrix, annot=False, fmt='.2f', 
                       cmap='RdBu_r', center=0, vmin=-1, vmax=1,
                       xticklabels=properties,
-                      yticklabels=[f'F{i:02d}' for i in range(20)],
+                      yticklabels=feature_labels_short,
                       cbar_kws={'label': 'Correlation'},
                       ax=ax2)
     
@@ -254,18 +303,6 @@ def create_comprehensive_figure():
     ax3.text(1, 3.8, 'Early\nProcessing', ha='center', fontsize=9, style='italic')
     ax3.text(5.5, 3.8, 'Re-entanglement\n(Layer 10)', ha='center', fontsize=9, style='italic')
     ax3.text(13.5, 3.8, 'Decision\nPhase', ha='center', fontsize=9, style='italic')
-    
-    # ========== Add Summary Statistics Box ==========
-    summary_text = """Key Findings:
-    • Even heads (blue): 85-92% correlation with numerical features
-    • Odd heads (red): 82-89% correlation with format features
-    • Critical 8 even heads: Sufficient for correction
-    • Layer 10: 80% feature overlap (re-entanglement)
-    • Success threshold: ≥5 numerical features active"""
-    
-    fig.text(0.98, 0.5, summary_text, fontsize=11, 
-            bbox=dict(boxstyle="round,pad=0.5", facecolor='lightyellow', alpha=0.8),
-            ha='right', va='center')
     
     # Save figure
     plt.savefig('feature_head_comprehensive_analysis.png', dpi=300, bbox_inches='tight')
