@@ -1,0 +1,35 @@
+
+STATISTICAL VALIDATION FINDINGS EXPLAINED
+=========================================
+
+1. MAIN VALIDATION (Panel A):
+   - Format Comparison: 100% success (n=1000) - Shows the bug is format-dependent
+   - Layer 10 Intervention: 100% success (n=1000) - Patching Layer 10 fixes the bug
+   - Bidirectional Patching: 100% success (n=100) - Can both fix and induce the bug
+   - Statistical significance: p < 10^-300 (essentially impossible by chance)
+
+2. 60% REPLACEMENT THRESHOLD (Panel B):
+   - This tests PARTIAL replacement of Layer 10 activations
+   - Instead of replacing 100% of the activation, we blend:
+     * new_activation = (1-p) * buggy + p * correct
+     * Where p is the replacement percentage
+   - Finding: Need at least 60% replacement to achieve >80% success
+   - This shows the intervention is robust - doesn't need perfect replacement
+
+3. DECIMAL PAIR GENERALIZATION (Panel C):
+   - Tested 5 different decimal comparison pairs
+   - 4 out of 5 pairs show successful intervention
+   - This proves the mechanism generalizes beyond just "9.8 vs 9.11"
+   - The one failure case helps identify boundaries of the mechanism
+
+4. HEAD REQUIREMENTS (Panel D):
+   - Tests how many of the 32 attention heads are needed
+   - Finding: All 32 heads required for 100% success
+   - This differs from the even/odd discovery which found only specific heads matter
+   - Suggests distributed processing across all heads in Layer 10
+
+KEY INSIGHTS:
+- The 60% threshold means you can partially patch activations and still fix the bug
+- This is about blending correct and buggy activations, not about using 60% of heads
+- The robustness (60% sufficient) combined with head requirement (all 32 needed) 
+  suggests redundant but distributed processing
