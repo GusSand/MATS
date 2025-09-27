@@ -1,0 +1,222 @@
+{
+  "timestamp": "2025-09-27T15:15:30.130476",
+  "model": "EleutherAI/pythia-160m",
+  "target_layer": 6,
+  "methodology": "activation_patching_corrected",
+  "baseline": {
+    "response": "I think the answer is:\n\n9.11\n\nA:\n\nThe",
+    "bug_fixed": false,
+    "has_bug": true
+  },
+  "baseline_even_odd": {
+    "even": {
+      "heads": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10
+      ],
+      "group_name": "Even Heads",
+      "response": "I would say that the answer is 9.8.\n\nA:\n\nThe",
+      "bug_fixed": true
+    },
+    "odd": {
+      "heads": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11
+      ],
+      "group_name": "Odd Heads",
+      "response": "I think the answer is 9.11.\n\nA:\n\nThe answer is",
+      "bug_fixed": false
+    }
+  },
+  "even_odd_swap": {
+    "permutation": [
+      1,
+      0,
+      3,
+      2,
+      5,
+      4,
+      7,
+      6,
+      9,
+      8,
+      11,
+      10
+    ],
+    "description": "Even/Odd Swap (0\u21941, 2\u21943, 4\u21945, 6\u21947, 8\u21949, 10\u219411)",
+    "original_even_heads": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10
+    ],
+    "permuted_even_positions": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11
+    ],
+    "results": {
+      "original_even": {
+        "heads": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10
+        ],
+        "group_name": "Original Even Heads",
+        "response": "I would say that the answer is 9.8.\n\nA:\n\nThe",
+        "bug_fixed": true
+      },
+      "permuted_even": {
+        "heads": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11
+        ],
+        "group_name": "Permuted Even Positions ([1, 3, 5, 7, 9, 11])",
+        "response": "I think the answer is 9.11.\n\nA:\n\nThe answer is",
+        "bug_fixed": false
+      }
+    }
+  },
+  "even_odd_shuffle": {
+    "permutation": [
+      6,
+      7,
+      2,
+      1,
+      4,
+      5,
+      8,
+      9,
+      0,
+      11,
+      10,
+      3
+    ],
+    "description": "Even Shuffle + Odd Shuffle",
+    "original_even_heads": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10
+    ],
+    "permuted_even_positions": [
+      6,
+      2,
+      4,
+      8,
+      0,
+      10
+    ],
+    "results": {
+      "original_even": {
+        "heads": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10
+        ],
+        "group_name": "Original Even Heads",
+        "response": "I would say that the answer is 9.8.\n\nA:\n\nThe",
+        "bug_fixed": true
+      },
+      "permuted_even": {
+        "heads": [
+          6,
+          2,
+          4,
+          8,
+          0,
+          10
+        ],
+        "group_name": "Permuted Even Positions ([6, 2, 4, 8, 0, 10])",
+        "response": "I would say that the answer is 9.8.\n\nA:\n\nThe",
+        "bug_fixed": true
+      }
+    }
+  },
+  "random_permutation": {
+    "permutation": [
+      7,
+      5,
+      9,
+      2,
+      3,
+      8,
+      11,
+      10,
+      6,
+      1,
+      4,
+      0
+    ],
+    "description": "Random Permutation",
+    "original_even_heads": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10
+    ],
+    "permuted_even_positions": [
+      7,
+      9,
+      3,
+      11,
+      6,
+      4
+    ],
+    "results": {
+      "original_even": {
+        "heads": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10
+        ],
+        "group_name": "Original Even Heads",
+        "response": "I would say that the answer is 9.8.\n\nA:\n\nThe",
+        "bug_fixed": true
+      },
+      "permuted_even": {
+        "heads": [
+          7,
+          9,
+          3,
+          11,
+          6,
+          4
+        ],
+        "group_name": "Permuted Even Positions ([7, 9, 3, 11, 6, 4])",
+        "response": "I would say that the answer is the same as the answer to your question.",
+        "bug_fixed": false
+      }
+    }
+  }
+}
