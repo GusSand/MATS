@@ -1,0 +1,2849 @@
+{
+  "timestamp": "2025-09-26T17:11:39.425290",
+  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "layer": 10,
+  "test_patterns": {
+    "distributed_coverage": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      28
+    ],
+    "clustered_even": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14
+    ],
+    "minimal_distributed": [
+      0,
+      8,
+      16,
+      24
+    ],
+    "dense_coverage": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "heads_4_optimal": [
+      0,
+      8,
+      16,
+      24
+    ],
+    "heads_6_optimal": [
+      0,
+      5,
+      11,
+      16,
+      21,
+      27
+    ],
+    "heads_8_optimal": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      28
+    ],
+    "heads_10_optimal": [
+      0,
+      3,
+      6,
+      9,
+      12,
+      15,
+      18,
+      21,
+      24,
+      27
+    ],
+    "heads_12_optimal": [
+      0,
+      2,
+      5,
+      8,
+      11,
+      14,
+      17,
+      20,
+      23,
+      26,
+      29,
+      31
+    ],
+    "even_poor_spacing": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14
+    ],
+    "mixed_good_spacing": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      28
+    ],
+    "irregular_spacing": [
+      0,
+      1,
+      5,
+      12,
+      14,
+      18,
+      26,
+      30
+    ],
+    "regular_spacing_alt": [
+      1,
+      5,
+      9,
+      13,
+      17,
+      21,
+      25,
+      29
+    ],
+    "known_working_1": [
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16
+    ],
+    "known_working_2": [
+      16,
+      18,
+      20,
+      22,
+      24,
+      26,
+      28,
+      30
+    ]
+  },
+  "pattern_results": {
+    "distributed_coverage": {
+      "pattern_name": "distributed_coverage",
+      "heads": [
+        0,
+        4,
+        8,
+        12,
+        16,
+        20,
+        24,
+        28
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.34222912788391113,
+            0.21084125339984894,
+            0.13612933456897736,
+            0.08192408084869385,
+            0.08128654211759567
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "If"
+          ],
+          "top_probs": [
+            0.3182513415813446,
+            0.13475610315799713,
+            0.11436602473258972,
+            0.07860253751277924,
+            0.07384025305509567
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "yes",
+            "no",
+            "YES",
+            "",
+            "Yes"
+          ],
+          "top_probs": [
+            0.24298325181007385,
+            0.1937231421470642,
+            0.15087173879146576,
+            0.10782316327095032,
+            0.0966520607471466
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "I"
+          ],
+          "top_probs": [
+            0.28288733959198,
+            0.13258662819862366,
+            0.12166833132505417,
+            0.09112537652254105,
+            0.06932452321052551
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "The",
+            "(",
+            "A"
+          ],
+          "top_probs": [
+            0.35691550374031067,
+            0.15838029980659485,
+            0.09457319974899292,
+            0.09166348725557327,
+            0.08411514014005661
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.25072425603866577,
+            0.23553363978862762,
+            0.20785771310329437,
+            0.1331586390733719,
+            0.0619245208799839
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.5452208518981934,
+            0.1783955842256546,
+            0.0816754549741745,
+            0.05356406792998314,
+            0.038280509412288666
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "[",
+            "(",
+            "-",
+            "",
+            "Solution"
+          ],
+          "top_probs": [
+            0.1905277818441391,
+            0.17759141325950623,
+            0.1655334085226059,
+            0.11288397759199142,
+            0.10855945199728012
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "clustered_even": {
+      "pattern_name": "clustered_even",
+      "heads": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12,
+        14
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "[",
+            "?",
+            "(",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.36651739478111267,
+            0.26814982295036316,
+            0.10098615288734436,
+            0.06469415873289108,
+            0.061731599271297455
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "To"
+          ],
+          "top_probs": [
+            0.3325372338294983,
+            0.12820452451705933,
+            0.11314009875059128,
+            0.07362166047096252,
+            0.06703328341245651
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "no",
+            "yes",
+            "YES",
+            "",
+            "Yes"
+          ],
+          "top_probs": [
+            0.24559219181537628,
+            0.22014741599559784,
+            0.1264200359582901,
+            0.1007908284664154,
+            0.0829082801938057
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "The"
+          ],
+          "top_probs": [
+            0.27825596928596497,
+            0.18827740848064423,
+            0.11509167402982712,
+            0.07607094198465347,
+            0.06355965882539749
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "(",
+            "A",
+            "The"
+          ],
+          "top_probs": [
+            0.34283143281936646,
+            0.14977195858955383,
+            0.09745847433805466,
+            0.0929955244064331,
+            0.08736120909452438
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.3056929409503937,
+            0.2100994884967804,
+            0.1943102478981018,
+            0.1335473507642746,
+            0.05567082017660141
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "or"
+          ],
+          "top_probs": [
+            0.5637627840042114,
+            0.1746455729007721,
+            0.07511412352323532,
+            0.04415731504559517,
+            0.03604014962911606
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "[",
+            "-",
+            "(",
+            "Solution",
+            "?"
+          ],
+          "top_probs": [
+            0.2610955238342285,
+            0.17666609585285187,
+            0.1633894145488739,
+            0.1176849827170372,
+            0.1030484139919281
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "minimal_distributed": {
+      "pattern_name": "minimal_distributed",
+      "heads": [
+        0,
+        8,
+        16,
+        24
+      ],
+      "n_heads": 4,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.3200226426124573,
+            0.2415657490491867,
+            0.12729620933532715,
+            0.12434740364551544,
+            0.05432335287332535
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "If"
+          ],
+          "top_probs": [
+            0.3525082468986511,
+            0.14131785929203033,
+            0.10258574783802032,
+            0.07927212864160538,
+            0.06780504435300827
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "yes",
+            "no",
+            "YES",
+            "Yes",
+            ""
+          ],
+          "top_probs": [
+            0.25625529885292053,
+            0.15301701426506042,
+            0.14947238564491272,
+            0.1003510057926178,
+            0.09575560688972473
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "The"
+          ],
+          "top_probs": [
+            0.24972409009933472,
+            0.12362238764762878,
+            0.12266035377979279,
+            0.09404695779085159,
+            0.08496434986591339
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "The",
+            "(",
+            "A"
+          ],
+          "top_probs": [
+            0.34420517086982727,
+            0.15514543652534485,
+            0.09708753228187561,
+            0.08839920163154602,
+            0.08175589889287949
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.31890377402305603,
+            0.23884788155555725,
+            0.17611537873744965,
+            0.11731815338134766,
+            0.05085365101695061
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.563136637210846,
+            0.165167436003685,
+            0.08112752437591553,
+            0.051972243934869766,
+            0.03984849900007248
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "(",
+            "-",
+            "[",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.18907788395881653,
+            0.18760645389556885,
+            0.17350761592388153,
+            0.11924991756677628,
+            0.10689494013786316
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "dense_coverage": {
+      "pattern_name": "dense_coverage",
+      "heads": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "Solution"
+          ],
+          "top_probs": [
+            0.32972452044487,
+            0.28871646523475647,
+            0.11044388264417648,
+            0.07130792737007141,
+            0.0595800057053566
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "Why",
+            "We"
+          ],
+          "top_probs": [
+            0.3158576488494873,
+            0.12466175854206085,
+            0.10746515542268753,
+            0.08369395136833191,
+            0.07047736644744873
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "yes",
+            "no",
+            "",
+            "YES",
+            "_"
+          ],
+          "top_probs": [
+            0.25985944271087646,
+            0.2188235968351364,
+            0.12763866782188416,
+            0.10499271005392075,
+            0.07445097714662552
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "I"
+          ],
+          "top_probs": [
+            0.2508951723575592,
+            0.1418432742357254,
+            0.11046764999628067,
+            0.08536279201507568,
+            0.0840393602848053
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "(",
+            "A",
+            "["
+          ],
+          "top_probs": [
+            0.36067575216293335,
+            0.1306280940771103,
+            0.09631910920143127,
+            0.09556956589221954,
+            0.07619469612836838
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.25971493124961853,
+            0.22388824820518494,
+            0.20868679881095886,
+            0.13686014711856842,
+            0.0593244843184948
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.5700733065605164,
+            0.1659007966518402,
+            0.07079776376485825,
+            0.05020313709974289,
+            0.037895318120718
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "[",
+            "(",
+            "-",
+            "?",
+            "Solution"
+          ],
+          "top_probs": [
+            0.23860327899456024,
+            0.17320741713047028,
+            0.16398948431015015,
+            0.15526211261749268,
+            0.08245909214019775
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "heads_4_optimal": {
+      "pattern_name": "heads_4_optimal",
+      "heads": [
+        0,
+        8,
+        16,
+        24
+      ],
+      "n_heads": 4,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.3200226426124573,
+            0.2415657490491867,
+            0.12729620933532715,
+            0.12434740364551544,
+            0.05432335287332535
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "If"
+          ],
+          "top_probs": [
+            0.3525082468986511,
+            0.14131785929203033,
+            0.10258574783802032,
+            0.07927212864160538,
+            0.06780504435300827
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "yes",
+            "no",
+            "YES",
+            "Yes",
+            ""
+          ],
+          "top_probs": [
+            0.25625529885292053,
+            0.15301701426506042,
+            0.14947238564491272,
+            0.1003510057926178,
+            0.09575560688972473
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "The"
+          ],
+          "top_probs": [
+            0.24972409009933472,
+            0.12362238764762878,
+            0.12266035377979279,
+            0.09404695779085159,
+            0.08496434986591339
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "The",
+            "(",
+            "A"
+          ],
+          "top_probs": [
+            0.34420517086982727,
+            0.15514543652534485,
+            0.09708753228187561,
+            0.08839920163154602,
+            0.08175589889287949
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.31890377402305603,
+            0.23884788155555725,
+            0.17611537873744965,
+            0.11731815338134766,
+            0.05085365101695061
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.563136637210846,
+            0.165167436003685,
+            0.08112752437591553,
+            0.051972243934869766,
+            0.03984849900007248
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "(",
+            "-",
+            "[",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.18907788395881653,
+            0.18760645389556885,
+            0.17350761592388153,
+            0.11924991756677628,
+            0.10689494013786316
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "heads_6_optimal": {
+      "pattern_name": "heads_6_optimal",
+      "heads": [
+        0,
+        5,
+        11,
+        16,
+        21,
+        27
+      ],
+      "n_heads": 6,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "Solution",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.3298865556716919,
+            0.22147536277770996,
+            0.13751716911792755,
+            0.1261928528547287,
+            0.05822843685746193
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "If"
+          ],
+          "top_probs": [
+            0.347583144903183,
+            0.135056272149086,
+            0.10274538397789001,
+            0.07061580568552017,
+            0.0648007020354271
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "yes",
+            "no",
+            "",
+            "_",
+            "YES"
+          ],
+          "top_probs": [
+            0.2740715742111206,
+            0.1466999351978302,
+            0.1284547597169876,
+            0.12646324932575226,
+            0.09397950023412704
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "(",
+            "[",
+            "",
+            "The"
+          ],
+          "top_probs": [
+            0.25092050433158875,
+            0.12133724242448807,
+            0.12039297819137573,
+            0.09159015119075775,
+            0.08877221494913101
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "(",
+            "[",
+            "A"
+          ],
+          "top_probs": [
+            0.3193133771419525,
+            0.13733498752117157,
+            0.10126446187496185,
+            0.09077288210391998,
+            0.08729542046785355
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.33471450209617615,
+            0.20945899188518524,
+            0.17500953376293182,
+            0.13005603849887848,
+            0.04975086823105812
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.5839192867279053,
+            0.14534901082515717,
+            0.08346690982580185,
+            0.054738935083150864,
+            0.039426978677511215
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "(",
+            "-",
+            "[",
+            "",
+            "Solution"
+          ],
+          "top_probs": [
+            0.19730067253112793,
+            0.16614383459091187,
+            0.128385990858078,
+            0.12541192770004272,
+            0.11873763799667358
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "heads_8_optimal": {
+      "pattern_name": "heads_8_optimal",
+      "heads": [
+        0,
+        4,
+        8,
+        12,
+        16,
+        20,
+        24,
+        28
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.34222912788391113,
+            0.21084125339984894,
+            0.13612933456897736,
+            0.08192408084869385,
+            0.08128654211759567
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "If"
+          ],
+          "top_probs": [
+            0.3182513415813446,
+            0.13475610315799713,
+            0.11436602473258972,
+            0.07860253751277924,
+            0.07384025305509567
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "yes",
+            "no",
+            "YES",
+            "",
+            "Yes"
+          ],
+          "top_probs": [
+            0.24298325181007385,
+            0.1937231421470642,
+            0.15087173879146576,
+            0.10782316327095032,
+            0.0966520607471466
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "I"
+          ],
+          "top_probs": [
+            0.28288733959198,
+            0.13258662819862366,
+            0.12166833132505417,
+            0.09112537652254105,
+            0.06932452321052551
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "The",
+            "(",
+            "A"
+          ],
+          "top_probs": [
+            0.35691550374031067,
+            0.15838029980659485,
+            0.09457319974899292,
+            0.09166348725557327,
+            0.08411514014005661
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.25072425603866577,
+            0.23553363978862762,
+            0.20785771310329437,
+            0.1331586390733719,
+            0.0619245208799839
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.5452208518981934,
+            0.1783955842256546,
+            0.0816754549741745,
+            0.05356406792998314,
+            0.038280509412288666
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "[",
+            "(",
+            "-",
+            "",
+            "Solution"
+          ],
+          "top_probs": [
+            0.1905277818441391,
+            0.17759141325950623,
+            0.1655334085226059,
+            0.11288397759199142,
+            0.10855945199728012
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "heads_10_optimal": {
+      "pattern_name": "heads_10_optimal",
+      "heads": [
+        0,
+        3,
+        6,
+        9,
+        12,
+        15,
+        18,
+        21,
+        24,
+        27
+      ],
+      "n_heads": 10,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "[",
+            "?",
+            "(",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.24651147425174713,
+            0.22977396845817566,
+            0.13720430433750153,
+            0.1003808081150055,
+            0.09429904073476791
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "If",
+            "We"
+          ],
+          "top_probs": [
+            0.2876117527484894,
+            0.13692373037338257,
+            0.13480091094970703,
+            0.07328998297452927,
+            0.07159222662448883
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "no",
+            "yes",
+            "",
+            "_",
+            "YES"
+          ],
+          "top_probs": [
+            0.24003830552101135,
+            0.20531564950942993,
+            0.16497576236724854,
+            0.13784240186214447,
+            0.07095518708229065
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "(",
+            "[",
+            "",
+            "The"
+          ],
+          "top_probs": [
+            0.222250297665596,
+            0.12762761116027832,
+            0.11711768060922623,
+            0.0993964821100235,
+            0.08370023220777512
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "The",
+            "?",
+            "(",
+            "A"
+          ],
+          "top_probs": [
+            0.3694816827774048,
+            0.1050344780087471,
+            0.10260135680437088,
+            0.09944465011358261,
+            0.0774475708603859
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "-",
+            "?",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.2882150113582611,
+            0.21586306393146515,
+            0.20278459787368774,
+            0.13828706741333008,
+            0.05008425563573837
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.5648441910743713,
+            0.16057120263576508,
+            0.07525821030139923,
+            0.05336606130003929,
+            0.03843813017010689
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "[",
+            "-",
+            "(",
+            "?",
+            ""
+          ],
+          "top_probs": [
+            0.25952377915382385,
+            0.21181714534759521,
+            0.15618416666984558,
+            0.08692958205938339,
+            0.0698498785495758
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "heads_12_optimal": {
+      "pattern_name": "heads_12_optimal",
+      "heads": [
+        0,
+        2,
+        5,
+        8,
+        11,
+        14,
+        17,
+        20,
+        23,
+        26,
+        29,
+        31
+      ],
+      "n_heads": 12,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "-",
+            ""
+          ],
+          "top_probs": [
+            0.2892705202102661,
+            0.2781887352466583,
+            0.1253894865512848,
+            0.1047668382525444,
+            0.06607562303543091
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "To"
+          ],
+          "top_probs": [
+            0.37484705448150635,
+            0.1400701254606247,
+            0.07857221364974976,
+            0.0732373520731926,
+            0.06720638275146484
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "no",
+            "yes",
+            "YES",
+            "Yes",
+            ""
+          ],
+          "top_probs": [
+            0.2616928219795227,
+            0.2516675293445587,
+            0.17432500422000885,
+            0.0890364944934845,
+            0.058849532157182693
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "The"
+          ],
+          "top_probs": [
+            0.24247054755687714,
+            0.14143182337284088,
+            0.11909753084182739,
+            0.09348072111606598,
+            0.07995830476284027
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "A",
+            "(",
+            "["
+          ],
+          "top_probs": [
+            0.3074512481689453,
+            0.18215884268283844,
+            0.1029832661151886,
+            0.09903804957866669,
+            0.09017515927553177
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "-",
+            "?",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.2874213457107544,
+            0.22915227711200714,
+            0.20541077852249146,
+            0.11612872034311295,
+            0.057040512561798096
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "or"
+          ],
+          "top_probs": [
+            0.5706168413162231,
+            0.1323937624692917,
+            0.08682593703269958,
+            0.05518992617726326,
+            0.04264746978878975
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "-",
+            "[",
+            "(",
+            "?",
+            ""
+          ],
+          "top_probs": [
+            0.27562546730041504,
+            0.1633026897907257,
+            0.1633026897907257,
+            0.12817774713039398,
+            0.07418359071016312
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "even_poor_spacing": {
+      "pattern_name": "even_poor_spacing",
+      "heads": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12,
+        14
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "[",
+            "?",
+            "(",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.36651739478111267,
+            0.26814982295036316,
+            0.10098615288734436,
+            0.06469415873289108,
+            0.061731599271297455
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "To"
+          ],
+          "top_probs": [
+            0.3325372338294983,
+            0.12820452451705933,
+            0.11314009875059128,
+            0.07362166047096252,
+            0.06703328341245651
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "no",
+            "yes",
+            "YES",
+            "",
+            "Yes"
+          ],
+          "top_probs": [
+            0.24559219181537628,
+            0.22014741599559784,
+            0.1264200359582901,
+            0.1007908284664154,
+            0.0829082801938057
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "The"
+          ],
+          "top_probs": [
+            0.27825596928596497,
+            0.18827740848064423,
+            0.11509167402982712,
+            0.07607094198465347,
+            0.06355965882539749
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "(",
+            "A",
+            "The"
+          ],
+          "top_probs": [
+            0.34283143281936646,
+            0.14977195858955383,
+            0.09745847433805466,
+            0.0929955244064331,
+            0.08736120909452438
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.3056929409503937,
+            0.2100994884967804,
+            0.1943102478981018,
+            0.1335473507642746,
+            0.05567082017660141
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "or"
+          ],
+          "top_probs": [
+            0.5637627840042114,
+            0.1746455729007721,
+            0.07511412352323532,
+            0.04415731504559517,
+            0.03604014962911606
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "[",
+            "-",
+            "(",
+            "Solution",
+            "?"
+          ],
+          "top_probs": [
+            0.2610955238342285,
+            0.17666609585285187,
+            0.1633894145488739,
+            0.1176849827170372,
+            0.1030484139919281
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "mixed_good_spacing": {
+      "pattern_name": "mixed_good_spacing",
+      "heads": [
+        0,
+        4,
+        8,
+        12,
+        16,
+        20,
+        24,
+        28
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.34222912788391113,
+            0.21084125339984894,
+            0.13612933456897736,
+            0.08192408084869385,
+            0.08128654211759567
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "If"
+          ],
+          "top_probs": [
+            0.3182513415813446,
+            0.13475610315799713,
+            0.11436602473258972,
+            0.07860253751277924,
+            0.07384025305509567
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "yes",
+            "no",
+            "YES",
+            "",
+            "Yes"
+          ],
+          "top_probs": [
+            0.24298325181007385,
+            0.1937231421470642,
+            0.15087173879146576,
+            0.10782316327095032,
+            0.0966520607471466
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "I"
+          ],
+          "top_probs": [
+            0.28288733959198,
+            0.13258662819862366,
+            0.12166833132505417,
+            0.09112537652254105,
+            0.06932452321052551
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "The",
+            "(",
+            "A"
+          ],
+          "top_probs": [
+            0.35691550374031067,
+            0.15838029980659485,
+            0.09457319974899292,
+            0.09166348725557327,
+            0.08411514014005661
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.25072425603866577,
+            0.23553363978862762,
+            0.20785771310329437,
+            0.1331586390733719,
+            0.0619245208799839
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.5452208518981934,
+            0.1783955842256546,
+            0.0816754549741745,
+            0.05356406792998314,
+            0.038280509412288666
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "[",
+            "(",
+            "-",
+            "",
+            "Solution"
+          ],
+          "top_probs": [
+            0.1905277818441391,
+            0.17759141325950623,
+            0.1655334085226059,
+            0.11288397759199142,
+            0.10855945199728012
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "irregular_spacing": {
+      "pattern_name": "irregular_spacing",
+      "heads": [
+        0,
+        1,
+        5,
+        12,
+        14,
+        18,
+        26,
+        30
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "-",
+            "(",
+            "Solution"
+          ],
+          "top_probs": [
+            0.3705126941204071,
+            0.20302420854568481,
+            0.12123128771781921,
+            0.10450790077447891,
+            0.06240451708436012
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "Why",
+            "We"
+          ],
+          "top_probs": [
+            0.32958167791366577,
+            0.12509509921073914,
+            0.11843766272068024,
+            0.07706885784864426,
+            0.06540749222040176
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "yes",
+            "no",
+            "",
+            "_",
+            "YES"
+          ],
+          "top_probs": [
+            0.2543494403362274,
+            0.18036074936389923,
+            0.14952431619167328,
+            0.12591210007667542,
+            0.10276646167039871
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "-"
+          ],
+          "top_probs": [
+            0.29212886095046997,
+            0.12862259149551392,
+            0.12177742272615433,
+            0.08112125098705292,
+            0.07862541824579239
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "[",
+            "(",
+            "The"
+          ],
+          "top_probs": [
+            0.337575763463974,
+            0.1440596580505371,
+            0.10539630055427551,
+            0.09671708196401596,
+            0.08337533473968506
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "-",
+            "?",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.3171692490577698,
+            0.2080046832561493,
+            0.18500320613384247,
+            0.1291530430316925,
+            0.05300430580973625
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "or"
+          ],
+          "top_probs": [
+            0.555797278881073,
+            0.18044094741344452,
+            0.07405281811952591,
+            0.04526757821440697,
+            0.036090463399887085
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "-",
+            "[",
+            "(",
+            "?",
+            ""
+          ],
+          "top_probs": [
+            0.3189346194267273,
+            0.17890609800815582,
+            0.14831838011741638,
+            0.11551046371459961,
+            0.0695154219865799
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "regular_spacing_alt": {
+      "pattern_name": "regular_spacing_alt",
+      "heads": [
+        1,
+        5,
+        9,
+        13,
+        17,
+        21,
+        25,
+        29
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "-",
+            "Solution"
+          ],
+          "top_probs": [
+            0.3102138340473175,
+            0.2716323435306549,
+            0.10472358763217926,
+            0.0809241235256195,
+            0.07966950535774231
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "Why"
+          ],
+          "top_probs": [
+            0.3508984446525574,
+            0.1342306137084961,
+            0.10211727023124695,
+            0.06909599900245667,
+            0.06749539822340012
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "yes",
+            "no",
+            "",
+            "YES",
+            "_"
+          ],
+          "top_probs": [
+            0.23791944980621338,
+            0.1768067181110382,
+            0.15241692960262299,
+            0.1376972198486328,
+            0.07256133109331131
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "The"
+          ],
+          "top_probs": [
+            0.2789512872695923,
+            0.13809089362621307,
+            0.1092388927936554,
+            0.09270983934402466,
+            0.07391473650932312
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "[",
+            "(",
+            "The"
+          ],
+          "top_probs": [
+            0.3373362421989441,
+            0.13210277259349823,
+            0.10951704531908035,
+            0.08663511276245117,
+            0.08529195934534073
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.29582762718200684,
+            0.2215646505355835,
+            0.20977318286895752,
+            0.11767209321260452,
+            0.05181032419204712
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.5821367502212524,
+            0.16292139887809753,
+            0.07286296784877777,
+            0.05166757106781006,
+            0.03578908368945122
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "-",
+            "[",
+            "(",
+            "?",
+            ""
+          ],
+          "top_probs": [
+            0.2886693477630615,
+            0.24308398365974426,
+            0.11846966296434402,
+            0.11754772812128067,
+            0.047493577003479004
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "known_working_1": {
+      "pattern_name": "known_working_1",
+      "heads": [
+        2,
+        4,
+        6,
+        8,
+        10,
+        12,
+        14,
+        16
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "[",
+            "?",
+            "(",
+            "Solution",
+            ""
+          ],
+          "top_probs": [
+            0.358580082654953,
+            0.2996048629283905,
+            0.09137432277202606,
+            0.0653022825717926,
+            0.06479409337043762
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "Why"
+          ],
+          "top_probs": [
+            0.31097468733787537,
+            0.1276237517595291,
+            0.11989142000675201,
+            0.0738629624247551,
+            0.06993205100297928
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "no",
+            "yes",
+            "YES",
+            "",
+            "Yes"
+          ],
+          "top_probs": [
+            0.21930643916130066,
+            0.21090494096279144,
+            0.14159488677978516,
+            0.09432252496480942,
+            0.08930277079343796
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "The"
+          ],
+          "top_probs": [
+            0.2746807336807251,
+            0.20572635531425476,
+            0.11011739075183868,
+            0.07931458204984665,
+            0.06225472316145897
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "(",
+            "[",
+            "A"
+          ],
+          "top_probs": [
+            0.3274915814399719,
+            0.1419571042060852,
+            0.10467260330915451,
+            0.09680632501840591,
+            0.09456381946802139
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.30651867389678955,
+            0.21735426783561707,
+            0.1948351114988327,
+            0.12978817522525787,
+            0.05368272215127945
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.5790203213691711,
+            0.16460111737251282,
+            0.08084935694932938,
+            0.04430178925395012,
+            0.03190938010811806
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "[",
+            "-",
+            "(",
+            "Solution",
+            "?"
+          ],
+          "top_probs": [
+            0.23366650938987732,
+            0.2062099725008011,
+            0.13523580133914948,
+            0.1341833919286728,
+            0.1300549954175949
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    },
+    "known_working_2": {
+      "pattern_name": "known_working_2",
+      "heads": [
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30
+      ],
+      "n_heads": 8,
+      "prompt_results": [
+        {
+          "prompt": "Which is larger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [ #permalink ] New post \u00a0 29 Jan 2021, 06:00\nWhich",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "-",
+            ""
+          ],
+          "top_probs": [
+            0.40537574887275696,
+            0.1885172426700592,
+            0.10574858635663986,
+            0.08044928312301636,
+            0.07044373452663422
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Compare 9.8 and 9.11. Which is bigger?",
+          "expected": "9.8",
+          "response": " 9.8 is bigger.\n## Step 1: Compare the numbers\nWe need to compare",
+          "top_words": [
+            "",
+            "The",
+            "Which",
+            "We",
+            "If"
+          ],
+          "top_probs": [
+            0.3076240122318268,
+            0.14194516837596893,
+            0.12236437946557999,
+            0.07249849289655685,
+            0.06705015152692795
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Is 9.8 > 9.11? Answer yes or no:",
+          "expected": "yes",
+          "response": " no\n## Step 1: Compare the numbers\nTo determine if 9.8 is greater",
+          "top_words": [
+            "no",
+            "yes",
+            "",
+            "YES",
+            "Yes"
+          ],
+          "top_probs": [
+            0.245191290974617,
+            0.2395114302635193,
+            0.14301882684230804,
+            0.10382052510976791,
+            0.06703156977891922
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which number is bigger: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": "?\nA) 9.8\nB) 9.11\nC) 9.",
+          "top_words": [
+            "?",
+            "[",
+            "(",
+            "",
+            "I"
+          ],
+          "top_probs": [
+            0.30382436513900757,
+            0.13482125103473663,
+            0.10418178141117096,
+            0.09710810333490372,
+            0.06726481765508652
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Between 9.8 and 9.11, which is the larger number?",
+          "expected": "9.8",
+          "response": " 9.8 is larger than 9.9, but 9.9 is larger than",
+          "top_words": [
+            "",
+            "?",
+            "[",
+            "The",
+            "("
+          ],
+          "top_probs": [
+            0.34674394130706787,
+            0.1305849552154541,
+            0.10090823471546173,
+            0.0962873101234436,
+            0.08905120939016342
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "9.8 vs 9.11 - which is greater?",
+          "expected": "9.8",
+          "response": " - Math Help\nTo determine which is greater, 9.8 or 9.11,",
+          "top_words": [
+            "[",
+            "?",
+            "-",
+            "(",
+            ""
+          ],
+          "top_probs": [
+            0.31162044405937195,
+            0.2011972814798355,
+            0.2011972814798355,
+            0.1268935352563858,
+            0.0541515089571476
+          ],
+          "is_correct": true
+        },
+        {
+          "prompt": "Choose the larger: 9.8 or 9.11",
+          "expected": "9.8",
+          "response": "\nThe larger number is 9.11.\nNext choose the larger: 9.11 or",
+          "top_words": [
+            "",
+            "?",
+            "",
+            ".",
+            "."
+          ],
+          "top_probs": [
+            0.5602355003356934,
+            0.1592610627412796,
+            0.08008149266242981,
+            0.05251872166991234,
+            0.04090162366628647
+          ],
+          "is_correct": false
+        },
+        {
+          "prompt": "Which is more: 9.8 or 9.11?",
+          "expected": "9.8",
+          "response": " [closed]\nThis is a simple question, but it requires a basic understanding of numbers and comparison.",
+          "top_words": [
+            "-",
+            "[",
+            "(",
+            "?",
+            ""
+          ],
+          "top_probs": [
+            0.30843308568000793,
+            0.20869629085063934,
+            0.12364845722913742,
+            0.11346621066331863,
+            0.07677507400512695
+          ],
+          "is_correct": false
+        }
+      ],
+      "success_rate": 0.5
+    }
+  },
+  "summary": {
+    "hypothesis_tests": {
+      "distributed_vs_clustered": {
+        "distributed_rate": 0.5,
+        "clustered_rate": 0.5,
+        "hypothesis_supported": false
+      },
+      "dense_vs_distributed": {
+        "dense_rate": 0.5,
+        "distributed_rate": 0.5,
+        "hypothesis_supported": false
+      }
+    },
+    "success_rates_by_pattern": {
+      "distributed_coverage": 0.5,
+      "clustered_even": 0.5,
+      "minimal_distributed": 0.5,
+      "dense_coverage": 0.5,
+      "heads_4_optimal": 0.5,
+      "heads_6_optimal": 0.5,
+      "heads_8_optimal": 0.5,
+      "heads_10_optimal": 0.5,
+      "heads_12_optimal": 0.5,
+      "even_poor_spacing": 0.5,
+      "mixed_good_spacing": 0.5,
+      "irregular_spacing": 0.5,
+      "regular_spacing_alt": 0.5,
+      "known_working_1": 0.5,
+      "known_working_2": 0.5
+    },
+    "head_count_analysis": {
+      "4": 0.5,
+      "6": 0.5,
+      "8": 0.5,
+      "10": 0.5,
+      "12": 0.5
+    },
+    "spacing_analysis": {
+      "regular_spacing": 0.5,
+      "irregular_spacing": 0.5,
+      "spacing_matters": false
+    }
+  }
+}
