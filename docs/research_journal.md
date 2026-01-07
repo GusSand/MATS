@@ -40,3 +40,58 @@ See: [docs/experiments/01-07_llama8b_security_sprintf_localization.md](experimen
 `src/experiments/01-07_llama8b_sprintf_security/`
 
 ---
+
+## 2026-01-07: Linear Probes & IOI-style Circuit Analysis
+
+### Prompt
+> Can we identify a sparse "security circuit" (like IOI's Name Mover circuit) for the sprintf/snprintf decision? Use linear probes and attention pattern analysis.
+
+### Research Question
+Is there a sparse, identifiable circuit responsible for security-aware code generation, or is it distributed?
+
+### Methods
+1. **Linear Probes**: Train logistic regression at each layer to classify context (secure vs neutral) and predict behavior (snprintf vs sprintf)
+2. **Attention Pattern Analysis**: Identify heads attending to security tokens ("WARNING", "snprintf", "buffer", "overflow")
+3. **Causal Verification**: Test candidate heads via ablation, path patching, and output analysis
+
+### Results (No Interpretation)
+
+**Linear Probes:**
+| Probe | Accuracy (all layers) |
+|-------|----------------------|
+| Context (secure vs neutral) | 100% |
+| Behavior (snprintf vs sprintf) | 91.9% |
+
+**Top Attention Heads (to security tokens):**
+| Head | Attention | Ablation Drop | Path Patch Lift |
+|------|-----------|---------------|-----------------|
+| L20H24 | 61.1% | -0.6% | +0.1% |
+| L25H13 | 47.7% | +3.7% | +0.3% |
+| L17H29 | 44.0% | +5.7% | +0.5% |
+
+**Combined Effects:**
+| Intervention | Effect |
+|--------------|--------|
+| Ablate all 8 top heads | 8.6% drop |
+| Patch all 8 top heads | 1.4% lift (vs 33.9% gap) |
+
+### Key Findings (No Interpretation)
+1. **Attention ≠ Causation**: L20H24 attends 61% to security tokens but has zero causal impact
+2. **No sparse circuit**: Top 8 heads account for only 1.4% of the effect
+3. **Only L17H29 verified** as having measurable causal impact (5.7% ablation drop)
+4. **Distribution**: ~512 heads across layers 16-31 each contribute small amounts
+
+### Interpretation (Claude's)
+Unlike IOI which found a clean circuit of 26 heads in 7 functional classes, the security decision has **no identifiable sparse circuit**. The effect is "many heads doing a little bit" - a diffuse representation rather than a localized circuit.
+
+This is a **negative result for circuit identification** but a **positive finding about representation**: security context is immediately linearly decodable (layer 0) but requires distributed processing across the full network to influence behavior.
+
+**Methodological lesson**: Attention patterns are unreliable indicators of causal importance. Heads that "look at" security tokens may not "use" that information.
+
+### Detailed Report
+See: [docs/experiments/01-07_llama8b_sprintf_linear_probes.md](experiments/01-07_llama8b_sprintf_linear_probes.md)
+
+### Code Location
+`src/experiments/01-07_llama8b_sprintf_linear_probes/`
+
+---
