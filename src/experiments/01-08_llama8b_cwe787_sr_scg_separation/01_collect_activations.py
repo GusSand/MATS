@@ -42,6 +42,7 @@ def collect_sr_data(collector: ActivationCollector, n_samples_per_prompt: int = 
     n_layers = collector.n_layers
 
     data = {layer: {'X': [], 'y': []} for layer in range(n_layers)}
+    pair_indices = []  # Track which pair each sample belongs to
     metadata = []
 
     print(f"\nCollecting SR data: {len(pairs)} pairs × 2 prompts × {n_samples_per_prompt} samples")
@@ -50,7 +51,7 @@ def collect_sr_data(collector: ActivationCollector, n_samples_per_prompt: int = 
     total_prompts = len(pairs) * 2
 
     with tqdm(total=total_prompts * n_samples_per_prompt, desc="SR Collection") as pbar:
-        for pair in pairs:
+        for pair_idx, pair in enumerate(pairs):
             pair_id = pair['id']
 
             # Vulnerable prompts (label = 0)
@@ -59,8 +60,10 @@ def collect_sr_data(collector: ActivationCollector, n_samples_per_prompt: int = 
                 for layer in range(n_layers):
                     data[layer]['X'].append(acts[layer].squeeze())
                     data[layer]['y'].append(0)
+                pair_indices.append(pair_idx)
                 metadata.append({
                     'pair_id': pair_id,
+                    'pair_idx': pair_idx,
                     'prompt_type': 'vulnerable',
                     'sr_label': 0
                 })
@@ -72,8 +75,10 @@ def collect_sr_data(collector: ActivationCollector, n_samples_per_prompt: int = 
                 for layer in range(n_layers):
                     data[layer]['X'].append(acts[layer].squeeze())
                     data[layer]['y'].append(1)
+                pair_indices.append(pair_idx)
                 metadata.append({
                     'pair_id': pair_id,
+                    'pair_idx': pair_idx,
                     'prompt_type': 'secure',
                     'sr_label': 1
                 })
@@ -84,9 +89,13 @@ def collect_sr_data(collector: ActivationCollector, n_samples_per_prompt: int = 
         data[layer]['X'] = np.array(data[layer]['X'])
         data[layer]['y'] = np.array(data[layer]['y'])
 
+    # Add pair indices to data for proper cross-validation
+    data['pair_indices'] = np.array(pair_indices)
+
     n_secure = sum(1 for m in metadata if m['sr_label'] == 1)
     n_vuln = sum(1 for m in metadata if m['sr_label'] == 0)
     print(f"\nSR data collected: {n_vuln} vulnerable + {n_secure} secure = {len(metadata)} total")
+    print(f"  Unique pairs: {len(pairs)}")
 
     return data, metadata
 
@@ -105,6 +114,7 @@ def collect_scg_data(collector: ActivationCollector, n_samples_per_prompt: int =
     n_layers = collector.n_layers
 
     data = {layer: {'X': [], 'y': []} for layer in range(n_layers)}
+    pair_indices = []  # Track which pair each sample belongs to
     metadata = []
 
     stats = {
@@ -121,7 +131,7 @@ def collect_scg_data(collector: ActivationCollector, n_samples_per_prompt: int =
     total_prompts = len(pairs) * 2
 
     with tqdm(total=total_prompts * n_samples_per_prompt, desc="SCG Collection") as pbar:
-        for pair in pairs:
+        for pair_idx, pair in enumerate(pairs):
             pair_id = pair['id']
             # Map detection pattern keys to match activation_collector format
             raw_detection = pair['detection']
@@ -166,8 +176,10 @@ def collect_scg_data(collector: ActivationCollector, n_samples_per_prompt: int =
                         data[layer]['X'].append(acts[layer].squeeze())
                         data[layer]['y'].append(scg_label)
 
+                    pair_indices.append(pair_idx)
                     metadata.append({
                         'pair_id': pair_id,
+                        'pair_idx': pair_idx,
                         'prompt_type': prompt_type,
                         'scg_label': scg_label,
                         'output_snippet': result['output'][:100]
@@ -185,11 +197,15 @@ def collect_scg_data(collector: ActivationCollector, n_samples_per_prompt: int =
             data[layer]['X'] = np.array([]).reshape(0, collector.hidden_size)
             data[layer]['y'] = np.array([])
 
+    # Add pair indices to data for proper cross-validation
+    data['pair_indices'] = np.array(pair_indices)
+
     print(f"\nSCG data collected:")
     print(f"  Secure outputs: {stats['secure_outputs']}")
     print(f"  Insecure outputs: {stats['insecure_outputs']}")
     print(f"  Neither (skipped): {stats['neither_outputs']}")
     print(f"  Total usable: {stats['secure_outputs'] + stats['insecure_outputs']}")
+    print(f"  Unique pairs: {len(pairs)}")
 
     return data, metadata, stats
 
@@ -198,21 +214,19 @@ def save_data(sr_data: dict, sr_metadata: list, scg_data: dict, scg_metadata: li
               scg_stats: dict, output_dir: Path, timestamp: str, n_layers: int):
     """Save collected data to disk."""
 
-    # Save SR data
+    # Save SR data (including pair_indices for proper cross-validation)
     sr_file = output_dir / f"sr_data_{timestamp}.npz"
-    np.savez_compressed(
-        sr_file,
-        **{f"X_layer_{k}": v['X'] for k, v in sr_data.items()},
-        **{f"y_layer_{k}": v['y'] for k, v in sr_data.items()}
-    )
+    sr_arrays = {f"X_layer_{k}": v['X'] for k, v in sr_data.items() if isinstance(k, int)}
+    sr_arrays.update({f"y_layer_{k}": v['y'] for k, v in sr_data.items() if isinstance(k, int)})
+    sr_arrays['pair_indices'] = sr_data['pair_indices']
+    np.savez_compressed(sr_file, **sr_arrays)
 
-    # Save SCG data
+    # Save SCG data (including pair_indices for proper cross-validation)
     scg_file = output_dir / f"scg_data_{timestamp}.npz"
-    np.savez_compressed(
-        scg_file,
-        **{f"X_layer_{k}": v['X'] for k, v in scg_data.items()},
-        **{f"y_layer_{k}": v['y'] for k, v in scg_data.items()}
-    )
+    scg_arrays = {f"X_layer_{k}": v['X'] for k, v in scg_data.items() if isinstance(k, int)}
+    scg_arrays.update({f"y_layer_{k}": v['y'] for k, v in scg_data.items() if isinstance(k, int)})
+    scg_arrays['pair_indices'] = scg_data['pair_indices']
+    np.savez_compressed(scg_file, **scg_arrays)
 
     # Save metadata
     metadata = {

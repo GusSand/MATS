@@ -5,8 +5,11 @@ Train separate SR and SCG probes and compute direction similarity.
 Key question: Are SR (Security Recognition) and SCG (Secure Code Generation)
 encoded as separate directions using validated CWE-787 prompt pairs?
 
+FIXED VERSION: Uses leave-one-pair-out cross-validation to properly evaluate
+generalization to unseen prompt pairs. Previous version had data leakage.
+
 Metrics:
-- Probe accuracy at each layer for both SR and SCG
+- Probe accuracy at each layer for both SR and SCG (proper test accuracy)
 - Cosine similarity between SR and SCG directions at each layer
 - If cosine similarity < 0.5: Evidence for separate encoding
 """
@@ -21,7 +24,6 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import cross_val_score
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 
@@ -53,38 +55,136 @@ def load_data(data_dir: Path, n_layers: int = 32) -> tuple:
         if X_key in scg_npz and y_key in scg_npz:
             scg_data[layer] = {'X': scg_npz[X_key], 'y': scg_npz[y_key]}
 
-    return sr_data, scg_data
+    # Load pair indices for proper cross-validation
+    sr_pair_indices = sr_npz.get('pair_indices', None)
+    scg_pair_indices = scg_npz.get('pair_indices', None)
+
+    return sr_data, scg_data, sr_pair_indices, scg_pair_indices
 
 
-def train_probe(X: np.ndarray, y: np.ndarray) -> dict:
-    """Train a linear probe and return metrics."""
-    if len(X) < 10:
-        return {'accuracy': None, 'auc': None, 'cv_mean': None, 'direction': None}
+def leave_one_pair_out_cv(X: np.ndarray, y: np.ndarray, pair_indices: np.ndarray) -> dict:
+    """
+    Leave-one-pair-out cross-validation.
 
+    For each fold:
+    - Train on 6 pairs (12 prompts worth of samples)
+    - Test on 1 held-out pair (2 prompts worth of samples)
+
+    This properly tests generalization to UNSEEN prompt pairs.
+    """
+    unique_pairs = np.unique(pair_indices)
+    n_pairs = len(unique_pairs)
+
+    if n_pairs < 2:
+        return {'test_acc': None, 'test_accs': [], 'direction': None}
+
+    test_accs = []
+    test_aucs = []
+    all_directions = []
+
+    for held_out_pair in unique_pairs:
+        # Split by pair
+        train_mask = pair_indices != held_out_pair
+        test_mask = pair_indices == held_out_pair
+
+        X_train, X_test = X[train_mask], X[test_mask]
+        y_train, y_test = y[train_mask], y[test_mask]
+
+        # Skip if test set doesn't have both classes
+        if len(np.unique(y_test)) < 2 or len(np.unique(y_train)) < 2:
+            continue
+
+        # Scale
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+
+        # Train
+        clf = LogisticRegression(max_iter=1000, random_state=42)
+        clf.fit(X_train_scaled, y_train)
+
+        # Evaluate on held-out pair
+        y_pred = clf.predict(X_test_scaled)
+        y_prob = clf.predict_proba(X_test_scaled)[:, 1]
+
+        acc = accuracy_score(y_test, y_pred)
+        try:
+            auc = roc_auc_score(y_test, y_prob)
+        except ValueError:
+            auc = 0.5
+
+        test_accs.append(acc)
+        test_aucs.append(auc)
+        all_directions.append(clf.coef_[0])
+
+    if not test_accs:
+        return {'test_acc': None, 'test_accs': [], 'direction': None}
+
+    # Final probe: train on ALL data for direction extraction
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-
     clf = LogisticRegression(max_iter=1000, random_state=42)
     clf.fit(X_scaled, y)
-
-    y_pred = clf.predict(X_scaled)
-    y_prob = clf.predict_proba(X_scaled)[:, 1]
-
-    acc = accuracy_score(y, y_pred)
-    auc = roc_auc_score(y, y_prob) if len(np.unique(y)) > 1 else 0.5
-
-    # Cross-validation
-    cv_scores = cross_val_score(clf, X_scaled, y, cv=min(5, len(X) // 5))
-    cv_mean = np.mean(cv_scores)
-
-    # Extract direction (probe coefficients)
     direction = clf.coef_[0]
     direction_norm = direction / (np.linalg.norm(direction) + 1e-10)
 
     return {
-        'accuracy': acc,
-        'auc': auc,
-        'cv_mean': cv_mean,
+        'test_acc': np.mean(test_accs),
+        'test_acc_std': np.std(test_accs),
+        'test_accs': test_accs,
+        'test_auc': np.mean(test_aucs),
+        'n_folds': len(test_accs),
+        'direction': direction,
+        'direction_norm': direction_norm,
+        'probe': clf,
+        'scaler': scaler
+    }
+
+
+def train_probe_simple(X: np.ndarray, y: np.ndarray, test_size: float = 0.2) -> dict:
+    """
+    Simple train/test split for SCG when pair indices aren't available.
+    Uses random split but at least doesn't evaluate on training data.
+    """
+    if len(X) < 10:
+        return {'test_acc': None, 'direction': None}
+
+    # Random shuffle
+    n = len(X)
+    idx = np.random.permutation(n)
+    split = int(n * (1 - test_size))
+
+    X_train, X_test = X[idx[:split]], X[idx[split:]]
+    y_train, y_test = y[idx[:split]], y[idx[split:]]
+
+    if len(np.unique(y_train)) < 2 or len(np.unique(y_test)) < 2:
+        return {'test_acc': None, 'direction': None}
+
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    clf = LogisticRegression(max_iter=1000, random_state=42)
+    clf.fit(X_train_scaled, y_train)
+
+    y_pred = clf.predict(X_test_scaled)
+    y_prob = clf.predict_proba(X_test_scaled)[:, 1]
+
+    acc = accuracy_score(y_test, y_pred)
+    try:
+        auc = roc_auc_score(y_test, y_prob)
+    except ValueError:
+        auc = 0.5
+
+    # Retrain on all data for direction
+    X_scaled = scaler.fit_transform(X)
+    clf.fit(X_scaled, y)
+    direction = clf.coef_[0]
+    direction_norm = direction / (np.linalg.norm(direction) + 1e-10)
+
+    return {
+        'test_acc': acc,
+        'test_auc': auc,
         'direction': direction,
         'direction_norm': direction_norm,
         'probe': clf,
@@ -101,8 +201,9 @@ def compute_cosine_similarity(dir1: np.ndarray, dir2: np.ndarray) -> float:
     return float(np.dot(dir1, dir2) / (norm1 * norm2))
 
 
-def train_all_probes(sr_data: dict, scg_data: dict, n_layers: int) -> dict:
-    """Train SR and SCG probes at all layers."""
+def train_all_probes(sr_data: dict, scg_data: dict, sr_pair_indices: np.ndarray,
+                     scg_pair_indices: np.ndarray, n_layers: int) -> dict:
+    """Train SR and SCG probes at all layers with proper cross-validation."""
     results = {
         'sr_probes': {},
         'scg_probes': {},
@@ -110,35 +211,62 @@ def train_all_probes(sr_data: dict, scg_data: dict, n_layers: int) -> dict:
     }
 
     print("\n" + "=" * 60)
-    print("TRAINING PROBES")
+    print("TRAINING PROBES (Leave-One-Pair-Out CV)")
     print("=" * 60)
+
+    use_lopocv_sr = sr_pair_indices is not None
+    use_lopocv_scg = scg_pair_indices is not None
+
+    if use_lopocv_sr:
+        print(f"SR: Using leave-one-pair-out CV with {len(np.unique(sr_pair_indices))} pairs")
+    else:
+        print("SR: WARNING - No pair indices, using random split (results may be inflated)")
+
+    if use_lopocv_scg:
+        print(f"SCG: Using leave-one-pair-out CV with {len(np.unique(scg_pair_indices))} pairs")
+    else:
+        print("SCG: WARNING - No pair indices, using random split (results may be inflated)")
 
     for layer in range(n_layers):
         # Train SR probe
         if layer in sr_data and len(sr_data[layer]['X']) > 0:
-            sr_result = train_probe(sr_data[layer]['X'], sr_data[layer]['y'])
+            if use_lopocv_sr:
+                sr_result = leave_one_pair_out_cv(
+                    sr_data[layer]['X'], sr_data[layer]['y'], sr_pair_indices
+                )
+            else:
+                sr_result = train_probe_simple(sr_data[layer]['X'], sr_data[layer]['y'])
+
             results['sr_probes'][layer] = {
-                'accuracy': sr_result['accuracy'],
-                'auc': sr_result['auc'],
-                'cv_mean': sr_result['cv_mean'],
-                'direction': sr_result['direction'],
-                'direction_norm': sr_result['direction_norm']
+                'test_acc': sr_result.get('test_acc'),
+                'test_acc_std': sr_result.get('test_acc_std'),
+                'test_auc': sr_result.get('test_auc'),
+                'n_folds': sr_result.get('n_folds'),
+                'direction': sr_result.get('direction'),
+                'direction_norm': sr_result.get('direction_norm')
             }
         else:
-            results['sr_probes'][layer] = {'accuracy': None}
+            results['sr_probes'][layer] = {'test_acc': None}
 
         # Train SCG probe
         if layer in scg_data and len(scg_data[layer]['X']) > 0:
-            scg_result = train_probe(scg_data[layer]['X'], scg_data[layer]['y'])
+            if use_lopocv_scg:
+                scg_result = leave_one_pair_out_cv(
+                    scg_data[layer]['X'], scg_data[layer]['y'], scg_pair_indices
+                )
+            else:
+                scg_result = train_probe_simple(scg_data[layer]['X'], scg_data[layer]['y'])
+
             results['scg_probes'][layer] = {
-                'accuracy': scg_result['accuracy'],
-                'auc': scg_result['auc'],
-                'cv_mean': scg_result['cv_mean'],
-                'direction': scg_result['direction'],
-                'direction_norm': scg_result['direction_norm']
+                'test_acc': scg_result.get('test_acc'),
+                'test_acc_std': scg_result.get('test_acc_std'),
+                'test_auc': scg_result.get('test_auc'),
+                'n_folds': scg_result.get('n_folds'),
+                'direction': scg_result.get('direction'),
+                'direction_norm': scg_result.get('direction_norm')
             }
         else:
-            results['scg_probes'][layer] = {'accuracy': None}
+            results['scg_probes'][layer] = {'test_acc': None}
 
         # Compute similarity
         sr_dir = results['sr_probes'][layer].get('direction_norm')
@@ -151,21 +279,27 @@ def train_all_probes(sr_data: dict, scg_data: dict, n_layers: int) -> dict:
             results['similarities'][layer] = None
 
     # Print summary tables
-    print("\nSR Probe Results:")
-    print("| Layer | Accuracy | AUC   | CV Mean |")
-    print("|-------|----------|-------|---------|")
+    print("\nSR Probe Results (Leave-One-Pair-Out Test Accuracy):")
+    print("| Layer | Test Acc | Std    | AUC   | Folds |")
+    print("|-------|----------|--------|-------|-------|")
     for layer in range(n_layers):
         r = results['sr_probes'][layer]
-        if r['accuracy']:
-            print(f"| {layer:5d} | {r['accuracy']*100:6.1f}% | {r['auc']:.3f} | {r['cv_mean']*100:5.1f}% |")
+        if r['test_acc'] is not None:
+            std = r.get('test_acc_std', 0) or 0
+            auc = r.get('test_auc', 0) or 0
+            folds = r.get('n_folds', '-') or '-'
+            print(f"| {layer:5d} | {r['test_acc']*100:6.1f}% | {std*100:5.1f}% | {auc:.3f} | {folds:5} |")
 
-    print("\nSCG Probe Results:")
-    print("| Layer | Accuracy | AUC   | CV Mean |")
-    print("|-------|----------|-------|---------|")
+    print("\nSCG Probe Results (Leave-One-Pair-Out Test Accuracy):")
+    print("| Layer | Test Acc | Std    | AUC   | Folds |")
+    print("|-------|----------|--------|-------|-------|")
     for layer in range(n_layers):
         r = results['scg_probes'][layer]
-        if r['accuracy']:
-            print(f"| {layer:5d} | {r['accuracy']*100:6.1f}% | {r['auc']:.3f} | {r['cv_mean']*100:5.1f}% |")
+        if r['test_acc'] is not None:
+            std = r.get('test_acc_std', 0) or 0
+            auc = r.get('test_auc', 0) or 0
+            folds = r.get('n_folds', '-') or '-'
+            print(f"| {layer:5d} | {r['test_acc']*100:6.1f}% | {std*100:5.1f}% | {auc:.3f} | {folds:5} |")
 
     print("\nDirection Similarities (SR vs SCG):")
     print("| Layer | Cosine Sim | Interpretation |")
@@ -196,12 +330,16 @@ def analyze_results(results: dict, n_layers: int) -> dict:
     valid_sims = [s for s in results['similarities'].values() if s is not None]
     avg_sim = np.mean(valid_sims) if valid_sims else 0
 
-    # Find best probe layers
-    sr_accs = [(l, r['accuracy']) for l, r in results['sr_probes'].items() if r['accuracy']]
-    scg_accs = [(l, r['accuracy']) for l, r in results['scg_probes'].items() if r['accuracy']]
+    # Find best probe layers (using test accuracy now!)
+    sr_accs = [(l, r['test_acc']) for l, r in results['sr_probes'].items() if r['test_acc'] is not None]
+    scg_accs = [(l, r['test_acc']) for l, r in results['scg_probes'].items() if r['test_acc'] is not None]
 
     best_sr = max(sr_accs, key=lambda x: x[1]) if sr_accs else (None, None)
     best_scg = max(scg_accs, key=lambda x: x[1]) if scg_accs else (None, None)
+
+    # Average test accuracy
+    avg_sr_acc = np.mean([a[1] for a in sr_accs]) if sr_accs else 0
+    avg_scg_acc = np.mean([a[1] for a in scg_accs]) if scg_accs else 0
 
     # Count low similarity layers
     low_sim_layers = sum(1 for s in valid_sims if s < 0.5)
@@ -212,14 +350,27 @@ def analyze_results(results: dict, n_layers: int) -> dict:
         'best_sr_accuracy': best_sr[1],
         'best_scg_layer': best_scg[0],
         'best_scg_accuracy': best_scg[1],
+        'avg_sr_accuracy': avg_sr_acc,
+        'avg_scg_accuracy': avg_scg_acc,
         'n_low_similarity_layers': low_sim_layers,
         'n_total_layers': len(valid_sims)
     }
 
     print(f"\nAverage SR-SCG similarity: {avg_sim:.3f}")
-    print(f"Best SR probe: Layer {best_sr[0]} ({best_sr[1]*100:.1f}%)")
-    print(f"Best SCG probe: Layer {best_scg[0]} ({best_scg[1]*100:.1f}%)")
+    print(f"Best SR probe: Layer {best_sr[0]} ({best_sr[1]*100:.1f}% test acc)")
+    print(f"Best SCG probe: Layer {best_scg[0]} ({best_scg[1]*100:.1f}% test acc)")
+    print(f"Average SR test accuracy: {avg_sr_acc*100:.1f}%")
+    print(f"Average SCG test accuracy: {avg_scg_acc*100:.1f}%")
     print(f"Layers with low similarity (<0.5): {low_sim_layers}/{len(valid_sims)}")
+
+    # Flag if accuracy is suspiciously high
+    if best_sr[1] is not None and best_sr[1] > 0.95:
+        print(f"\n⚠️  WARNING: SR accuracy ({best_sr[1]*100:.1f}%) is very high.")
+        print("   This might indicate data leakage or trivial separation.")
+
+    if best_scg[1] is not None and best_scg[1] > 0.95:
+        print(f"\n⚠️  WARNING: SCG accuracy ({best_scg[1]*100:.1f}%) is very high.")
+        print("   This might indicate data leakage or trivial separation.")
 
     # Conclusion
     if avg_sim < 0.3:
@@ -243,40 +394,42 @@ def plot_results(results: dict, analysis: dict, output_path: Path, n_layers: int
 
     layers = list(range(n_layers))
 
-    # Plot 1: SR Accuracy
+    # Plot 1: SR Accuracy (test accuracy now!)
     ax1 = axes[0, 0]
-    sr_acc = [results['sr_probes'][l].get('accuracy', 0.5) or 0.5 for l in layers]
-    ax1.plot(layers, sr_acc, 'b-o', markersize=4, label='SR Accuracy')
+    sr_acc = [results['sr_probes'][l].get('test_acc', 0.5) or 0.5 for l in layers]
+    sr_std = [results['sr_probes'][l].get('test_acc_std', 0) or 0 for l in layers]
+    ax1.errorbar(layers, sr_acc, yerr=sr_std, fmt='b-o', markersize=4, label='SR Test Accuracy', capsize=2)
     ax1.axhline(y=0.5, color='gray', linestyle=':', label='Chance')
     ax1.set_xlabel('Layer')
-    ax1.set_ylabel('Accuracy')
-    ax1.set_title('SR Probe: Security Recognition\n(Is this a secure prompt?)')
+    ax1.set_ylabel('Test Accuracy')
+    ax1.set_title('SR Probe: Security Recognition\n(Leave-One-Pair-Out CV)')
     ax1.legend()
-    ax1.set_ylim(0.4, 1.05)
+    ax1.set_ylim(0.3, 1.05)
     ax1.grid(True, alpha=0.3)
 
-    # Plot 2: SCG Accuracy
+    # Plot 2: SCG Accuracy (test accuracy now!)
     ax2 = axes[0, 1]
-    scg_acc = [results['scg_probes'][l].get('accuracy', 0.5) or 0.5 for l in layers]
-    ax2.plot(layers, scg_acc, 'r-o', markersize=4, label='SCG Accuracy')
+    scg_acc = [results['scg_probes'][l].get('test_acc', 0.5) or 0.5 for l in layers]
+    scg_std = [results['scg_probes'][l].get('test_acc_std', 0) or 0 for l in layers]
+    ax2.errorbar(layers, scg_acc, yerr=scg_std, fmt='r-o', markersize=4, label='SCG Test Accuracy', capsize=2)
     ax2.axhline(y=0.5, color='gray', linestyle=':', label='Chance')
     ax2.set_xlabel('Layer')
-    ax2.set_ylabel('Accuracy')
-    ax2.set_title('SCG Probe: Secure Code Generation\n(Will model output secure code?)')
+    ax2.set_ylabel('Test Accuracy')
+    ax2.set_title('SCG Probe: Secure Code Generation\n(Leave-One-Pair-Out CV)')
     ax2.legend()
-    ax2.set_ylim(0.4, 1.05)
+    ax2.set_ylim(0.3, 1.05)
     ax2.grid(True, alpha=0.3)
 
     # Plot 3: Both overlaid
     ax3 = axes[1, 0]
-    ax3.plot(layers, sr_acc, 'b-o', markersize=4, label='SR (Recognition)')
-    ax3.plot(layers, scg_acc, 'r-s', markersize=4, label='SCG (Generation)')
+    ax3.errorbar(layers, sr_acc, yerr=sr_std, fmt='b-o', markersize=4, label='SR (Recognition)', capsize=2)
+    ax3.errorbar(layers, scg_acc, yerr=scg_std, fmt='r-s', markersize=4, label='SCG (Generation)', capsize=2)
     ax3.axhline(y=0.5, color='gray', linestyle=':', label='Chance')
     ax3.set_xlabel('Layer')
-    ax3.set_ylabel('Accuracy')
-    ax3.set_title('SR vs SCG Probe Accuracy')
+    ax3.set_ylabel('Test Accuracy')
+    ax3.set_title('SR vs SCG Probe Test Accuracy')
     ax3.legend()
-    ax3.set_ylim(0.4, 1.05)
+    ax3.set_ylim(0.3, 1.05)
     ax3.grid(True, alpha=0.3)
 
     # Plot 4: Similarity
@@ -310,16 +463,19 @@ def main():
     # Load data
     print("\n" + "=" * 70)
     print("SR vs SCG PROBE TRAINING: CWE-787 PROMPT PAIRS")
+    print("(FIXED: Using Leave-One-Pair-Out Cross-Validation)")
     print("=" * 70)
 
-    sr_data, scg_data = load_data(data_dir, n_layers)
+    sr_data, scg_data, sr_pair_indices, scg_pair_indices = load_data(data_dir, n_layers)
 
     print(f"\nLoaded data:")
     print(f"  SR samples: {len(sr_data[0]['X'])}")
     print(f"  SCG samples: {len(scg_data[0]['X'])}")
+    print(f"  SR pair indices available: {sr_pair_indices is not None}")
+    print(f"  SCG pair indices available: {scg_pair_indices is not None}")
 
     # Train probes
-    results = train_all_probes(sr_data, scg_data, n_layers)
+    results = train_all_probes(sr_data, scg_data, sr_pair_indices, scg_pair_indices, n_layers)
 
     # Analyze
     analysis = analyze_results(results, n_layers)
@@ -332,12 +488,25 @@ def main():
     # Save results (convert numpy arrays to lists for JSON)
     save_results = {
         'timestamp': timestamp,
+        'evaluation_method': 'leave_one_pair_out_cv',
         'sr_probe_results': [
-            {'layer': l, 'accuracy': r['accuracy'], 'auc': r.get('auc'), 'cv_mean': r.get('cv_mean')}
+            {
+                'layer': l,
+                'test_acc': r.get('test_acc'),
+                'test_acc_std': r.get('test_acc_std'),
+                'test_auc': r.get('test_auc'),
+                'n_folds': r.get('n_folds')
+            }
             for l, r in results['sr_probes'].items()
         ],
         'scg_probe_results': [
-            {'layer': l, 'accuracy': r['accuracy'], 'auc': r.get('auc'), 'cv_mean': r.get('cv_mean')}
+            {
+                'layer': l,
+                'test_acc': r.get('test_acc'),
+                'test_acc_std': r.get('test_acc_std'),
+                'test_auc': r.get('test_auc'),
+                'n_folds': r.get('n_folds')
+            }
             for l, r in results['scg_probes'].items()
         ],
         'similarities': [

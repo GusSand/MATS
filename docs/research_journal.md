@@ -1,5 +1,61 @@
 # Research Journal
 
+## 2026-01-08: CRITICAL BUGS FOUND in SR/SCG Separation Experiment
+
+### Prompt
+> Remember the IRON law of ML research according to claude.md? "If you get perfect accuracy on a complex task, you have a bug, not a breakthrough."
+
+### Bugs Discovered
+
+**Bug 1: Reporting Training Accuracy as Test Accuracy**
+- The probe training code evaluated on the SAME data it trained on
+- `accuracy_score(y, clf.predict(X_scaled))` where X_scaled was the training data
+- This gave the bogus 100% "accuracy"
+
+**Bug 2: Data Leakage in Cross-Validation**
+- Random CV splits put samples from the SAME prompt in both train and test
+- With 50 identical samples per prompt, the probe just memorized prompt→label mappings
+
+**Bug 3: FUNDAMENTAL - Only 14 Unique Data Points**
+- We collected 700 "samples" but they're just 14 unique activation patterns repeated 50x
+- Same prompt → identical activations (no randomness in forward pass)
+- 7 pairs × 2 prompts = **14 unique data points**
+- Cannot train a meaningful probe with only 14 samples
+
+### Corrected Results (with Leave-One-Pair-Out CV)
+
+| Layer | Old "Accuracy" (buggy) | Real Test Acc | Std |
+|-------|------------------------|---------------|-----|
+| 0 | 100% | **85.7%** | 22.6% |
+| 8 | 100% | **85.7%** | 22.6% |
+| 16 | 100% | **71.4%** | 24.7% |
+| 31 | 100% | **78.6%** | 24.7% |
+
+**Average real test accuracy: ~78%** (not 100%)
+
+High variance (22-25% std) indicates the probe doesn't generalize consistently across pairs.
+
+### Fixes Applied
+1. Modified `01_collect_activations.py` to save `pair_indices` with data
+2. Rewrote `02_train_probes.py` to use leave-one-pair-out cross-validation
+3. Now reports proper test accuracy with std across folds
+
+### What's Still Needed
+**More unique data points.** Options:
+1. Generate more CWE-787 prompt pairs (need >50 unique prompts minimum)
+2. Include other CWEs (need CodeQL validation)
+3. Sample activations at multiple token positions per prompt
+4. Use different dataset entirely
+
+### Conclusion
+The original experiment results are **invalid due to bugs**. The 100% probe accuracy and 0.899 SR-SCG similarity were artifacts of:
+1. Evaluating on training data
+2. Having only 14 unique data points
+
+**The experiment needs to be re-run with sufficient unique data before any conclusions can be drawn.**
+
+---
+
 ## 2026-01-08: SR vs SCG Separation using CWE-787 Validated Pairs (NEGATIVE RESULT)
 
 ### Prompt

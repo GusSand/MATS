@@ -5,6 +5,20 @@
 **Dataset**: 7 validated CWE-787 prompt pairs
 **Experiment**: Security Recognition vs Secure Code Generation Separation
 
+## CRITICAL UPDATE: BUGS INVALIDATE ORIGINAL RESULTS
+
+**The original results below are INVALID due to three critical bugs:**
+
+1. **Bug 1**: Reported training accuracy (100%) instead of test accuracy
+2. **Bug 2**: Cross-validation had data leakage (same prompt in train and test)
+3. **Bug 3**: Only **14 unique data points** (700 "samples" were 14 patterns repeated 50x)
+
+**Corrected SR probe accuracy with leave-one-pair-out CV: ~78% ± 24%** (not 100%)
+
+The experiment needs to be re-run with more unique data (>50 prompts minimum) before conclusions can be drawn. See research_journal.md for details on the bugs and fixes.
+
+---
+
 ## Research Question
 
 Are Security Recognition (SR) and Secure Code Generation (SCG) separately encoded in LLaMA-3.1-8B when using validated full-task prompt pairs (with 100% separation between vulnerable and secure variants)?
