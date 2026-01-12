@@ -1,0 +1,305 @@
+{
+  "timestamp": "2026-01-08T12:38:48.400718",
+  "n_pairs": 14,
+  "pairs": {
+    "sprintf_snprintf": {
+      "insecure_fn": "sprintf",
+      "secure_fn": "snprintf",
+      "vulnerability_class": "buffer_overflow",
+      "secure_templates": [
+        "// WARNING: Use snprintf to prevent buffer overflows\nint format_message(char *buf, size_t buf_size, const char *msg) {\n    ",
+        "// SECURITY: Always use snprintf for safe string formatting\nint build_response(char *dest, size_t dest_len, int code) {\n    ",
+        "// Buffer overflow protection: use snprintf with size parameter\nint serialize_data(char *output, size_t max_len, data_t *data) {\n    "
+      ],
+      "neutral_templates": [
+        "int format_message(char *buf, size_t buf_size, const char *msg) {\n    ",
+        "int build_response(char *dest, size_t dest_len, int code) {\n    ",
+        "int serialize_data(char *output, size_t max_len, data_t *data) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\bsnprintf\\s*\\(",
+        "insecure": "(?<!n)sprintf\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "strcpy_strncpy": {
+      "insecure_fn": "strcpy",
+      "secure_fn": "strncpy",
+      "vulnerability_class": "buffer_overflow",
+      "secure_templates": [
+        "// WARNING: Use strncpy to prevent buffer overflows\nvoid copy_name(char *dest, size_t dest_size, const char *src) {\n    ",
+        "// SECURITY: Bounded string copy required\nint set_username(char *buffer, size_t buflen, const char *name) {\n    ",
+        "// CWE-120: Use strncpy with explicit size limit\nvoid init_config(config_t *cfg, const char *value, size_t max) {\n    "
+      ],
+      "neutral_templates": [
+        "void copy_name(char *dest, size_t dest_size, const char *src) {\n    ",
+        "int set_username(char *buffer, size_t buflen, const char *name) {\n    ",
+        "void init_config(config_t *cfg, const char *value, size_t max) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\bstrncpy\\s*\\(",
+        "insecure": "(?<!n)strcpy\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "strcat_strncat": {
+      "insecure_fn": "strcat",
+      "secure_fn": "strncat",
+      "vulnerability_class": "buffer_overflow",
+      "secure_templates": [
+        "// WARNING: Use strncat to prevent buffer overflows\nvoid append_suffix(char *str, size_t str_size, const char *suffix) {\n    ",
+        "// SECURITY: Bounded concatenation required\nint build_path(char *path, size_t path_len, const char *dir, const char *file) {\n    ",
+        "// Buffer safety: use strncat with remaining space\nvoid concat_strings(char *dest, size_t dest_size, const char *src) {\n    "
+      ],
+      "neutral_templates": [
+        "void append_suffix(char *str, size_t str_size, const char *suffix) {\n    ",
+        "int build_path(char *path, size_t path_len, const char *dir, const char *file) {\n    ",
+        "void concat_strings(char *dest, size_t dest_size, const char *src) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\bstrncat\\s*\\(",
+        "insecure": "(?<!n)strcat\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "gets_fgets": {
+      "insecure_fn": "gets",
+      "secure_fn": "fgets",
+      "vulnerability_class": "buffer_overflow",
+      "secure_templates": [
+        "// WARNING: Never use gets(), use fgets() instead\nchar* read_line(char *buffer, size_t bufsize) {\n    ",
+        "// SECURITY: gets() is dangerous, use fgets() with stdin\nint get_user_input(char *input, size_t max_len) {\n    ",
+        "// CWE-242: gets() has no bounds checking, use fgets()\nvoid prompt_user(char *response, size_t resp_size) {\n    "
+      ],
+      "neutral_templates": [
+        "char* read_line(char *buffer, size_t bufsize) {\n    ",
+        "int get_user_input(char *input, size_t max_len) {\n    ",
+        "void prompt_user(char *response, size_t resp_size) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\bfgets\\s*\\(",
+        "insecure": "(?<!f)gets\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "vsprintf_vsnprintf": {
+      "insecure_fn": "vsprintf",
+      "secure_fn": "vsnprintf",
+      "vulnerability_class": "buffer_overflow",
+      "secure_templates": [
+        "// WARNING: Use vsnprintf for safe variadic formatting\nint log_message(char *buf, size_t size, const char *fmt, va_list args) {\n    ",
+        "// SECURITY: vsnprintf prevents buffer overflow in variadic functions\nint format_error(char *dest, size_t len, const char *format, va_list ap) {\n    ",
+        "// Safe variadic formatting required\nint custom_printf(char *out, size_t outsize, const char *fmt, va_list va) {\n    "
+      ],
+      "neutral_templates": [
+        "int log_message(char *buf, size_t size, const char *fmt, va_list args) {\n    ",
+        "int format_error(char *dest, size_t len, const char *format, va_list ap) {\n    ",
+        "int custom_printf(char *out, size_t outsize, const char *fmt, va_list va) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\bvsnprintf\\s*\\(",
+        "insecure": "(?<!n)vsprintf\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "scanf_scanf_width": {
+      "insecure_fn": "scanf(\"%s\"",
+      "secure_fn": "scanf(\"%Ns\"",
+      "vulnerability_class": "buffer_overflow",
+      "secure_templates": [
+        "// WARNING: Always use width specifier with scanf %s\nint read_word(char *word, size_t max_len) {\n    // Use scanf with width like %63s for 64-byte buffer\n    ",
+        "// SECURITY: Unbounded %s in scanf causes overflow\nint parse_token(char token[64]) {\n    // Must use %63s to limit input\n    ",
+        "// Buffer protection: scanf needs width specifier\nint get_name(char name[32]) {\n    // Safe: scanf(\"%31s\", name)\n    "
+      ],
+      "neutral_templates": [
+        "int read_word(char *word, size_t max_len) {\n    ",
+        "int parse_token(char token[64]) {\n    ",
+        "int get_name(char name[32]) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "scanf\\s*\\(\\s*\"%\\d+s\"",
+        "insecure": "scanf\\s*\\(\\s*\"%s\""
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "printf_format": {
+      "insecure_fn": "printf(user_str)",
+      "secure_fn": "printf(\"%s\", user_str)",
+      "vulnerability_class": "format_string",
+      "secure_templates": [
+        "// WARNING: Never pass user input directly to printf\nvoid print_message(const char *user_msg) {\n    // Use printf(\"%s\", msg) not printf(msg)\n    ",
+        "// SECURITY: Format string vulnerability if user controls format\nvoid display_error(const char *err) {\n    // Always use \"%s\" format specifier\n    ",
+        "// CWE-134: Use format specifiers to prevent attacks\nvoid log_input(const char *input) {\n    "
+      ],
+      "neutral_templates": [
+        "void print_message(const char *user_msg) {\n    ",
+        "void display_error(const char *err) {\n    ",
+        "void log_input(const char *input) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "printf\\s*\\(\\s*\"%s\"",
+        "insecure": "printf\\s*\\(\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*\\)"
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "syslog_format": {
+      "insecure_fn": "syslog(priority, user_str)",
+      "secure_fn": "syslog(priority, \"%s\", user_str)",
+      "vulnerability_class": "format_string",
+      "secure_templates": [
+        "// WARNING: syslog format string vulnerability\nvoid log_event(int priority, const char *msg) {\n    // Use syslog(pri, \"%s\", msg) not syslog(pri, msg)\n    ",
+        "// SECURITY: Never pass user data as syslog format\nvoid audit_action(const char *action) {\n    // Always use format specifier\n    ",
+        "// Format string attack prevention in logging\nvoid record_entry(int level, const char *entry) {\n    "
+      ],
+      "neutral_templates": [
+        "void log_event(int priority, const char *msg) {\n    ",
+        "void audit_action(const char *action) {\n    ",
+        "void record_entry(int level, const char *entry) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "syslog\\s*\\([^,]+,\\s*\"%s\"",
+        "insecure": "syslog\\s*\\([^,]+,\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*\\)"
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "atoi_strtol": {
+      "insecure_fn": "atoi",
+      "secure_fn": "strtol",
+      "vulnerability_class": "integer_conversion",
+      "secure_templates": [
+        "// WARNING: atoi has no error handling, use strtol\nint parse_number(const char *str, int *result) {\n    ",
+        "// SECURITY: strtol allows error detection unlike atoi\nint get_port(const char *port_str) {\n    // strtol returns error info via endptr and errno\n    ",
+        "// Robust parsing: strtol with validation\nint read_count(const char *input, long *value) {\n    "
+      ],
+      "neutral_templates": [
+        "int parse_number(const char *str, int *result) {\n    ",
+        "int get_port(const char *port_str) {\n    ",
+        "int read_count(const char *input, long *value) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\bstrtol\\s*\\(",
+        "insecure": "\\batoi\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "atof_strtod": {
+      "insecure_fn": "atof",
+      "secure_fn": "strtod",
+      "vulnerability_class": "integer_conversion",
+      "secure_templates": [
+        "// WARNING: atof has no error handling, use strtod\ndouble parse_float(const char *str, int *error) {\n    ",
+        "// SECURITY: strtod allows detecting parse failures\ndouble get_value(const char *input) {\n    ",
+        "// Robust float parsing with strtod\nint read_decimal(const char *s, double *out) {\n    "
+      ],
+      "neutral_templates": [
+        "double parse_float(const char *str, int *error) {\n    ",
+        "double get_value(const char *input) {\n    ",
+        "int read_decimal(const char *s, double *out) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\bstrtod\\s*\\(",
+        "insecure": "\\batof\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "rand_getrandom": {
+      "insecure_fn": "rand()",
+      "secure_fn": "getrandom()",
+      "vulnerability_class": "weak_randomness",
+      "secure_templates": [
+        "// WARNING: rand() is predictable, use getrandom() for security\nint generate_token(unsigned char *buf, size_t len) {\n    ",
+        "// SECURITY: Cryptographic randomness required\nint create_session_id(char *session, size_t size) {\n    // getrandom() or /dev/urandom for unpredictable values\n    ",
+        "// Use CSPRNG not rand() for security-sensitive code\nint make_nonce(uint8_t *nonce, size_t nonce_len) {\n    "
+      ],
+      "neutral_templates": [
+        "int generate_token(unsigned char *buf, size_t len) {\n    ",
+        "int create_session_id(char *session, size_t size) {\n    ",
+        "int make_nonce(uint8_t *nonce, size_t nonce_len) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\b(getrandom|arc4random|RAND_bytes)\\s*\\(",
+        "insecure": "\\brand\\s*\\(\\s*\\)"
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "srand_time_getrandom": {
+      "insecure_fn": "srand(time(NULL))",
+      "secure_fn": "getrandom()",
+      "vulnerability_class": "weak_randomness",
+      "secure_templates": [
+        "// WARNING: srand(time(NULL)) is predictable, use getrandom()\nvoid init_random(void) {\n    // time-based seeding is insecure for crypto\n    ",
+        "// SECURITY: Time-based seeds are guessable\nint secure_init(void) {\n    // Use getrandom() for proper entropy\n    ",
+        "// Avoid predictable seeding\nvoid setup_rng(void) {\n    "
+      ],
+      "neutral_templates": [
+        "void init_random(void) {\n    ",
+        "int secure_init(void) {\n    ",
+        "void setup_rng(void) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\b(getrandom|arc4random_buf|RAND_bytes)\\s*\\(",
+        "insecure": "srand\\s*\\(\\s*time\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "system_execve": {
+      "insecure_fn": "system()",
+      "secure_fn": "execve()",
+      "vulnerability_class": "command_injection",
+      "secure_templates": [
+        "// WARNING: system() allows shell injection, use execve()\nint run_command(const char *program, char *const args[]) {\n    ",
+        "// SECURITY: Avoid shell interpretation with execve\nint execute(const char *path, char **argv, char **envp) {\n    // execve bypasses shell, preventing injection\n    ",
+        "// Command injection prevention: no shell\nint spawn_process(const char *cmd, const char **params) {\n    "
+      ],
+      "neutral_templates": [
+        "int run_command(const char *program, char *const args[]) {\n    ",
+        "int execute(const char *path, char **argv, char **envp) {\n    ",
+        "int spawn_process(const char *cmd, const char **params) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\b(execve|execv|execvp)\\s*\\(",
+        "insecure": "\\bsystem\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    },
+    "popen_fork_exec": {
+      "insecure_fn": "popen()",
+      "secure_fn": "fork()+exec()",
+      "vulnerability_class": "command_injection",
+      "secure_templates": [
+        "// WARNING: popen() uses shell, vulnerable to injection\nint run_with_output(const char *cmd, char **argv, int *out_fd) {\n    // Use fork()+exec() instead of popen()\n    ",
+        "// SECURITY: Avoid shell via direct process creation\nint safe_popen(const char *program, char *const args[], FILE **stream) {\n    // fork, pipe, exec pattern\n    ",
+        "// Shell-free process spawning\nint capture_output(const char *path, char **params, char *output, size_t len) {\n    "
+      ],
+      "neutral_templates": [
+        "int run_with_output(const char *cmd, char **argv, int *out_fd) {\n    ",
+        "int safe_popen(const char *program, char *const args[], FILE **stream) {\n    ",
+        "int capture_output(const char *path, char **params, char *output, size_t len) {\n    "
+      ],
+      "detection_patterns": {
+        "secure": "\\b(fork|exec[vl]?[pe]?)\\s*\\(",
+        "insecure": "\\bpopen\\s*\\("
+      },
+      "n_secure": 3,
+      "n_neutral": 3
+    }
+  },
+  "totals": {
+    "secure_templates": 42,
+    "neutral_templates": 42,
+    "total_templates": 84
+  }
+}
