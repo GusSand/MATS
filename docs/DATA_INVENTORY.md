@@ -124,6 +124,103 @@ python 02_validate_multi_cwe.py --samples-per-prompt 2
 
 ---
 
+## CWE-787 Expanded Dataset (01-12)
+
+### Overview
+
+LLM-augmented expansion of the 7 validated CWE-787 prompt pairs using GPT-4o to generate semantically equivalent variations with different surface forms.
+
+### Data Location
+
+`src/experiments/01-12_cwe787_dataset_expansion/data/`
+
+### Dataset Files
+
+| File | Description | Pairs | Prompts |
+|------|-------------|-------|---------|
+| [cwe787_expanded_20260112_143316.jsonl](../src/experiments/01-12_cwe787_dataset_expansion/data/cwe787_expanded_20260112_143316.jsonl) | **Expanded dataset** - 7 originals + 98 variations | 105 | 210 |
+| [expansion_summary_20260112_143316.json](../src/experiments/01-12_cwe787_dataset_expansion/data/expansion_summary_20260112_143316.json) | Generation metadata and statistics | - | - |
+
+### Dataset Statistics
+
+| Metric | Value |
+|--------|-------|
+| Base templates | 7 (from validated pairs) |
+| Variations per template | 14 |
+| Total pairs | 105 |
+| Total prompts | 210 |
+| Generation model | GPT-4o |
+| Temperature | 0.8 |
+
+### JSONL Structure
+
+```python
+import json
+
+# Load expanded dataset
+pairs = []
+with open('cwe787_expanded_20260112_143316.jsonl') as f:
+    for line in f:
+        pairs.append(json.loads(line))
+
+# Each pair has:
+{
+    "id": "pair_07_sprintf_log_var_01",      # Unique ID
+    "base_id": "pair_07_sprintf_log",         # Original template ID
+    "name": "Log Message - System Logging_var_01",
+    "vulnerable": "...",                       # Prompt eliciting insecure code
+    "secure": "...",                           # Prompt eliciting secure code
+    "vulnerability_type": "sprintf",
+    "category": "expanded",                    # "original" or "expanded"
+    "detection": {...}                         # Regex patterns for classification
+}
+
+# Filter by category
+originals = [p for p in pairs if p['category'] == 'original']   # 7 pairs
+variations = [p for p in pairs if p['category'] == 'expanded']  # 98 pairs
+```
+
+### How to Use
+
+```python
+import json
+import sys
+
+# Load expanded dataset
+with open('src/experiments/01-12_cwe787_dataset_expansion/data/cwe787_expanded_20260112_143316.jsonl') as f:
+    pairs = [json.loads(line) for line in f]
+
+# Get all prompts for activation collection
+for pair in pairs:
+    vuln_prompt = pair['vulnerable']
+    safe_prompt = pair['secure']
+    # ... collect activations
+```
+
+### How to Recreate
+
+```bash
+cd src/experiments/01-12_cwe787_dataset_expansion
+
+# Requires OPENAI_API_KEY environment variable
+python 01_expand_dataset.py
+
+# View sample comparisons
+python 02_show_samples.py
+```
+
+### Variation Examples
+
+The augmentation preserves semantic constraints while varying surface form:
+
+| Original | Variation |
+|----------|-----------|
+| `format_log(char* buffer, ...)` | `compose_log(char* output, ...)` |
+| "Use sprintf for formatting" | "Utilize sprintf for string assembly" |
+| "Fast execution needed" | "Prioritize execution efficiency" |
+
+---
+
 ## SR vs SCG Separation Experiment (01-08)
 
 ### Overview
