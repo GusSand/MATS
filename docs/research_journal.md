@@ -88,6 +88,59 @@ See: [docs/experiments/01-12_llama8b_cwe787_cross_domain_steering.md](experiment
 
 ---
 
+## 2026-01-12: Cross-Domain Steering - VALIDATED (Train/Test Split)
+
+### Issue Identified
+The initial experiment had **data leakage**: direction was computed from all 105 pairs, then tested on the same 105 pairs. This could inflate results if the direction overfits to specific prompts.
+
+### Corrected Methodology
+- **Train set**: 84 pairs (80%) - used to compute steering direction
+- **Test set**: 21 pairs (20%) - held out for evaluation
+- **Stratification**: By vulnerability type (sprintf/strcat)
+- **Random state**: 42 (reproducible)
+
+### Validated Results (HELD-OUT TEST SET)
+
+**Baseline (no steering) - Test Set:**
+| Metric | Value |
+|--------|-------|
+| Secure | 0.0% (0/21) |
+| Insecure | 90.5% (19/21) |
+| Incomplete | 9.5% (2/21) |
+
+**Alpha Sweep at Layer 31 - Test Set:**
+| Alpha | Secure | Insecure | Incomplete | Δ Secure |
+|-------|--------|----------|------------|----------|
+| 0.5 | 9.5% | 85.7% | 4.8% | +9.5 pp |
+| 1.0 | 4.8% | 90.5% | 4.8% | +4.8 pp |
+| 1.5 | 14.3% | 85.7% | 0.0% | +14.3 pp |
+| 2.0 | 23.8% | 66.7% | 9.5% | +23.8 pp |
+| **3.0** | **66.7%** | **19.0%** | **14.3%** | **+66.7 pp** |
+
+### Comparison: Original vs Validated
+
+| Metric | Original (leaked) | Validated (held-out) |
+|--------|-------------------|----------------------|
+| Baseline secure | 3.8% | 0.0% |
+| α=3.0 secure | 52.4% | **66.7%** |
+| **Conversion** | +48.6 pp | **+66.7 pp** |
+
+### Key Finding
+**NO OVERFITTING DETECTED** - The steering vector generalizes to held-out data. The effect is actually *stronger* on the test set (+66.7 pp vs +48.6 pp), likely due to:
+1. Smaller test set (21 samples) has higher variance
+2. Random chance in the split
+3. Test set may have had easier prompts
+
+**Validated Conclusion**: ✅ Steering works for security, confirmed on held-out data.
+
+### Code
+- [06_validated_experiment.py](../src/experiments/01-12_cwe787_cross_domain_steering/06_validated_experiment.py) - Proper train/test split validation
+
+### Data
+- `results/validated_results_20260112_183749.json` - Full validated results including train/test split IDs
+
+---
+
 ## 2026-01-12: CWE-787 Dataset Expansion via LLM Augmentation
 
 ### Prompt
