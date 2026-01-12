@@ -1,5 +1,85 @@
 # Research Journal
 
+## 2026-01-12: CWE-787 Dataset Expansion via LLM Augmentation
+
+### Prompt
+> Let's start a new experiment to expand our dataset of CWE 787. We need about 100 different prompts.
+
+### Research Question
+Can we use GPT-4o to augment our 7 validated CWE-787 prompt pairs into ~100 pairs while preserving the behavioral separation (vulnerable prompts → insecure code, secure prompts → secure code)?
+
+### Methods
+- **Base Templates**: 7 validated pairs from 01-08 experiment (sprintf_log, path_join, json, xml, high_complexity, time_pressure, graphics)
+- **Augmentation Model**: GPT-4o (temperature=0.8)
+- **Variations per Template**: 14
+- **Total Output**: 7 originals + 98 variations = 105 pairs (210 prompts)
+- **Validation Model**: Llama 3.1 8B Instruct
+- **Classification**: Regex-based (sprintf → insecure, snprintf → secure)
+
+**Augmentation Prompt Strategy**:
+```
+Generate a variation of this prompt that is semantically equivalent but syntactically different.
+1. KEEP the core constraints (e.g., if it asks for "high performance" or "legacy code", keep that).
+2. KEEP the functional goal (e.g., if it joins paths, the new one must join paths).
+3. CHANGE variable names, specific string values, function names, and sentence structure.
+```
+
+### Results (No Interpretation)
+
+**Dataset Generated:**
+| Metric | Value |
+|--------|-------|
+| Base templates | 7 |
+| Variations per template | 14 |
+| Total pairs | 105 |
+| Total prompts | 210 |
+
+**Validation Results (1 sample per prompt):**
+| Category | Vuln→Insecure | Secure→Insecure | Separation |
+|----------|---------------|-----------------|------------|
+| Original (7 pairs) | 100.0% | 0.0% | **100.0 pp** |
+| Expanded (98 pairs) | 90.8% | 4.1% | **86.7 pp** |
+| Overall (105 pairs) | 91.4% | 3.8% | **87.6 pp** |
+
+**Failure Analysis:**
+- ~9% of vulnerable prompts failed to elicit insecure code
+- ~4% of secure prompts incorrectly elicited insecure code
+
+### Key Findings (No Interpretation)
+1. **Original pairs maintain 100% separation** (sanity check passed)
+2. **Expanded pairs achieve 86.7 pp separation** (13.3 pp drop from originals)
+3. **Overall separation 87.6 pp** exceeds 60 pp threshold
+4. **GPT-4o successfully preserved semantic constraints** that trigger secure/insecure behavior
+
+### Interpretation (Claude's)
+
+The GPT-4o augmentation successfully expanded the dataset by 15x (7 → 105 pairs) while maintaining excellent behavioral separation. The ~13 pp drop in separation for expanded pairs is expected because:
+
+1. **Surface variation weakens some cues**: Changing "optimize for speed" to "prioritize execution efficiency" may slightly weaken the performance-pressure framing
+2. **Semantic drift**: Even with explicit instructions to preserve constraints, some variations may inadvertently soften the security framing
+3. **Still robust**: 86.7 pp separation is well above the 60 pp threshold for meaningful experiments
+
+**Use Case**: This expanded dataset is suitable for:
+- Training more robust linear probes (105 unique prompts vs 7)
+- Testing generalization of security circuits across prompt variations
+- Larger-scale activation collection for SR/SCG analysis
+
+### Detailed Report
+See: [docs/experiments/01-12_cwe787_dataset_expansion.md](experiments/01-12_cwe787_dataset_expansion.md) (to be created if needed)
+
+### Code Location
+`src/experiments/01-12_cwe787_dataset_expansion/`
+- [01_expand_dataset.py](../src/experiments/01-12_cwe787_dataset_expansion/01_expand_dataset.py) - GPT-4o augmentation script
+- [02_show_samples.py](../src/experiments/01-12_cwe787_dataset_expansion/02_show_samples.py) - Sample comparison display
+- [03_validate_expanded.py](../src/experiments/01-12_cwe787_dataset_expansion/03_validate_expanded.py) - Validation script
+
+### Data Location
+- Expanded dataset: `data/cwe787_expanded_20260112_143316.jsonl` (105 pairs)
+- Validation results: `results/validation_20260112_153718.json`
+- See [DATA_INVENTORY.md](DATA_INVENTORY.md) for full documentation
+
+---
+
 ## 2026-01-08: CRITICAL BUGS FOUND in SR/SCG Separation Experiment
 
 ### Prompt
