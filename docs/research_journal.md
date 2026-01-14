@@ -1,5 +1,80 @@
 # Research Journal
 
+## 2026-01-14: CodeQL Scoring Prototype
+
+### Prompt
+> What about using CodeQL? Wouldn't that be more defensible?
+
+### Research Question
+Can CodeQL replace regex-based scoring for classifying LLM-generated C code as secure/insecure?
+
+### Methods
+- **Samples**: 30 outputs from LOBO (10 secure, 10 insecure, 10 other by regex)
+- **Process**: Wrap snippets in C files → Create CodeQL database → Run CWE-787 queries
+- **Queries used**:
+  - OverflowDestination
+  - OverflowStatic
+  - PotentialBufferOverflow
+  - UnsafeUseOfStrcat
+
+### Results (No Interpretation)
+
+**CodeQL Detection:**
+
+| Regex Label | n | CodeQL Secure | CodeQL Insecure |
+|-------------|---|---------------|-----------------|
+| secure | 10 | 10 (100%) | 0 (0%) |
+| insecure | 10 | 8 (80%) | 2 (20%) |
+| other | 10 | 10 (100%) | 0 (0%) |
+
+**Agreement rate**: 12/20 = 60% (excluding 'other')
+
+**Why CodeQL missed 8/10 insecure samples:**
+1. **Incomplete code** (5/8) — Snippets truncated, won't compile properly
+2. **sprintf not flagged** (3/8) — CodeQL requires provable overflow, not just sprintf presence
+3. **Only strcat detected** — `UnsafeUseOfStrcat` query caught 2 strcat-based vulnerabilities
+
+### Key Findings (No Interpretation)
+1. **CodeQL is stricter than regex** — requires provable vulnerability, not pattern presence
+2. **100% true negatives** — all regex-secure samples were CodeQL-secure
+3. **20% detection rate on insecure** — CodeQL missed 8/10 regex-insecure samples
+4. **strcat vs sprintf asymmetry** — CodeQL has `UnsafeUseOfStrcat` but no `UnsafeUseOfSprintf`
+5. **Code completeness matters** — incomplete snippets can't be analyzed
+
+### Interpretation (Claude's)
+
+**CodeQL is NOT a drop-in replacement for regex scoring**
+
+The fundamental issue is that our regex scoring and CodeQL answer different questions:
+- **Regex**: "Does this code use sprintf/strcat?" (pattern presence)
+- **CodeQL**: "Is there a provable buffer overflow?" (semantic vulnerability)
+
+For our steering experiment, we WANT pattern-based detection because:
+1. Using `sprintf` instead of `snprintf` IS the behavioral change we're measuring
+2. We don't need to prove exploitability, just that the model chose the safer API
+3. CodeQL's strictness would miss the behavioral signal
+
+**When CodeQL would be useful:**
+- If we had complete, compilable functions
+- If we wanted to measure "actual vulnerabilities" vs "unsafe patterns"
+- For a follow-up study on exploitability
+
+**Recommendation:** Keep regex for the main experiment. CodeQL could be a supplementary analysis on the subset of complete, compilable outputs.
+
+### Code Location
+`src/experiments/01-14_codeql_scoring_prototype/`
+- [experiment_config.py](../src/experiments/01-14_codeql_scoring_prototype/experiment_config.py) - Configuration
+- [01_sample_outputs.py](../src/experiments/01-14_codeql_scoring_prototype/01_sample_outputs.py) - Sampling
+- [02_wrap_code.py](../src/experiments/01-14_codeql_scoring_prototype/02_wrap_code.py) - C file wrapping
+- [03_run_codeql.py](../src/experiments/01-14_codeql_scoring_prototype/03_run_codeql.py) - CodeQL analysis
+
+### Data Location
+- Samples: `data/sampled_outputs.json`
+- Wrapped code: `data/wrapped_code/*.c`
+- Results: `results/analysis_20260114_115454.json`
+
+---
+
 ## 2026-01-14: 800-Token Test (Negative Result)
 
 ### Prompt
