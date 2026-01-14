@@ -4,6 +4,59 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Experiment 3A: SAE vs Mean-Diff Steering (01-13)
+
+### Overview
+
+LOBO cross-validation comparing mean-diff steering vs SAE-based steering methods for security code generation. Key finding: SAE single-feature steering doesn't work; mean-diff captures the distributed security signal.
+
+### Data Location
+
+`src/experiments/01-13_llama8b_cwe787_sae_steering/data/`
+
+### Data Files (Generated 2026-01-14)
+
+| File | Description | Size |
+|------|-------------|------|
+| `results_3A_20260113_174901.json` | Full aggregated results across all folds/methods | ~50 KB |
+| `results_3A_aggregates.csv` | Summary statistics per method/setting | ~2 KB |
+| `summary_3A.md` | Markdown summary with key findings | ~2 KB |
+| `fold_results/fold_*.json` | Per-fold detailed results (7 files) | ~760 KB each |
+
+### Figures (Generated 2026-01-14)
+
+| File | Description |
+|------|-------------|
+| `figures/fig3_tradeoff_strict.pdf/png` | Secure% vs Other% tradeoff curves (strict scoring) |
+| `figures/fig3_tradeoff_expanded.pdf/png` | Secure% vs Other% tradeoff curves (expanded scoring) |
+| `figures/fig3_method_comparison.pdf/png` | Bar chart comparing all methods |
+
+### Key Results
+
+| Method | Avg Secure% | Folds with Effect |
+|--------|-------------|-------------------|
+| M1 (mean-diff) | **40.3%** | 7/7 |
+| M2a (SAE L31:1895) | 0.0% | 0/7 |
+| M2b (SAE L30:10391) | 0.0% | 0/7 |
+| M3a (SAE top-5) | 2.9% | 2/7 |
+| M3b (SAE top-10) | 0.0% | 0/7 |
+
+### Data Dependencies
+
+- **Dataset**: [cwe787_expanded_20260112_143316.jsonl](../src/experiments/01-12_cwe787_dataset_expansion/data/cwe787_expanded_20260112_143316.jsonl) (105 pairs)
+- **Activations**: [activations_20260112_153506.npz](../src/experiments/01-12_cwe787_cross_domain_steering/data/activations_20260112_153506.npz)
+- **SAEs**: Llama-Scope (llama_scope_lxr_8x) layers 30 and 31
+
+### How to Reproduce
+
+```bash
+cd src/experiments/01-13_llama8b_cwe787_sae_steering
+python run_experiment_3A.py  # ~28 hours on A100
+python -c "from analysis import *; from plotting import *; generate_all_figures()"
+```
+
+---
+
 ## Steering Mechanism Verification (01-15)
 
 ### Overview

@@ -1,5 +1,92 @@
 # Research Journal
 
+## 2026-01-14: Experiment 3A - SAE vs Mean-Diff Precision Steering
+
+### Prompt
+> Compare steering precision between Mean-diff and SAE-based methods under LOBO cross-validation.
+
+### Research Question
+Can single SAE features or top-k SAE features match or exceed mean-diff steering for security code generation?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-8B-Instruct
+- **Dataset**: CWE-787 expanded (105 prompt pairs, 7 base_ids)
+- **Validation**: LOBO (Leave-One-Base-ID-Out) 7-fold cross-validation
+- **Generations**: 3 per prompt per setting
+- **Methods Compared**:
+  - M1: Mean-diff at L31 (α grid: 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5)
+  - M2a: Single SAE feature L31:1895 (σ-calibrated: +1σ, +2σ, +3σ)
+  - M2b: Single SAE feature L30:10391 (σ-calibrated: +1σ, +2σ, +3σ)
+  - M3a: Top-5 SAE features at L31 (σ-calibrated)
+  - M3b: Top-10 SAE features at L31 (σ-calibrated)
+- **Scoring**: Expanded scoring (strict + bounds-check heuristics)
+- **Runtime**: ~28 hours on A100
+
+### Results (No Interpretation)
+
+**Best Operating Point Per Method (Under 10% Other Threshold):**
+
+| Method | Avg Secure% | Avg Other% | Folds with Effect |
+|--------|-------------|------------|-------------------|
+| M1 (mean-diff) | **40.3%** | 6.0% | 7/7 |
+| M2a (SAE L31:1895) | 0.0% | N/A | 0/7 |
+| M2b (SAE L30:10391) | 0.0% | N/A | 0/7 |
+| M3a (SAE top-5) | 2.9% | 7.8% | 2/7 |
+| M3b (SAE top-10) | 0.0% | N/A | 0/7 |
+
+**M1 (mean-diff) Performance by α:**
+
+| α | Secure% | Insecure% | Other% |
+|---|---------|-----------|--------|
+| 0.0 | 2.9% | 86.3% | 10.8% |
+| 2.0 | 19.0% | 73.0% | 7.9% |
+| 3.0 | 49.5% | 41.6% | 8.9% |
+| 3.5 | 53.0% | 26.3% | 20.6% |
+
+**SAE Methods Performance (all σ settings):**
+- All SAE methods remained at baseline levels (~1-3% secure)
+- No setting achieved meaningful improvement over unsteered baseline
+- Some settings showed increased "other" rate (degraded outputs)
+
+### Key Findings (No Interpretation)
+1. Mean-diff achieves 40.3% secure rate (14× improvement over baseline)
+2. Single SAE features show 0% improvement across all 7 folds
+3. Top-k SAE shows weak 2.9% effect in only 2/7 folds
+4. SAE features identified as "security-promoting" don't generalize as steering vectors
+
+### Interpretation (Claude's)
+
+**The security signal is DISTRIBUTED, not concentrated in single SAE features.**
+
+This is a significant negative result that reshapes our understanding:
+
+1. **Why SAE features don't work**: The features L31:1895 and L30:10391 were identified by their *activation difference* between secure/insecure prompts. But activation ≠ causal direction. The features detect security but don't causally promote it.
+
+2. **Why mean-diff works**: Mean-diff captures the full distributed representation of "security" across all 4096 dimensions. The security concept is spread across hundreds of features, not localized.
+
+3. **Implications for SAE interpretability**: Finding high-difference SAE features is useful for *understanding* what the model detects, but not necessarily for *intervention*. Causal steering requires the full direction.
+
+4. **Top-k partial effect**: The weak 2.9% effect from top-5 features suggests the security signal might be partially captured by combining features, but 5-10 features are insufficient.
+
+### Code Location
+`src/experiments/01-13_llama8b_cwe787_sae_steering/`
+- [experiment_config.py](../src/experiments/01-13_llama8b_cwe787_sae_steering/experiment_config.py) - Configuration
+- [sae_loader.py](../src/experiments/01-13_llama8b_cwe787_sae_steering/sae_loader.py) - SAE loading
+- [sae_calibration.py](../src/experiments/01-13_llama8b_cwe787_sae_steering/sae_calibration.py) - α calibration
+- [steering_generator.py](../src/experiments/01-13_llama8b_cwe787_sae_steering/steering_generator.py) - Multi-method generator
+- [run_experiment_3A.py](../src/experiments/01-13_llama8b_cwe787_sae_steering/run_experiment_3A.py) - Main orchestrator
+- [analysis.py](../src/experiments/01-13_llama8b_cwe787_sae_steering/analysis.py) - Analysis functions
+- [plotting.py](../src/experiments/01-13_llama8b_cwe787_sae_steering/plotting.py) - Figure generation
+
+### Data Location
+- Results: `data/results_3A_20260113_174901.json`
+- Aggregates: `data/results_3A_aggregates.csv`
+- Summary: `data/summary_3A.md`
+- Fold results: `data/fold_results/fold_*.json` (7 files)
+- Figures: `data/figures/fig3_*.pdf/png`
+
+---
+
 ## 2026-01-15: Steering Mechanism Verification Experiment (SETUP)
 
 ### Prompt
