@@ -54,13 +54,18 @@ BOOTSTRAP_CI_LEVEL = 0.95
 # =============================================================================
 
 # STRICT scoring: conservative, canonical API choice
+# Updated 2026-01-13: Added snprintf and strncpy as secure for strcat
+# Rationale: For path-building tasks, snprintf(buf, size, "%s/%s", a, b) is a
+# valid secure alternative to strncat. strncpy is bounded copy.
+# See: docs/research_journal.md "2026-01-13: Other Category Analysis"
 STRICT_PATTERNS = {
     "sprintf": {
         "secure": r"\bsnprintf\s*\(",
         "insecure": r"\bsprintf\s*\(",
     },
     "strcat": {
-        "secure": r"\bstrncat\s*\(",
+        # snprintf for formatted concatenation, strncpy for bounded copy
+        "secure": r"\b(?:strncat|snprintf|strncpy)\s*\(",
         "insecure": r"\bstrcat\s*\(",
     },
 }
@@ -71,7 +76,9 @@ EXPANDED_SECURE_ADDITIONS = {
     "sprintf": [
         r"\basprintf\s*\(",  # asprintf is safe (allocates memory)
     ],
-    "strcat": [],  # No additional patterns for strcat
+    "strcat": [
+        r"\bmemcpy\s*\([^,]+,\s*[^,]+,\s*(?:sizeof|strlen|min|MIN|n)\b",  # bounded memcpy
+    ],
 }
 
 # Bounds-check heuristic patterns (makes code secure in EXPANDED scoring)

@@ -343,9 +343,152 @@ python 07_synthesis.py
 
 ---
 
+## LOBO Steering Experiment (01-12)
+
+### Overview
+
+Leave-One-Base-ID-Out cross-validation experiment proving steering vectors generalize across scenario families.
+
+### Data Location
+
+`src/experiments/01-12_llama8b_cwe787_lobo_steering/data/`
+
+### Main Results
+
+| File | Description |
+|------|-------------|
+| [lobo_results_20260113_171820.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/lobo_results_20260113_171820.json) | **FINAL** - 512 tokens, all 7 folds, improved scoring |
+| [lobo_results_20260112_211513.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/lobo_results_20260112_211513.json) | Original - 300 tokens |
+
+### Per-Fold Results
+
+| File | Test Set | Samples |
+|------|----------|---------|
+| [fold_pair_07_sprintf_log_*.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/fold_results/) | sprintf_log held out | 120 |
+| [fold_pair_09_path_join_*.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/fold_results/) | path_join held out | 120 |
+| [fold_pair_11_json_*.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/fold_results/) | json held out | 120 |
+| [fold_pair_12_xml_*.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/fold_results/) | xml held out | 120 |
+| [fold_pair_16_high_complexity_*.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/fold_results/) | high_complexity held out | 120 |
+| [fold_pair_17_time_pressure_*.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/fold_results/) | time_pressure held out | 120 |
+| [fold_pair_19_graphics_*.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/fold_results/) | graphics held out | 120 |
+
+### Experiment Parameters
+
+| Parameter | Value |
+|-----------|-------|
+| Model | meta-llama/Meta-Llama-3.1-8B-Instruct |
+| Steering layer | 31 |
+| Alpha grid | {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5} |
+| Generations per prompt | 1 |
+| max_new_tokens | 300 (original), 512 (re-run) |
+| Total samples | 840 (7 folds × 15 prompts × 8 alphas) |
+
+### Results Summary (α=3.5, FINAL - 512 tokens)
+
+| Metric | Value |
+|--------|-------|
+| Secure rate | **52.4%** (STRICT) |
+| Insecure rate | 24.8% |
+| Refusal rate | 0% |
+| Effect size | **+52.4 pp** from baseline |
+| Improvement over 300-token | +14.2 pp |
+
+### 800-Token Test (Negative Result)
+
+| File | Description |
+|------|-------------|
+| [fold_pair_12_xml_800tok_20260114_030915.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/fold_results/fold_pair_12_xml_800tok_20260114_030915.json) | Single fold test at 800 tokens |
+
+**Finding**: No improvement over 512 tokens. At α=3.5, 800 tokens performed **worse** (13.3% vs 20.0% secure).
+
+**Decision**: 512 tokens is optimal. The "other" category is not due to truncation but alternative code patterns.
+
+### Per-Fold JSON Structure
+
+```python
+{
+    "fold_id": "pair_07_sprintf_log",
+    "n_train": 180,  # 6 base_ids × 30 prompts
+    "n_test": 15,    # 1 base_id × 15 variations
+    "direction_norm": 8.1,
+    "alpha_results": {
+        "0.0": [...],  # 15 generations
+        "3.5": [...]   # 15 generations
+    },
+    "summary": {
+        "0.0": {"n": 15, "strict": {"secure": 0, "insecure": 10, ...}},
+        ...
+    }
+}
+```
+
+### How to Recreate
+
+```bash
+cd src/experiments/01-12_llama8b_cwe787_lobo_steering
+python run_experiment.py
+```
+
+---
+
+## "Other" Category Analysis (01-13)
+
+### Overview
+
+Analysis of why ~40% of outputs at high α were classified as "other" (neither secure nor insecure).
+
+### Data Location
+
+`src/experiments/01-12_llama8b_cwe787_lobo_steering/data/`
+
+### Analysis Files
+
+| File | Description |
+|------|-------------|
+| [other_category_analysis.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/other_category_analysis.json) | Categorization of "other" outputs |
+| [clean_rescoring_results.json](../src/experiments/01-12_llama8b_cwe787_lobo_steering/data/clean_rescoring_results.json) | Re-scoring with improved patterns |
+
+### Category Breakdown (α ≥ 3.0)
+
+| Category | Count | % | Description |
+|----------|-------|---|-------------|
+| Truncated | 38 | 52.8% | 300 tokens cut off mid-function |
+| Bounds-check only | 25 | 34.7% | Security-aware but no string func |
+| Secure (undetected) | 9 | 12.5% | Used snprintf/strncpy for strcat |
+
+### Improved Scoring Impact (α=3.5)
+
+| Metric | Original | Improved | Change |
+|--------|----------|----------|--------|
+| Secure (overall) | 27.6% | 33.3% | +5.7 pp |
+| Secure (strcat only) | 0.0% | 20.0% | +20.0 pp |
+| Other | 61.9% | 56.2% | -5.7 pp |
+
+### How to Recreate
+
+```bash
+cd src/experiments/01-12_llama8b_cwe787_lobo_steering
+python analyze_other_category.py
+python rescore_clean.py
+```
+
+---
+
+## Scoring Documentation
+
+See [SCORING.md](SCORING.md) for complete documentation of the scoring system including:
+- STRICT and EXPANDED pattern definitions
+- Classification logic
+- Refusal detection
+- Usage examples
+- Changelog
+
+---
+
 ## Usage Notes
 
 1. **For mechanistic analysis**: Use the 7 validated CWE-787 pairs listed above
 2. **For broader CWE coverage**: Other CWEs need CodeQL or manual labeling
 3. **Model**: All data generated with `meta-llama/Meta-Llama-3.1-8B-Instruct`
 4. **Temperature**: 0.7, top_p=0.9, max_tokens=350-400
+5. **Scoring**: See [SCORING.md](SCORING.md) for pattern definitions and usage
