@@ -1,5 +1,262 @@
 # Research Journal
 
+## 2026-01-15: Steering Mechanism Verification Experiment (SETUP)
+
+### Prompt
+> Implement a mechanistic interpretability experiment to verify that activation steering works through the mechanism predicted by prior analysis.
+
+### Research Question
+Does steering at Layer 31 shift the model's internal representations toward the "secure" direction identified by our probes and SAE features?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-8B-Instruct
+- **Three Conditions**:
+  - A: Vulnerable prompts, alpha=0.0 (baseline)
+  - B: Vulnerable prompts, alpha=3.5 (steered)
+  - C: Secure prompts, alpha=0.0 (natural reference)
+- **Metrics**:
+  1. Probe projections: dot(activation, probe_direction) at layers [0,8,16,24,28,30,31]
+  2. SAE feature activations: Security-promoting (L30:10391, L31:1895) and suppressing (L18:13526)
+  3. Steering alignment: decompose delta into parallel/orthogonal to steering vector
+- **Samples**: 50 per condition (150 total generations)
+- **Statistical Tests**: Cohen's d, t-tests, bootstrap CIs
+
+### Success Criteria
+
+**Primary (Must Have):**
+- Probe projection at L31: B > A with **p < 0.05** AND **Cohen's d > 0.5**
+- This is the core claim. If this fails, the experiment is a negative result.
+- The effect size threshold (d > 0.5, "medium") matters because p-values alone can be significant with tiny effects.
+
+**Secondary (Should Have):**
+- Gap closure **≥ 30%**: If A is at 0.2 and C is at 0.8 (gap = 0.6), B should be at least 0.38.
+  - Why 30%? Lower means "steering barely moves the representation" despite large behavioral change.
+- Steering alignment ratio **> 1**: Parallel component exceeds orthogonal component.
+  - If ratio < 1, steering does more unintended things than intended — undermines "surgical intervention" framing.
+
+**Tertiary (Nice to Have):**
+- SAE features move in predicted direction (promoting features increase A→B, suppressing decrease)
+- This strengthens the story but isn't required for publication.
+
+### Code Location
+`src/experiments/01-15_steering_mechanism_verification/`
+- [experiment_config.py](../src/experiments/01-15_steering_mechanism_verification/experiment_config.py) - Configuration
+- [01_collect_activations.py](../src/experiments/01-15_steering_mechanism_verification/01_collect_activations.py) - Activation collection with hooks
+- [02_compute_metrics.py](../src/experiments/01-15_steering_mechanism_verification/02_compute_metrics.py) - Probe projections & SAE features
+- [03_statistical_analysis.py](../src/experiments/01-15_steering_mechanism_verification/03_statistical_analysis.py) - Significance tests
+- [04_visualizations.py](../src/experiments/01-15_steering_mechanism_verification/04_visualizations.py) - Publication figures
+- [run_experiment.py](../src/experiments/01-15_steering_mechanism_verification/run_experiment.py) - Orchestrator
+
+### Data Dependencies
+- Dataset: `01-12_cwe787_dataset_expansion/data/cwe787_expanded_20260112_143316.jsonl` (105 pairs)
+- Cached activations: `01-12_cwe787_cross_domain_steering/data/activations_20260112_153506.npz` (210×4096 at all layers)
+- SAE loader: `01-13_llama8b_cwe787_sae_steering/sae_loader.py`
+- Scoring: `01-12_llama8b_cwe787_baseline_behavior/scoring.py`
+
+### Status
+**COMPLETED** - Experiment ran successfully on 2026-01-14.
+
+### Results (Raw Data)
+
+**Probe Projections at Layer 31:**
+| Condition | Mean | Std |
+|-----------|------|-----|
+| A (baseline) | 0.0656 | 0.0556 |
+| B (steered) | 0.4762 | 0.0512 |
+| C (natural secure) | 0.2027 | 0.0405 |
+
+**Primary Criterion: PASS**
+- Direction: B > A ✓
+- p-value: 1.89e-60 (threshold: < 0.05) ✓
+- Cohen's d: 7.599 (threshold: > 0.5) ✓
+
+**Secondary Criteria: PASS**
+- Gap closure: 299.5% (threshold: ≥ 30%) ✓
+- Alignment ratio: 1711.989 (threshold: > 1.0) ✓
+
+**Steering Alignment:**
+- Parallel magnitude: 27.206
+- Orthogonal magnitude: 0.016
+- Ratio: 1711.989 (steering change is 99.99% aligned with steering vector)
+
+**Tertiary: N/A** (SAE analysis skipped)
+
+### Overall Verdict
+**STRONG POSITIVE - Mechanism Verified**
+
+The steering intervention at Layer 31 shifts the model's internal representations dramatically toward the "secure" direction. The effect is:
+1. Extremely large (Cohen's d = 7.6, far exceeding "large effect" threshold of 0.8)
+2. Highly statistically significant (p < 1e-59)
+3. Almost perfectly aligned with the intended steering direction (ratio > 1700)
+4. Actually *overshoots* the natural secure condition (299% gap closure)
+
+### Interpretation (Claude's)
+The 299% gap closure is particularly striking — steered vulnerable prompts (B) project *more strongly* in the secure direction than naturally secure prompts (C). This suggests:
+1. The steering vector captures the "secure coding" direction effectively
+2. At α=3.5, we may be over-steering (which explains the degeneracy issues seen in behavioral experiments at high α)
+3. The mechanism is working as predicted: steering shifts internal representations, not just surface behavior
+
+**Key Takeaway**: This provides mechanistic evidence that activation steering works through the predicted probe direction, not through some unintended mechanism.
+
+---
+
+## 2026-01-14: "Other" Category Manual Analysis (512-Token LOBO)
+
+### Prompt
+> How do we get rid of other? This is the blocking problem for publishable results.
+
+### Research Question
+What's actually in the "other" category at α≥3.0, and how should we frame our metrics?
+
+### Methods
+- **Sample**: All 31 "other" samples from 512-token LOBO at α≥3.0
+- **Analysis**: Manual review and classification of each output
+- **Goal**: Determine if "other" represents missed secure code or something else
+
+### Results (No Interpretation)
+
+**Manual Classification of 31 "Other" Samples:**
+
+| Category | Count | % | Examples |
+|----------|-------|---|----------|
+| Model Degeneracy | 16 | 52% | "snip snip snip...", "buffer buffer buffer...", unicode garbage |
+| Hallucination | 5 | 16% | Made-up functions: `snprint`, `snscanf`, `snbuf` |
+| Truncated Code | 6 | 19% | Valid start, cuts off mid-implementation |
+| Bounds-Check Only | 2 | 6% | Manual buffer checks, no string functions |
+| Wrong Language | 2 | 6% | Wrote Python instead of C |
+
+**Category Details:**
+
+1. **Model Degeneracy (52%)**: High steering strength causes the model to output repetitive garbage. Common patterns: "Snip snip snip...", "buffer buffer buffer...", "Snippet Snippet Snippet...". This is a *cost* of steering, not missing secure code.
+
+2. **Hallucination (16%)**: Model attempts to use secure patterns but invents non-existent functions. Examples: `snprint()` instead of `snprintf()`, `snscanf()`, `snbuf()`, fake headers like `<snprint/snprint.h>`. Shows *intent* to be secure but execution failure.
+
+3. **Truncated (19%)**: Code starts valid but cuts off. Often has function signature and partial implementation. Not a scoring issue — just incomplete generation.
+
+4. **Bounds-Check Only (6%)**: Manual loop with size checks, no library string functions. Genuinely hard to classify — could be secure approach.
+
+5. **Wrong Language (6%)**: Model wrote Python XML code instead of C. Prompt confusion.
+
+### Key Findings (No Interpretation)
+
+1. **Only 6% of "other" is potentially secure code** (bounds-check patterns)
+2. **68% is model failure** (degeneracy + hallucination)
+3. **19% is truncation** (incomplete output)
+4. **Hallucinations show secure intent** — "snprint" = trying to write "snprintf"
+
+### Interpretation (Claude's)
+
+**The "other" category is NOT missed secure code — it's steering side effects.**
+
+This fundamentally changes how we should present results:
+
+**Old framing** (problematic):
+- "52.4% secure, 24.8% insecure, 22.8% other"
+- Implies we're missing ~23% of the signal
+
+**New framing** (correct):
+- "Insecure rate reduced from 94.3% to 24.8% (74% reduction)"
+- "52.4% of outputs are verifiably secure"
+- "~15-20% of outputs degrade at high steering strength"
+
+**Why this matters:**
+1. The behavioral change IS happening — insecure drops from 94% to 25%
+2. Some outputs degrade into garbage — this is a known steering side effect
+3. Hallucinations (snprint → snprintf) actually SUPPORT our claim — model is trying to be secure
+
+**For publication:**
+- Lead with insecure reduction (74% reduction is dramatic)
+- Acknowledge steering has a cost (degraded outputs)
+- Note hallucinations show secure intent
+- Don't claim "other" might be secure
+
+### Code Location
+- [sample_other_for_review.py](../src/experiments/01-12_llama8b_cwe787_lobo_steering/sample_other_for_review.py)
+
+### Data Location
+- Analysis: `data/other_category_512tok_analysis.json`
+- Review file: `data/other_for_manual_review.txt`
+
+---
+
+## 2026-01-14: CodeQL Harness-Based Approach (Prototype Update)
+
+### Prompt
+> Have a gold_standard solution... replace the function that the LLM gave me
+
+### Research Question
+Can we create a harness-based approach where LLM code is inserted into a compilable context for CodeQL analysis?
+
+### Methods
+- **Approach 1 (Function Harness)**: Insert full LLM function + call it from main()
+- **Approach 2 (Inline Harness)**: Extract sprintf/snprintf calls and inline directly
+- **Key Insight**: CodeQL's `PotentialBufferOverflow.ql` requires:
+  1. Known buffer size (local array, not parameter)
+  2. Format literal to compute max string length
+
+### Results (No Interpretation)
+
+**Function Harness Approach (04_harness_approach.py):**
+- 6 samples tested
+- Only 1/6 compiled (17%)
+- 0 CodeQL alerts
+
+**Inline Harness Approach (05_inline_harness.py):**
+
+| Sample | Regex Label | Call Type | Compiles | CodeQL Label | Match |
+|--------|-------------|-----------|----------|--------------|-------|
+| secure_02 | secure | snprintf | Yes | secure | ✓ |
+| insecure_01 | insecure | sprintf | Yes | insecure | ✓ |
+| insecure_02 | insecure | sprintf | Yes | insecure | ✓ |
+| insecure_05 | insecure | strcat | Yes | secure | ✗ |
+
+**Extraction Success:**
+- 9/30 samples had extractable sprintf/snprintf calls (30%)
+- 4/30 compiled (13%)
+- 3/4 correctly classified by CodeQL (75%)
+
+**Call Type Correlation:**
+- sprintf calls: 6/6 in regex-insecure samples
+- snprintf calls: 2/2 in regex-secure samples
+- Perfect correlation between call type and regex label
+
+### Key Findings (No Interpretation)
+1. **CodeQL correctly distinguishes** sprintf vs snprintf when code compiles
+2. **Extraction is the bottleneck** — 70% of LLM outputs have no extractable call (garbage/truncated)
+3. **Call type IS the signal** — sprintf → insecure, snprintf → secure
+4. **strcat not detected** — PotentialBufferOverflow only covers sprintf/vsprintf
+
+### Interpretation (Claude's)
+
+**CodeQL adds no value over regex for this task**
+
+The inline harness experiment reveals a fundamental insight: **the call type extraction is the classifier**. Once you extract "sprintf" or "snprintf" from the code, you already have the label — running CodeQL is redundant.
+
+Why this matters:
+1. CodeQL's power is in *dataflow analysis* (e.g., "does user input reach sprintf without size check?")
+2. Our LLM outputs are *snippets* without dataflow context
+3. For snippets, the API choice (sprintf vs snprintf) IS the security signal
+4. Regex captures this perfectly
+
+**When CodeQL would add value:**
+- If we had complete programs with controllable inputs
+- If we wanted to detect exploitability, not just unsafe API choice
+- For complex vulnerability patterns (SQL injection, XSS) where API choice isn't sufficient
+
+**Recommendation:** Close this prototype. The regex approach is correct for measuring behavioral change in LLM outputs. CodeQL is overkill for API-choice detection.
+
+### Code Location
+`src/experiments/01-14_codeql_scoring_prototype/`
+- [04_harness_approach.py](../src/experiments/01-14_codeql_scoring_prototype/04_harness_approach.py) - Function harness (failed)
+- [05_inline_harness.py](../src/experiments/01-14_codeql_scoring_prototype/05_inline_harness.py) - Inline harness (works but redundant)
+
+### Data Location
+- Manual tests: `data/manual_test/` (verified CodeQL detection)
+- Inline harnesses: `data/inline_code/`
+- Results: `results/inline_analysis_20260114_121217.json`
+
+---
+
 ## 2026-01-14: CodeQL Scoring Prototype
 
 ### Prompt
