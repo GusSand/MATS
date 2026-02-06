@@ -88,6 +88,70 @@ class SteeringGenerator:
         generated = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         return generated[len(prompt):]
 
+    def generate_with_multi_steering(
+        self,
+        prompt: str,
+        directions: list,
+        layer: int,
+        alphas: list,
+        temperature: float = 0.6,
+        top_p: float = 0.9,
+        max_tokens: int = 512,
+    ) -> str:
+        """
+        Generate with multiple steering vectors applied simultaneously.
+
+        Args:
+            prompt: Input prompt
+            directions: List of steering direction vectors, each (hidden_size,)
+            layer: Layer index to apply steering
+            alphas: List of steering strengths (same length as directions)
+            temperature: Sampling temperature
+            top_p: Top-p nucleus sampling
+            max_tokens: Maximum new tokens
+
+        Returns:
+            Generated text (prompt stripped)
+        """
+        direction_tensors = [
+            torch.tensor(d, dtype=torch.float16).to(self.device)
+            for d in directions
+        ]
+        alpha_values = list(alphas)
+
+        def multi_steering_hook(module, input, output):
+            if isinstance(output, tuple):
+                h = output[0]
+            else:
+                h = output
+            for alpha, d_tensor in zip(alpha_values, direction_tensors):
+                h[:, -1, :] = h[:, -1, :] + alpha * d_tensor
+            if isinstance(output, tuple):
+                return (h,) + output[1:]
+            return h
+
+        self.clear_hooks()
+        target_layer = self.model.model.layers[layer]
+        hook = target_layer.register_forward_hook(multi_steering_hook)
+        self.hooks.append(hook)
+
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=max_tokens,
+                temperature=temperature,
+                do_sample=True,
+                top_p=top_p,
+                pad_token_id=self.tokenizer.pad_token_id
+            )
+
+        self.clear_hooks()
+
+        generated = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return generated[len(prompt):]
+
     def generate_baseline(
         self,
         prompt: str,
