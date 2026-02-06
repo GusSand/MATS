@@ -1,5 +1,54 @@
 # Research Journal
 
+## 2026-02-06: Experiment 5b - Cross-CWE Parallel Analysis (Vector Correlation, Failure Analysis, CIs)
+
+### Prompt
+> Run CPU-only analyses while GPU is busy: (1) vector correlation between CWE-787/119/134 steering directions, (2) CWE-119 failure categorization at α=4.0, (3) bootstrap CIs for all main results.
+
+### Research Question
+How similar are cross-CWE steering directions? Why does CWE-119 steering underperform? What are the confidence intervals?
+
+### Methods
+- **Vector Correlation**: Loaded CWE-787 L31 direction from existing .npz. Computed CWE-119 and CWE-134 directions by collecting L31 activations on Llama-8B for all 105 pairs each, then mean-diff. Cosine similarity between all pairs.
+- **Failure Analysis**: Regex-based categorization of 105 steered outputs at α=4.0 into 6 categories (correct, malformed, bounds check, still insecure, degenerate, other).
+- **Bootstrap CIs**: 10,000 resamples across LOBO folds (seed=42), 95% percentile CIs.
+
+### Results (No Interpretation)
+
+**Cosine Similarity (L31 Directions):**
+
+|           | CWE-787 | CWE-119 | CWE-134 |
+|-----------|---------|---------|---------|
+| CWE-787   | 1.00    | 0.47    | 0.48    |
+| CWE-119   | 0.47    | 1.00    | 0.63    |
+| CWE-134   | 0.48    | 0.63    | 1.00    |
+
+**CWE-119 Failure Breakdown (α=4.0, n=105):**
+- Still insecure: 54.3% | Other: 18.1% | Correct: 12.4% | Bounds check: 7.6% | Malformed: 4.8% | Degenerate: 2.9%
+- gets→fgets works better (22.2% correct) than strcpy→strncpy (5.0%)
+
+**Bootstrap 95% CIs:**
+
+| Experiment | Steered | 95% CI |
+|---|---|---|
+| Llama-8B CWE-787 | 52.4% | [39.0%, 65.7%] |
+| Mistral-7B CWE-787 | 92.4% | [84.8%, 100.0%] |
+| Llama-70B CWE-787 | 52.4% | [29.5%, 73.3%] |
+| Llama-8B CWE-119 | 20.0% | [10.5%, 30.5%] |
+| Llama-8B CWE-134 (pilot) | 90.0% | [86.7%, 93.3%] |
+
+### Code Location
+- [Detailed report](experiments/02-06_llama8b_cross_cwe_parallel_analysis.md)
+- [vector_correlation_analysis.py](../src/experiments/02-05_cross_cwe_steering/vector_correlation_analysis.py)
+- [cwe119_failure_analysis.py](../src/experiments/02-05_cross_cwe_steering/cwe119_failure_analysis.py)
+- [statistical_tables.py](../src/experiments/02-05_cross_cwe_steering/statistical_tables.py)
+
+### Data Location
+- Direction vectors: `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/direction_cwe*_L31_*.npy`
+- All JSON results: `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/`
+
+---
+
 ## 2026-02-06: Experiment 5 - Cross-CWE Steering Validation (CWE-119, CWE-134)
 
 ### Prompt
