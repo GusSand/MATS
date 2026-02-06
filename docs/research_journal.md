@@ -1,5 +1,100 @@
 # Research Journal
 
+## 2026-02-06: Experiment 6 - Unified Steering Vector (Combined CWE)
+
+### Prompt
+> Train a single unified steering vector on combined CWE-787/119/134 data (315 pairs) and test whether it provides broad-spectrum security improvement compared to per-CWE native vectors.
+
+### Research Question
+Can a unified mean-difference direction (computed across all 3 CWE types simultaneously) match or approach per-CWE native steering performance?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16), Layer 31
+- **Combined dataset**: 315 pairs (105 CWE-787 + 105 CWE-119 + 105 CWE-134), 630 prompts
+- **Direction**: `vec_unified = mean(all_secure_L31) - mean(all_insecure_L31)` across all 315 pairs
+- **Alphas**: CWE-787 [2.0, 3.0, 3.5, 4.0], CWE-119 [3.0, 4.0, 5.0], CWE-134 [1.0, 1.5, 2.0]
+- **Scoring**: Each CWE scored with its native patterns
+- **Total**: 1,050 steered generations (10 alpha-CWE combos × 105 prompts)
+
+### Results (No Interpretation)
+
+**Direction properties:**
+- Unified direction norm: 6.884 (native norms: 7.77-8.66)
+- Cosine sim (unified ↔ CWE-787): 0.7706
+- Cosine sim (unified ↔ CWE-119): 0.8529
+- Cosine sim (unified ↔ CWE-134): 0.8558
+
+**Summary table:**
+
+| CWE | Baseline | Native Best (α) | Unified Best (α) | Delta |
+|---|---|---|---|---|
+| CWE-787 | 0.0% | 52.4% (α=3.5) | 21.0% (α=4.0) | -31.4pp |
+| CWE-119 | 0.0% | 20.0% (α=4.0) | 4.8% (α=3.0) | -15.2pp |
+| CWE-134 | 66.7% | 90.0% (α=1.5) | 69.5% (α=1.0) | -20.5pp |
+
+**Key finding**: The unified vector substantially underperforms all three native per-CWE vectors. CWE-134 is especially affected — unified steering at α>1.0 actually *decreases* secure rate below the unsteered baseline (63.8% vs 66.7%). Despite high cosine similarities (0.77-0.86), the unified direction loses CWE-specific information critical for effective steering.
+
+### Code Location
+- [Detailed report](experiments/02-06_llama8b_combined_cwe_unified_steering.md)
+- [unified_steering_experiment.py](../src/experiments/02-05_cross_cwe_steering/unified_steering_experiment.py)
+
+### Data Location
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/unified_steering_results_20260206_172838.json`
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/direction_unified_L31_20260206_172846.npy`
+
+---
+
+## 2026-02-06: Experiment 4D/4E - Cross-Model Validation (Gemma-7B, Qwen-7B)
+
+### Prompt
+> Run Gemma-7B and Qwen-7B cross-model steering experiments to complete the 7B-scale architecture comparison.
+
+### Research Question
+Does mean-difference activation steering generalize across different 7B-scale model architectures (Llama, Mistral, Qwen, Gemma)?
+
+### Methods
+- **Models**: google/gemma-7b-it, Qwen/Qwen2.5-7B-Instruct
+- **Dataset**: CWE-787 Expanded (105 pairs, 7 base_ids)
+- **Validation**: LOBO (Leave-One-Base-ID-Out) 7-fold cross-validation
+- **Layer Selection**: Last hidden layer (both models: layer 27/28)
+- **Alpha Grid**: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0]
+
+### Results (No Interpretation)
+
+**Summary Table (7B-scale models):**
+
+| Model | Baseline | Best Steered | Best Alpha | Improvement |
+|-------|----------|-------------|------------|-------------|
+| Mistral-7B | 26.7% | 92.4% | 3.5-4.0 | +65.7pp |
+| Qwen-7B | 18.1% | 80.0% | 5.0 | +61.9pp |
+| Llama-8B | 0.0% | 52.4% | 3.5 | +52.4pp |
+| Gemma-7B | 2.9% | 17.1% | 5.0 | +14.3pp |
+
+**Gemma-7B Full LOBO (7 folds):**
+- Baseline: 2.9% → Best: 17.1% at α=5.0 (+14.3pp)
+- Only pair_09_path_join shows strong response (86.7% at α=5.0)
+- Most folds show 0-6.7% secure regardless of alpha
+- **VERDICT: WEAK STEERING RESPONSE**
+
+**Qwen-7B Full LOBO (7 folds):**
+- Baseline: 18.1% → Best: 80.0% at α=5.0 (+61.9pp)
+- 4/7 folds achieve 100% secure (sprintf_log, json, high_complexity, graphics)
+- XML parsing remains challenging (33.3%)
+- **VERDICT: STRONG STEERING RESPONSE**
+
+**Key Finding**: Architecture matters more than scale. Gemma shows minimal steering response despite similar probe accuracy, while Qwen shows excellent response. The Qwen architecture is particularly amenable to activation steering.
+
+### Code Location
+- [Detailed report](experiments/02-05_cross_model_cwe787_steering.md)
+- [experiment_4d_gemma7b/](../src/experiments/02-05_cross_model_cwe787_steering/experiment_4d_gemma7b/)
+- [experiment_4e_qwen7b/](../src/experiments/02-05_cross_model_cwe787_steering/experiment_4e_qwen7b/)
+
+### Data Location
+- Gemma-7B: `src/experiments/02-05_cross_model_cwe787_steering/experiment_4d_gemma7b/data/lobo_results_20260206_124752.json`
+- Qwen-7B: `src/experiments/02-05_cross_model_cwe787_steering/experiment_4e_qwen7b/data/lobo_results_20260206_152346.json`
+
+---
+
 ## 2026-02-06: Experiment 5d - Cross-CWE Transfer Test (CWE-787 ↔ CWE-134)
 
 ### Prompt
