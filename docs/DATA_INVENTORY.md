@@ -4,6 +4,205 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Experiment 5: Cross-CWE Steering (02-05/06)
+
+### Overview
+
+Cross-CWE validation of mean-difference activation steering. Tests CWE-119 (buffer operations) and CWE-134 (format strings) to verify that steering generalizes across vulnerability types.
+
+### Data Location (Git Worktree)
+
+All data in worktree at `/home/paperspace/MATS-cwe-steering/` on branch `feature/cwe119-cwe134-datasets`.
+
+#### CWE-119 Dataset
+`src/experiments/02-05_cross_cwe_steering/datasets/cwe119/`
+
+| File | Description | Size |
+|------|-------------|------|
+| `validated_pairs.py` | 7 validated CWE-119 prompt pairs | ~4 KB |
+| `config/cwe119_prompt_pairs.py` | Pair definitions with detection patterns | ~15 KB |
+| `data/cwe119_expanded_20260205_151207.jsonl` | Expanded dataset (105 pairs) | ~100 KB |
+| `data/expansion_summary_20260205_151207.json` | Generation metadata | ~1 KB |
+
+#### CWE-134 Dataset
+`src/experiments/02-05_cross_cwe_steering/datasets/cwe134/`
+
+| File | Description | Size |
+|------|-------------|------|
+| `validated_pairs.py` | 7 validated CWE-134 prompt pairs | ~4 KB |
+| `config/cwe134_prompt_pairs.py` | Pair definitions with detection patterns | ~15 KB |
+| `data/cwe134_expanded_20260205_151207.jsonl` | Expanded dataset (105 pairs) | ~107 KB |
+| `data/expansion_summary_20260205_151207.json` | Generation metadata | ~1 KB |
+
+#### CWE-119 Experiment Results
+`src/experiments/02-05_cross_cwe_steering/experiment_cwe119_llama8b/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| `baseline_20260205_151629.json` | Baseline generation results | ~81 KB |
+| `activations_20260205_155319.npz` | Per-layer activations (32 layers × 210 × 4096) | ~51 MB |
+| `metadata_20260205_155319.json` | Prompt metadata | ~40 KB |
+| `layer_sweep_results.json` | Linear probe accuracy per layer | ~5 KB |
+| `pilot_results_20260205_155558.json` | Pilot LOBO results (2 folds) | ~3 KB |
+| `lobo_results_20260205_173625.json` | Full LOBO results (7 folds) | ~3 KB |
+| `fold_results/fold_pair_*.json` | Per-fold detailed results | ~124 KB each |
+
+#### CWE-134 Experiment Results
+`src/experiments/02-05_cross_cwe_steering/experiment_cwe134_llama8b/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| `layer_sweep_results.json` | Linear probe accuracy per layer | ~5 KB |
+| `pilot_results_20260205_231906.json` | Pilot LOBO results (2 folds) | ~3 KB |
+| `fold_results/pilot_fold_*.json` | Per-fold pilot results | ~125 KB each |
+| `fold_results/fold_pair_01_*.json` | Full LOBO fold 1 (partial) | ~125 KB |
+
+### Dataset Structure
+
+#### CWE-119 Pairs
+
+| Short Name | Vulnerability | Secure Pattern | Insecure Pattern |
+|------------|---------------|----------------|------------------|
+| user_input | gets | fgets() | gets() |
+| command_parser | gets | fgets() | gets() |
+| config_reader | gets | fgets() | gets() |
+| username_copy | strcpy | strncpy() | strcpy() |
+| filepath_copy | strcpy | strncpy() | strcpy() |
+| error_msg_copy | strcpy | strncpy() | strcpy() |
+| hostname_copy | strcpy | strncpy() | strcpy() |
+
+#### CWE-134 Pairs
+
+| Short Name | Vulnerability | Secure Pattern | Insecure Pattern |
+|------------|---------------|----------------|------------------|
+| print_message | printf_format | printf("%s", var) | printf(var) |
+| print_status | printf_format | printf("%s", var) | printf(var) |
+| print_error | printf_format | printf("%s", var) | printf(var) |
+| log_to_file | fprintf_format | fprintf(fp, "%s", var) | fprintf(fp, var) |
+| write_report | fprintf_format | fprintf(fp, "%s", var) | fprintf(fp, var) |
+| system_log | syslog_format | syslog(pri, "%s", var) | syslog(pri, var) |
+| audit_log | syslog_format | syslog(pri, "%s", var) | syslog(pri, var) |
+
+### Key Results
+
+| CWE | Baseline | Best Steered | Best Alpha | Improvement | Status |
+|-----|----------|--------------|------------|-------------|--------|
+| CWE-119 | 0.0% | 20.0% | 4.0 | +20.0pp | Complete (7 folds) |
+| CWE-134 | 66.7% | 90.0% | 1.5 | +23.3pp | Pilot only (2 folds) |
+
+### JSONL Structure
+
+```python
+import json
+
+# Load expanded dataset
+with open('cwe119_expanded_20260205_151207.jsonl') as f:
+    pairs = [json.loads(line) for line in f]
+
+# Each pair has:
+{
+    "id": "pair_01_user_input_var_01",
+    "base_id": "pair_01_user_input",
+    "name": "User Input - Read Line_var_01",
+    "vulnerable": "...",
+    "secure": "...",
+    "vulnerability_type": "gets",
+    "category": "expanded",
+    "detection": {
+        "secure_pattern": r"\bfgets\s*\(",
+        "insecure_pattern": r"\bgets\s*\("
+    }
+}
+```
+
+### How to Reproduce
+
+```bash
+# Switch to worktree
+cd /home/paperspace/MATS-cwe-steering
+
+# Run CWE-119 experiment
+cd src/experiments/02-05_cross_cwe_steering/experiment_cwe119_llama8b
+python run_all.py all
+
+# Run CWE-134 experiment
+cd ../experiment_cwe134_llama8b
+python run_all.py all
+```
+
+**Requirements**: A100 GPU for activation collection and steering.
+
+---
+
+## Experiment 4: Cross-Model CWE-787 Steering (02-05)
+
+### Overview
+
+Cross-model validation of mean-difference activation steering for CWE-787. Tests Mistral-7B-Instruct-v0.3 and Llama-3.1-70B-Instruct to verify that steering generalizes beyond Llama-8B.
+
+### Data Location
+
+#### Experiment 4A: Mistral-7B
+`src/experiments/02-05_cross_model_cwe787_steering/experiment_4a_mistral7b/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| `baseline_20260205_021419.json` | Baseline generation results (105 prompts) | ~150 KB |
+| `activations_20260205_022224.npz` | Per-layer activations (32 layers x 210 x 4096) | ~99 MB |
+| `metadata_20260205_022224.json` | Prompt metadata and indices | ~15 KB |
+| `layer_sweep_results.json` | Linear probe accuracy per layer | ~5 KB |
+| `lobo_results_20260205_045755.json` | Full 7-fold LOBO aggregated results | ~200 KB |
+| `fold_results/fold_*.json` | Per-fold detailed results (7+2 pilot files) | ~100 KB each |
+
+#### Experiment 4B: Llama-70B
+`src/experiments/02-05_cross_model_cwe787_steering/experiment_4b_llama70b/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| `baseline_20260205_071732.json` | Baseline generation results (105 prompts) | ~180 KB |
+| `activations_20260205_075202.npz` | Per-layer activations (80 layers x 210 x 8192) | ~254 MB |
+| `metadata_20260205_075202.json` | Prompt metadata and indices | ~15 KB |
+| `layer_sweep_results.json` | Linear probe accuracy per layer (best_layer=79) | ~10 KB |
+| `fold_results/pilot_fold_*_091351.json` | Pilot LOBO results (2 folds, layer 79) | ~100 KB each |
+| `fold_results/fold_*_111622.json` | Full LOBO results (7 folds, in progress) | ~100 KB each |
+
+### Key Results
+
+| Model | Baseline | Best Steered | Best Alpha | Improvement |
+|-------|----------|-------------|------------|-------------|
+| Llama-8B (ref) | 0.0% | 52.4% | 3.5 | +52.4pp |
+| Mistral-7B | 26.7% | 92.4% | 3.5-4.0 | +65.7pp |
+| Llama-70B | 1.0% | 60.0%* | 5.0* | +59.0pp* |
+
+*Pilot results; full LOBO in progress.
+
+### Data Dependencies
+
+- **Dataset**: [cwe787_expanded_20260112_143316.jsonl](../src/experiments/01-12_cwe787_dataset_expansion/data/cwe787_expanded_20260112_143316.jsonl) (105 pairs)
+- **Scoring**: Uses [scoring.py](../src/experiments/01-12_llama8b_cwe787_baseline_behavior/scoring.py) and [refusal_detection.py](../src/experiments/01-12_llama8b_cwe787_baseline_behavior/refusal_detection.py) from Experiment 1
+
+### How to Reproduce
+
+```bash
+cd src/experiments/02-05_cross_model_cwe787_steering/experiment_4a_mistral7b
+python 01_baseline.py
+python 02_collect_activations.py
+python 03_layer_sweep.py
+python 04_pilot_lobo.py
+python 05_full_lobo.py
+
+cd ../experiment_4b_llama70b
+python 01_baseline.py
+python 02_collect_activations.py
+python 03_layer_sweep.py
+python 04_pilot_lobo.py
+python 05_full_lobo.py
+```
+
+**Requirements**: A100-80GB GPU. Llama-70B requires 4-bit NF4 quantization (~43 GB VRAM).
+
+---
+
 ## Experiment 3A: SAE vs Mean-Diff Steering (01-13)
 
 ### Overview

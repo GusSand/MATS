@@ -1,5 +1,209 @@
 # Research Journal
 
+## 2026-02-06: Experiment 5 - Cross-CWE Steering Validation (CWE-119, CWE-134)
+
+### Prompt
+> Create datasets for CWE-119 and CWE-134, test steering with Llama-8B to see if mean-difference steering generalizes across CWE types.
+
+### Research Question
+Does mean-difference activation steering for secure code generation generalize across CWE types?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-8B-Instruct
+- **Datasets**: New CWE-119 (105 pairs, 7 base_ids) and CWE-134 (105 pairs, 7 base_ids)
+- **Validation**: LOBO (Leave-One-Base-ID-Out) 7-fold cross-validation
+- **Pipeline**: Baseline → activations → layer sweep → pilot LOBO → full LOBO
+- **CWE-119**: gets/strcpy → fgets/strncpy (buffer operations)
+- **CWE-134**: printf(var) → printf("%s", var) (format strings)
+
+### Results (No Interpretation)
+
+**Cross-CWE Summary:**
+
+| CWE | Vulnerability Type | Baseline | Best Steered | Best Alpha | Improvement |
+|-----|-------------------|----------|--------------|--------|-------------|
+| CWE-787 (ref) | sprintf → snprintf | 0.0% | 52.4% | 3.5 | +52.4pp |
+| CWE-119 | gets/strcpy → fgets/strncpy | 0.0% | 20.0% | 4.0 | +20.0pp |
+| CWE-134 | printf(var) → printf("%s", var) | 66.7% | 90.0% | 1.5 | +23.3pp |
+
+**CWE-119 Full LOBO (7 folds):**
+
+| Alpha | Secure% | Insecure% | Other% |
+|-------|---------|-----------|--------|
+| 0.0 | 0.0% | 100.0% | 0.0% |
+| 3.5 | 7.6% | 87.6% | 4.8% |
+| **4.0** | **20.0%** | **72.4%** | **7.6%** |
+| 5.0 | 20.0% | 29.5% | 50.5% |
+
+**CWE-134 Pilot LOBO (2 folds):**
+
+| Alpha | Secure% | Insecure% | Other% |
+|-------|---------|-----------|--------|
+| 0.0 | 66.7% | 33.3% | 0.0% |
+| **1.5** | **90.0%** | **10.0%** | **0.0%** |
+| 3.5 | 90.0% | 10.0% | 0.0% |
+| 5.0 | 36.7% | 6.7% | 56.7% |
+
+### Key Findings (No Interpretation)
+1. **CWE-119 is resistant to steering**: Despite 100% probe accuracy, only 20% secure at best α
+2. **CWE-134 has high baseline**: Model already generates 66.7% secure format strings
+3. **Steering improves CWE-134 by 23pp**: From 66.7% to 90.0% at α=1.5
+4. **Layer 31 optimal for all CWEs**: Consistent with CWE-787 findings
+5. **Optimal α varies by CWE**: CWE-134 prefers low α (1.5), CWE-119 needs high α (4.0)
+6. **Over-steering collapse universal**: α=5.0 degrades all CWEs
+
+### Interpretation (Claude's)
+
+**MIXED RESULT - Steering is CWE-Dependent**
+
+The core finding is that mean-difference activation steering does NOT generalize uniformly across CWE types. Effectiveness depends on both vulnerability structure and baseline model behavior.
+
+**Why CWE-119 resists steering:**
+The gets() → fgets() and strcpy() → strncpy() transformations require adding parameters (buffer size), not just changing function names. This structural difference may be harder for the model to learn from steering vectors that operate on the same input token positions.
+
+**Why CWE-134 works well despite high baseline:**
+Format string security (printf("%s", var)) is well-represented in training data, giving the model a strong prior. The steering vector amplifies this existing tendency, achieving 90% secure with minimal steering (α=1.5).
+
+**Pattern emerging across experiments:**
+- Steering works best when secure/insecure patterns differ minimally (sprintf→snprintf)
+- Steering works less when structural changes are needed (gets→fgets with size param)
+- High baseline security (CWE-134) suggests the concept is already well-learned
+
+### Code Location
+`src/experiments/02-05_cross_cwe_steering/` (in git worktree: `/home/paperspace/MATS-cwe-steering/`)
+- [datasets/cwe119/](../src/experiments/02-05_cross_cwe_steering/datasets/cwe119/) - CWE-119 dataset
+- [datasets/cwe134/](../src/experiments/02-05_cross_cwe_steering/datasets/cwe134/) - CWE-134 dataset
+- [experiment_cwe119_llama8b/](../src/experiments/02-05_cross_cwe_steering/experiment_cwe119_llama8b/) - CWE-119 experiment
+- [experiment_cwe134_llama8b/](../src/experiments/02-05_cross_cwe_steering/experiment_cwe134_llama8b/) - CWE-134 experiment
+
+### Data Location
+- CWE-119 dataset: `datasets/cwe119/data/cwe119_expanded_20260205_151207.jsonl`
+- CWE-119 LOBO: `experiment_cwe119_llama8b/data/lobo_results_20260205_173625.json`
+- CWE-134 dataset: `datasets/cwe134/data/cwe134_expanded_20260205_151207.jsonl`
+- CWE-134 pilot: `experiment_cwe134_llama8b/data/pilot_results_20260205_231906.json`
+
+### Detailed Report
+See: [docs/experiments/02-05_cross_cwe_steering.md](experiments/02-05_cross_cwe_steering.md)
+
+---
+
+## 2026-02-05: Experiment 4 - Cross-Model CWE-787 Steering Validation
+
+### Prompt
+> Execute Experiment 4: Cross-Model CWE-787 Steering Validation. Test Mistral-7B and Llama-70B to see if mean-difference steering generalizes across architectures and scales.
+
+### Research Question
+Does mean-difference activation steering for CWE-787 secure code generation transfer across model architectures (Llama -> Mistral) and scales (8B -> 70B)?
+
+### Methods
+- **Models**: Mistral-7B-Instruct-v0.3 (fp16), Llama-3.1-70B-Instruct (4-bit NF4)
+- **Dataset**: Same CWE-787 expanded dataset (105 pairs, 7 base_ids)
+- **Validation**: LOBO (Leave-One-Base-ID-Out) 7-fold cross-validation
+- **Generations**: 1 per prompt per alpha per fold
+- **Reference**: Llama-3.1-8B-Instruct (Experiment 2: 0% -> 52.4% at alpha=3.5)
+- **Pipeline**: Baseline -> activations -> layer sweep -> pilot LOBO -> full LOBO
+- **Scoring**: Identical STRICT patterns to Experiment 2
+
+### Results (No Interpretation)
+
+**Cross-Model Summary:**
+
+| Model | Params | Quantization | Baseline | Best Steered | Best Alpha | Improvement | Best Layer |
+|-------|--------|-------------|----------|-------------|------------|-------------|------------|
+| Llama-8B (ref) | 8B | fp16 | 0.0% | 52.4% | 3.5 | +52.4pp | 31/32 |
+| Mistral-7B | 7B | fp16 | 26.7% | 92.4% | 3.5-4.0 | +65.7pp | 31/32 |
+| Llama-70B | 70B | 4-bit NF4 | 1.9% | 52.4% | 4.0 | +50.5pp | 79/80 |
+
+**Mistral-7B Full LOBO (STRICT Scoring):**
+
+| Alpha | Secure% | Insecure% | Refusal% |
+|-------|---------|-----------|----------|
+| 0.0 | 26.7% | 67.6% | 0.0% |
+| 1.0 | 67.6% | 25.7% | 0.0% |
+| 2.0 | 84.8% | 9.5% | 0.0% |
+| 3.5 | **92.4%** | **3.8%** | 0.0% |
+| 4.0 | **92.4%** | **3.8%** | 0.0% |
+| 5.0 | 83.8% | 1.9% | 0.0% |
+
+**Llama-70B Full LOBO (STRICT Scoring):**
+
+| Alpha | Secure% | Insecure% | Other% |
+|-------|---------|-----------|--------|
+| 0.0 | 1.9% | 88.6% | 9.5% |
+| 3.0 | 32.4% | 60.0% | 7.6% |
+| **4.0** | **52.4%** | **35.2%** | **12.4%** |
+| 5.0 | 44.8% | 7.6% | 47.6% |
+| 7.0 | 7.6% | 0.0% | 92.4% |
+| 10.0 | 0.0% | 0.0% | 100.0% |
+
+**Llama-70B Per-Fold Results (best alpha):**
+
+| Fold | Best Secure% | Best Alpha |
+|------|-------------|------------|
+| pair_07_sprintf_log | 73.3% | 5.0 |
+| pair_09_path_join | 73.3% | 4.0 |
+| pair_11_json | 53.3% | 3.0-4.0 |
+| pair_12_xml | 13.3% | 5.0 |
+| pair_16_high_complexity | 93.3% | 5.0 |
+| pair_17_time_pressure | 53.3% | 5.0 |
+| pair_19_graphics | 86.7% | 4.0 |
+
+### Key Findings (No Interpretation)
+1. **Steering transfers across architectures**: Mistral-7B achieves 92.4% secure (highest of any model)
+2. **Steering transfers across scales**: Llama-70B achieves 52.4% secure (same ceiling as Llama-8B)
+3. **Best layer is always the last hidden layer**: L31/32 for 7B models, L79/80 for 70B
+4. **Optimal alpha is consistent across Llama scales**: 3.5-4.0 for both 8B and 70B
+5. **Direction norm matters more than probe accuracy**: Llama-70B L2 had 96.7% accuracy but 0.09 norm (useless); L79 had 96.2% accuracy with 10.15 norm (effective)
+6. **Over-steering collapse is sharp for 70B**: alpha>=7.0 produces 0-7.6% secure with 92-100% "other" outputs
+7. **Zero refusals across all models**: Steering changes code patterns, not model compliance
+8. **High per-fold variability for 70B**: Best secure rate ranges from 13.3% (XML) to 93.3% (high complexity)
+9. **Scaling doesn't improve steering ceiling**: 70B and 8B achieve same 52.4% peak despite 9x size difference
+
+### Interpretation (Claude's)
+
+**MIXED RESULT - Steering is Architecture-General but Scaling-Invariant**
+
+The core finding is that mean-difference activation steering for CWE-787 is not specific to Llama-3.1-8B-Instruct. It works across architectures but doesn't improve with scale.
+
+**Positive findings:**
+1. **Architecture transfer**: Mistral-7B uses different attention patterns (sliding window, grouped-query) and different pretraining data, yet the same pipeline produces even better results (92.4% vs 52.4%).
+
+2. **Universal layer localization**: The security decision is localized to the last layer in all models (L31/32 for 7B, L79/80 for 70B), suggesting a universal pattern.
+
+3. **Baseline independence**: Mistral starts at 26.7% secure, Llama-8B at 0%, Llama-70B at 1.9%. Steering consistently pushes all models toward secure code regardless of starting point.
+
+**Surprising finding - Scaling doesn't help:**
+Llama-70B achieves the exact same 52.4% peak as Llama-8B despite being 9x larger. This challenges the intuition that larger models would be easier to steer due to richer representations. Possible explanations:
+- The security concept has a fixed "capacity ceiling" in the representation space
+- Larger models have more interference from other concepts
+- The 4-bit quantization may reduce effective steering capacity
+- The optimal alpha range is narrower for 70B (effective range ~3.0-5.0 vs broader for 8B)
+
+**Why Mistral-7B is so much better**: The 92.4% result likely reflects Mistral's stronger baseline safety priors (26.7% vs 0%). The steering direction amplifies an existing tendency rather than creating one from scratch.
+
+**Layer selection lesson**: The Llama-70B layer selection pitfall (L2 with high accuracy but near-zero norm) reveals that linear separability != causal influence. Early layers encode the concept but lack the representational magnitude for effective intervention.
+
+**Per-fold variability insight**: The wide range of per-fold results (13.3% to 93.3%) for Llama-70B suggests the steering direction is scenario-specific. XML parsing scenarios appear particularly resistant, while high-complexity code scenarios respond well.
+
+### Code Location
+`src/experiments/02-05_cross_model_cwe787_steering/`
+- [shared/model_loader.py](../src/experiments/02-05_cross_model_cwe787_steering/shared/model_loader.py) - Unified model loading
+- [shared/steering_generator.py](../src/experiments/02-05_cross_model_cwe787_steering/shared/steering_generator.py) - Steering with hooks
+- [experiment_4a_mistral7b/](../src/experiments/02-05_cross_model_cwe787_steering/experiment_4a_mistral7b/) - Mistral-7B scripts
+- [experiment_4b_llama70b/](../src/experiments/02-05_cross_model_cwe787_steering/experiment_4b_llama70b/) - Llama-70B scripts
+- [06_cross_model_analysis.py](../src/experiments/02-05_cross_model_cwe787_steering/06_cross_model_analysis.py) - Cross-model comparison
+
+### Data Location
+- Mistral-7B results: `experiment_4a_mistral7b/data/lobo_results_20260205_045755.json`
+- Llama-70B baseline: `experiment_4b_llama70b/data/baseline_20260205_071732.json`
+- Llama-70B pilot: `experiment_4b_llama70b/data/fold_results/pilot_fold_*_20260205_091351.json`
+- Llama-70B full LOBO: `experiment_4b_llama70b/data/lobo_results_20260205_111622.json`
+
+### Detailed Report
+See: [docs/experiments/02-05_cross_model_cwe787_steering.md](experiments/02-05_cross_model_cwe787_steering.md)
+
+---
+
 ## 2026-01-14: Experiment 3A - SAE vs Mean-Diff Precision Steering
 
 ### Prompt
