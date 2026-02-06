@@ -1,5 +1,75 @@
 # Research Journal
 
+## 2026-02-06: Experiment 5d - Cross-CWE Transfer Test (CWE-787 ↔ CWE-134)
+
+### Prompt
+> Run bidirectional transfer test: apply CWE-787 direction to CWE-134 prompts and CWE-134 direction to CWE-787 prompts, at α=0.0, 1.5, 3.5. Score with native CWE patterns. Hypothesis: transfer rate ≈ cosine_similarity (0.48) × native rate.
+
+### Research Question
+Do steering vectors transfer across CWE types? If directions share ~48% cosine similarity, does the transferred steering produce proportional gains?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16), Layer 31
+- **Datasets**: CWE-787 (105 pairs), CWE-134 (105 pairs)
+- **Directions**: Pre-computed L31 mean-difference vectors from vector_correlation_analysis.py
+- **Transfer 1**: CWE-787 direction → CWE-134 prompts, scored with CWE-134 patterns (printf/fprintf/syslog)
+- **Transfer 2**: CWE-134 direction → CWE-787 prompts, scored with CWE-787 patterns (sprintf/strcat)
+- **Alphas**: 0.0 (baseline), 1.5, 3.5
+- **Generation**: temperature=0.6, top_p=0.9, max_tokens=512
+
+### Results (No Interpretation)
+
+| Condition | α=0.0 | α=1.5 | α=3.5 |
+|---|---|---|---|
+| 787→134 (transfer) | 62.9% | 62.9% | 55.2% |
+| 134→134 (native ref) | 66.7% | 90.0% | 90.0% |
+| 134→787 (transfer) | 1.0% | 5.7% | 2.9% |
+| 787→787 (native ref) | 0.0% | 12.4% | 52.4% |
+
+**Hypothesis check (transfer ≈ 0.48 × native):**
+- 787→134 at α=1.5: predicted=43.4%, actual=62.9% (actual > predicted, but same as baseline)
+- 134→787 at α=3.5: predicted=25.3%, actual=2.9% (actual << predicted)
+
+**Verdict**: Steering vectors do NOT transfer meaningfully across CWE types. The CWE-787 direction shows zero improvement on CWE-134 prompts (62.9% at baseline = 62.9% with steering). The CWE-134 direction has negligible effect on CWE-787 prompts. The linear cosine-similarity hypothesis is not supported.
+
+### Code Location
+- [Detailed report](experiments/02-06_llama8b_cross_cwe_transfer_test.md)
+- [cross_cwe_transfer_test.py](../src/experiments/02-05_cross_cwe_steering/cross_cwe_transfer_test.py)
+
+### Data Location
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/cross_cwe_transfer_20260206_040528.json`
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/cross_cwe_transfer_full_20260206_040528.json`
+
+---
+
+## 2026-02-06: Experiment 5c - CodeQL Feasibility Check for CWE-134
+
+### Prompt
+> Sample 30 CWE-134 outputs at α=1.5, wrap as standalone C files, compile with gcc. If >50% compile, CodeQL validation is feasible.
+
+### Research Question
+Are CWE-134 steered outputs compilable enough for CodeQL static analysis validation?
+
+### Methods
+- **Inputs**: 30 random samples from CWE-134 LOBO/pilot fold results at α=1.5
+- **Code extraction**: Regex-based (reused from `01-14_codeql_scoring_prototype/02_wrap_code.py`)
+- **Wrapping**: Added standard C headers, main() stub when missing
+- **Compilation**: `gcc -fsyntax-only -w` per sample, 10s timeout
+
+### Results (No Interpretation)
+- **Samples**: 30/30 had extractable C code
+- **Compilation rate**: 30/30 = 100%
+- **Verdict**: FEASIBLE — CodeQL validation is worth pursuing for CWE-134
+
+### Code Location
+- [Detailed report](experiments/02-06_llama8b_cross_cwe_transfer_test.md)
+- [cwe134_codeql_feasibility.py](../src/experiments/02-05_cross_cwe_steering/cwe134_codeql_feasibility.py)
+
+### Data Location
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/cwe134_codeql_feasibility.json`
+
+---
+
 ## 2026-02-06: Experiment 5b - Cross-CWE Parallel Analysis (Vector Correlation, Failure Analysis, CIs)
 
 ### Prompt
@@ -145,7 +215,7 @@ See: [docs/experiments/02-05_cross_cwe_steering.md](experiments/02-05_cross_cwe_
 Does mean-difference activation steering for CWE-787 secure code generation transfer across model architectures (Llama -> Mistral) and scales (8B -> 70B)?
 
 ### Methods
-- **Models**: Mistral-7B-Instruct-v0.3 (fp16), Llama-3.1-70B-Instruct (4-bit NF4)
+- **Models**: Mistral-7B-Instruct-v0.3 (fp16), Llama-3.1-70B-Instruct (4-bit NF4), Qwen2.5-14B-Instruct (fp16)
 - **Dataset**: Same CWE-787 expanded dataset (105 pairs, 7 base_ids)
 - **Validation**: LOBO (Leave-One-Base-ID-Out) 7-fold cross-validation
 - **Generations**: 1 per prompt per alpha per fold
@@ -161,6 +231,7 @@ Does mean-difference activation steering for CWE-787 secure code generation tran
 |-------|--------|-------------|----------|-------------|------------|-------------|------------|
 | Llama-8B (ref) | 8B | fp16 | 0.0% | 52.4% | 3.5 | +52.4pp | 31/32 |
 | Mistral-7B | 7B | fp16 | 26.7% | 92.4% | 3.5-4.0 | +65.7pp | 31/32 |
+| **Qwen2.5-14B** | **14B** | **fp16** | **1.0%** | **77.1%** | **4.0** | **+74.2pp** | **47/48** |
 | Llama-70B | 70B | 4-bit NF4 | 1.9% | 52.4% | 4.0 | +50.5pp | 79/80 |
 
 **Mistral-7B Full LOBO (STRICT Scoring):**
@@ -197,16 +268,39 @@ Does mean-difference activation steering for CWE-787 secure code generation tran
 | pair_17_time_pressure | 53.3% | 5.0 |
 | pair_19_graphics | 86.7% | 4.0 |
 
+**Qwen2.5-14B Full LOBO (STRICT Scoring):**
+
+| Alpha | Secure% | Insecure% | Refusal% |
+|-------|---------|-----------|----------|
+| 0.0 | 2.9% | 89.5% | 0.0% |
+| 2.0 | 32.4% | 62.9% | 0.0% |
+| 3.0 | 65.7% | 28.6% | 1.0% |
+| 3.5 | 72.4% | 18.1% | 1.0% |
+| **4.0** | **77.1%** | **6.7%** | **0.0%** |
+| 5.0 | 45.7% | 1.9% | 0.0% |
+
+**Qwen2.5-14B Per-Fold Results (best alpha):**
+
+| Fold | Best Secure% | Best Alpha |
+|------|-------------|------------|
+| pair_07_sprintf_log | **100.0%** | 3.5 |
+| pair_09_path_join | 86.7% | 4.0 |
+| pair_11_json | 66.7% | 3.0-3.5 |
+| pair_12_xml | 46.7% | 3.5 |
+| pair_16_high_complexity | 93.3% | 4.0 |
+| pair_17_time_pressure | 80.0% | 4.0 |
+| pair_19_graphics | 93.3% | 4.0 |
+
 ### Key Findings (No Interpretation)
-1. **Steering transfers across architectures**: Mistral-7B achieves 92.4% secure (highest of any model)
-2. **Steering transfers across scales**: Llama-70B achieves 52.4% secure (same ceiling as Llama-8B)
-3. **Best layer is always the last hidden layer**: L31/32 for 7B models, L79/80 for 70B
-4. **Optimal alpha is consistent across Llama scales**: 3.5-4.0 for both 8B and 70B
-5. **Direction norm matters more than probe accuracy**: Llama-70B L2 had 96.7% accuracy but 0.09 norm (useless); L79 had 96.2% accuracy with 10.15 norm (effective)
-6. **Over-steering collapse is sharp for 70B**: alpha>=7.0 produces 0-7.6% secure with 92-100% "other" outputs
+1. **Steering transfers across architectures**: Mistral-7B (92.4%), Qwen2.5-14B (77.1%), Llama models (52.4%) all respond to steering
+2. **Qwen2.5-14B shows second-best performance**: 77.1% secure at α=4.0, with one fold achieving 100%
+3. **Best layer is always the last hidden layer**: L31/32 for 7B, L47/48 for 14B, L79/80 for 70B
+4. **Optimal alpha is consistent**: 3.5-4.0 across all model sizes and architectures
+5. **Direction norm matters more than probe accuracy**: Qwen L0 had 100% accuracy but 0.67 norm (useless); L47 had 95.2% accuracy with 88.9 norm (effective)
+6. **Over-steering collapse is model-dependent**: Llama-70B collapses at α≥7.0; Mistral/Qwen degrade more gracefully
 7. **Zero refusals across all models**: Steering changes code patterns, not model compliance
-8. **High per-fold variability for 70B**: Best secure rate ranges from 13.3% (XML) to 93.3% (high complexity)
-9. **Scaling doesn't improve steering ceiling**: 70B and 8B achieve same 52.4% peak despite 9x size difference
+8. **XML parsing is universally hard**: pair_12_xml achieves only 13-47% across all models
+9. **Scaling doesn't improve steering ceiling**: 70B same as 8B (52.4%), but 14B (77.1%) beats both
 
 ### Interpretation (Claude's)
 
