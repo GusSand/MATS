@@ -1,5 +1,53 @@
 # Research Journal
 
+## 2026-02-06: Experiment 7 - Stacked Vectors Test
+
+### Prompt
+> Experiment 6 (unified vector) showed that averaging CWE directions dilutes performance (-15 to -31pp vs native). Test whether stacking all three native CWE vectors simultaneously (adding them as separate perturbations) preserves CWE-specific effects while providing broad-spectrum security.
+
+### Research Question
+Does applying all 3 native CWE steering vectors simultaneously (summed perturbation at L31) preserve CWE-specific steering performance, unlike averaging which dilutes it?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16), Layer 31
+- **Directions**: 3 pre-computed native CWE vectors (norms: 7.77, 8.66, 8.51)
+- **Datasets**: 105 pairs each for CWE-787, CWE-119, CWE-134
+- **Hook**: `h[:, -1, :] += α_787·dir_787 + α_119·dir_119 + α_134·dir_134`
+- **Alpha configs**: Low (1.0/1.0/0.5), Medium (1.5/1.5/0.5), High (2.0/2.0/1.0), Weighted (1.5/2.0/0.3)
+- **Scoring**: Each CWE scored with its native patterns (strict mode)
+- **Total**: 1,260 steered generations (4 configs × 3 CWEs × 105 prompts)
+- **Generation**: seed=42, temperature=0.6, top_p=0.9, max_tokens=512
+
+### Results (No Interpretation)
+
+| CWE | Baseline | Native Best | Unified Best | Stk-Low | Stk-Med | Stk-High | Stk-Weighted |
+|-----|----------|-------------|--------------|---------|---------|----------|--------------|
+| 787 | 0.0% | 52.4% | 21.0% | 7.6% | 20.0% | 27.6% | 18.1% |
+| 119 | 0.0% | 20.0% | 4.8% | 1.0% | 2.9% | 7.6% | 10.5% |
+| 134 | 66.7% | 90.0% | 69.5% | 59.0% | 52.4% | 48.6% | 55.2% |
+
+Other % (degradation check, success <15%):
+
+| CWE | Stk-Low | Stk-Med | Stk-High | Stk-Weighted |
+|-----|---------|---------|----------|--------------|
+| 787 | 4.8% | 11.4% | 23.8% !!! | 7.6% |
+| 119 | 1.0% | 3.8% | 41.0% !!! | 5.7% |
+| 134 | 1.0% | 0.0% | 0.0% | 2.9% |
+
+**Success criteria: FAIL on all 4 configs.** No config preserved >=70% of native performance on any CWE. High config also failed Other% <15% on CWE-787 (23.8%) and CWE-119 (41.0%).
+
+**Key finding**: Stacking performs worse than unified averaging on CWE-787 and CWE-134, and degrades CWE-134 below baseline (48.6-59.0% vs 66.7%). The hypothesis that vectors operate in independent subspaces is not supported — they interfere destructively.
+
+### Code Location
+- [Detailed report](experiments/02-06_llama8b_stacked_vectors_test.md)
+- [stacked_vectors_experiment.py](../src/experiments/02-05_cross_cwe_steering/stacked_vectors_experiment.py)
+
+### Data Location
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/stacked_steering_results_20260206_225040.json`
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/stacked_steering_full_20260206_225040.json`
+
+---
+
 ## 2026-02-06: Experiment 6 - Unified Steering Vector (Combined CWE)
 
 ### Prompt
