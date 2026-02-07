@@ -4,6 +4,52 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Experiment 8.5: Neutral-Trained CWE Router & 2-Tier Deployment (02-07)
+
+### Overview
+
+Fixes probe routing distribution shift (Exp 8 Phase 4: 66.7% → 95.2%), validates 2-tier binary deployment architecture, runs full E2E pipeline with timing.
+
+### Activations
+`src/experiments/02-08_probe_routing_v2/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [neutral_original_L{0,8,16,24,31}.npy](../src/experiments/02-08_probe_routing_v2/data/) | Neutral prompt activations (21 × 4096) per layer | ~670 KB each |
+| [neutral_augmented_L{0,8,16,24,31}.npy](../src/experiments/02-08_probe_routing_v2/data/) | Augmented neutral activations (105 × 4096) per layer | ~3.4 MB each |
+| [adversarial_L{0,8,16,24,31}.npy](../src/experiments/02-08_probe_routing_v2/data/) | Adversarial activations (315 × 4096) per layer | ~10 MB each |
+| [labels_metadata.json](../src/experiments/02-08_probe_routing_v2/data/labels_metadata.json) | Label arrays and metadata | ~5 KB |
+
+**Stratification**: Neutral: 7 prompts × 3 CWEs = 21. Augmented: 5 prefix variants × 21 = 105. Adversarial: 105 pairs × 3 CWEs = 315.
+
+**How to recreate**: Run `python 01_probe_retraining.py` — collects activations from model, trains probes.
+
+### Binary Probe Weights
+`src/experiments/02-08_probe_routing_v2/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [binary_probe_weights.npy](../src/experiments/02-08_probe_routing_v2/data/binary_probe_weights.npy) | LogReg weights (1 × 4096) — adv-trained, L31 | ~33 KB |
+| [binary_probe_bias.npy](../src/experiments/02-08_probe_routing_v2/data/binary_probe_bias.npy) | LogReg bias (1,) | ~1 KB |
+| [binary_probe_scaler_mean.npy](../src/experiments/02-08_probe_routing_v2/data/binary_probe_scaler_mean.npy) | StandardScaler mean (4096,) | ~33 KB |
+| [binary_probe_scaler_scale.npy](../src/experiments/02-08_probe_routing_v2/data/binary_probe_scaler_scale.npy) | StandardScaler scale (4096,) | ~33 KB |
+
+**Training**: Adv-trained binary LogReg on 315 adversarial samples at L31. 95.2% LOO on neutral prompts.
+
+### Results
+`src/experiments/02-08_probe_routing_v2/results/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [3way_probe_results_20260207_211639.json](../src/experiments/02-08_probe_routing_v2/results/3way_probe_results_20260207_211639.json) | Part A: All probe training methods × layers | ~50 KB |
+| [2tier_simulation_results_20260207_212158.json](../src/experiments/02-08_probe_routing_v2/results/2tier_simulation_results_20260207_212158.json) | Part B: Strategy comparison table | ~2 KB |
+| [e2e_pipeline_results_20260207_212212.json](../src/experiments/02-08_probe_routing_v2/results/e2e_pipeline_results_20260207_212212.json) | Part C: E2E pipeline summary | ~5 KB |
+| [e2e_pipeline_full_20260207_212212.json](../src/experiments/02-08_probe_routing_v2/results/e2e_pipeline_full_20260207_212212.json) | Part C: Full outputs with completions | ~500 KB |
+
+**Used in**: Experiment 8.5. See [experiment report](experiments/02-07_llama8b_neutral_probe_routing_v2.md).
+
+---
+
 ## Experiment 8: Neutral Evaluation — Per-CWE Steering (02-07)
 
 ### Overview

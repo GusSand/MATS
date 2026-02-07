@@ -20,6 +20,85 @@ All methods tested on Llama-3.1-8B-Instruct (fp16), Layer 31, 105 prompts per CW
 
 ---
 
+## 2026-02-07: Experiment 8.5 — Neutral-Trained CWE Router & 2-Tier Deployment
+
+### Prompt
+> Fix probe routing (Phase 4 of Exp 8 only achieved 66.7%) by retraining on neutral/mixed data, validate 2-tier deployment architecture, and run full E2E pipeline with timing benchmarks.
+
+### Research Question
+Can we fix the distribution shift in CWE-type probes (adversarial-trained probes fail on neutral prompts) by retraining on neutral data? Is a 2-tier binary routing (format-string vs buffer) a viable simpler alternative to 3-way? What is the real-world overhead of probe-gated steering?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16), Layer 31 (steering), Layers [0,8,16,24,31] (probing)
+- **Data**: 21 neutral prompts (7/CWE), 105 augmented (5 prefix variants × 21), 315 adversarial (105/CWE)
+- **Probe training**: 4 methods for 3-way, 3 methods for binary, LOO/LOBO cross-validation
+- **E2E pipeline**: Binary probe at L31 → route → steer → generate → score, 10 seeds × 21 prompts
+- **Timing**: 50-iteration benchmark, max_new_tokens=64
+
+### Results (No Interpretation)
+
+**Part A — Probe Retraining (3-way, best valid methods per layer):**
+
+| Layer | Neutral LOO | Augmented LOBO | Mixed adv→neutral |
+|-------|------------|----------------|-------------------|
+| L0 | 76.2% | 76.2% | 33.3% |
+| L8 | 81.0% | 76.2% | 38.1% |
+| L16 | **95.2%** | **95.2%** | 61.9% |
+| L24 | 81.0% | 85.7% | 71.4% |
+| L31 | 76.2% | 81.0% | 66.7% |
+
+**Part A — Binary probe (format-string vs buffer, LOO):**
+
+| Layer | Neutral LOO | Adv-trained | Mixed-trained |
+|-------|------------|-------------|---------------|
+| L0 | 95.2% | 66.7% | 100%⚠️ |
+| L8 | 90.5% | 66.7% | 100%⚠️ |
+| L16 | **100%** | 90.5% | 100%⚠️ |
+| L24 | 95.2% | 95.2% | 100%⚠️ |
+| L31 | 95.2% | 95.2% | 100%⚠️ |
+
+⚠️ Mixed-trained 100% at all layers = data leakage (augmented test data in training set). Bug identified and flagged.
+
+**Part B — 2-Tier Strategy Comparison (avg secure rate):**
+
+| Strategy | CWE-787 | CWE-119 | CWE-134 | Avg |
+|----------|---------|---------|---------|-----|
+| No steering | 47.1% | 65.0% | 100.0% | 70.7% |
+| Perfect 3-way | 100.0% | 81.4% | 100.0% | 93.8% |
+| 2-Tier (binary probe) | 100.0% | 64.3% | 100.0% | 88.1% |
+| Naive CWE-787 only | 100.0% | 64.3% | 92.1% | 85.5% |
+
+2-Tier costs 5.7pp vs perfect routing. CWE-119 takes 17.1pp hit (gets CWE-787 vector instead of native).
+
+**Part C — E2E Pipeline (live generation + scoring):**
+
+| Metric | Value |
+|--------|-------|
+| Overall secure rate | 88.6% (186/210) |
+| Routing accuracy | 95.2% (20/21) |
+| CWE-787 secure | 98.6% (69/70) |
+| CWE-119 secure | 67.1% (47/70) |
+| CWE-134 secure | 100.0% (70/70) |
+
+**Part C — Overhead Benchmarks:**
+
+| Component | Time (ms) | Overhead |
+|-----------|-----------|----------|
+| Baseline (no hook) | 1213 | — |
+| Probe inference | 54 | — |
+| Steered generation | 2391 | — |
+| Full pipeline | 2447 | **+101.8%** |
+
+### Bug Found
+Mixed+Augmented method (Method 4) had data leakage: augmented neutral set includes original 21 neutral prompts (variant_idx=0), which ARE the LOO test set. This caused spurious 100% accuracy at all layers. Flagged per Iron Law.
+
+### Code Location
+- [01_probe_retraining.py](../src/experiments/02-08_probe_routing_v2/01_probe_retraining.py) - Part A: probe retraining
+- [02_two_tier_analysis.py](../src/experiments/02-08_probe_routing_v2/02_two_tier_analysis.py) - Part B: 2-tier analysis
+- [03_e2e_pipeline.py](../src/experiments/02-08_probe_routing_v2/03_e2e_pipeline.py) - Part C: E2E pipeline
+
+---
+
 ## 2026-02-07: Experiment 8 — Per-CWE Steering on Neutral Prompts
 
 ### Prompt
