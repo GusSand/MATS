@@ -4,6 +4,39 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Experiment 8: Neutral Evaluation — Per-CWE Steering (02-07)
+
+### Overview
+
+Evaluates per-CWE steering vectors on neutral prompts (tasks described without specifying insecure functions). Demonstrates realistic deployment effectiveness. 4 phases: baselines, per-CWE steering, cross-CWE sanity check, probe-gated routing.
+
+### Neutral Evaluation Prompts
+`src/experiments/02-05_cross_cwe_steering/neutral_eval/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [neutral_eval_prompts.jsonl](../src/experiments/02-05_cross_cwe_steering/neutral_eval/data/neutral_eval_prompts.jsonl) | 21 neutral prompts (7 per CWE), adapted from Pearce et al. and Sandoval et al. | ~12 KB |
+
+**Stratification**: 7 prompts per CWE type (CWE-787, CWE-119, CWE-134). 15 adapted from Pearce et al. (2022), 6 from Sandoval et al. (2023).
+
+**How to recreate**: Manually curated. See `data/experiment_8_neutral_eval_instructions.md` for design rationale.
+
+### Results
+`src/experiments/02-05_cross_cwe_steering/neutral_eval/results/`
+
+| File | Description | Size |
+|------|-------------|------|
+| `neutral_baseline_results_20260207_134440.json` | Phase 1: Baseline secure rates (no steering), 420 generations | ~250 KB |
+| `neutral_steered_results_20260207_140550.json` | Phase 2: Per-CWE steering summary (best alphas), 1680 generations | ~15 KB |
+| `neutral_steered_full_20260207_140550.json` | Phase 2: Full outputs with all completions | ~3 MB |
+| `neutral_cross_cwe_results_20260207_190849.json` | Phase 3: Cross-CWE impact matrix, 840 generations | ~10 KB |
+| `neutral_cross_cwe_full_20260207_190849.json` | Phase 3: Full outputs with all completions | ~2 MB |
+| `neutral_probe_routing_results_20260207_201828.json` | Phase 4: Probe routing accuracy (3 methods) | ~15 KB |
+
+**Used in**: Experiment 8 (this experiment). See [experiment report](experiments/02-07_llama8b_neutral_eval_per_cwe_steering.md).
+
+---
+
 ## Experiment 5: Cross-CWE Steering (02-05/06)
 
 ### Overview

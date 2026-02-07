@@ -1,5 +1,95 @@
 # Research Journal
 
+## Cross-CWE Combination Methods: Grand Comparison
+
+All methods tested on Llama-3.1-8B-Instruct (fp16), Layer 31, 105 prompts per CWE. Strict scoring. Secure rate = % of outputs containing secure function calls.
+
+| Method | CWE-787 | CWE-119 | CWE-134 | Avg |
+|--------|---------|---------|---------|-----|
+| Baseline (no steering) | 0.0% | 0.0% | 66.7% | 22.2% |
+| Native per-CWE best | 52.4% (α=3.5) | 20.0% (α=4.0) | 90.0% (α=1.5) | 54.1% |
+| Unified single vector (Exp 6) | 21.0% (α=4.0) | 4.8% (α=3.0) | 69.5% (α=1.0) | 31.8% |
+| Stacked vectors best (Exp 7) | 27.6% (High) | 10.5% (Weighted) | 59.0%\* (Low) | 32.4%\*\* |
+| PCA best sv-weighted (Exp 7A) | 1.9% | 0.0% | 74.3% | 25.4% |
+| Conceptor AND (Exp 7B) | N/A | N/A | N/A | N/A |
+
+\*Stacked CWE-134 degraded below baseline on all configs.
+\*\*Stacked avg uses best config per-CWE, not a single best config.
+
+**Conclusion**: All four combination approaches fail to match native per-CWE performance. Effective security steering requires CWE-specific vectors.
+
+---
+
+## 2026-02-07: Experiment 8 — Per-CWE Steering on Neutral Prompts
+
+### Prompt
+> Evaluate per-CWE steering vectors on neutral prompts (tasks described without specifying insecure functions). Demonstrates realistic deployment effectiveness vs adversarial prompts.
+
+### Research Question
+How effective are per-CWE steering vectors when applied to realistic neutral prompts (no explicit insecure function instructions), and can a probe-gated routing system correctly select the right vector?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16), Layer 31
+- **Prompts**: 21 neutral prompts (7 per CWE), adapted from Pearce et al. (2022) and Sandoval et al. (2023)
+- **Generation**: temperature=0.6, top_p=0.9, max_tokens=512, 20 seeds per prompt (140 samples/CWE)
+- **Scoring**: Per-CWE regex classifiers (same as adversarial experiments)
+- **Phases**: (1) Neutral baselines, (2) Per-CWE steering with alpha sweep, (3) Cross-CWE sanity check, (4) Probe-gated routing simulation
+
+### Results (No Interpretation)
+
+**Phase 1 — Neutral Baselines (no steering):**
+
+| CWE | Secure Rate | N |
+|-----|------------|---|
+| CWE-787 | 47.1% | 66/140 |
+| CWE-119 | 65.0% | 91/140 |
+| CWE-134 | 100.0% | 140/140 |
+
+**Phase 2 — Per-CWE Steering on Neutral Prompts (best alpha):**
+
+| CWE | Best α | Steered | Baseline | Δ |
+|-----|--------|---------|----------|---|
+| CWE-787 | 4.0 | 100.0% | 47.1% | +52.9pp |
+| CWE-119 | 4.5 | 81.4% | 65.0% | +16.4pp |
+| CWE-134 | 1.0 | 100.0% | 100.0% | +0.0pp |
+
+**Phase 3 — Cross-CWE Impact Matrix (secure rate when applying wrong vector):**
+
+| Vector \ Prompts | CWE-787 | CWE-119 | CWE-134 |
+|---|---|---|---|
+| Baseline | 47.1% | 65.0% | 100.0% |
+| CWE-787 vec (α=4.0) | — | 64.3% (Δ=-0.7pp) | 92.1% (Δ=-7.9pp) |
+| CWE-119 vec (α=4.5) | 56.4% (Δ=+9.3pp) | — | 100.0% (Δ=+0.0pp) |
+| CWE-134 vec (α=1.0) | 48.6% (Δ=+1.5pp) | 69.3% (Δ=+4.3pp) | — |
+
+Only warning: CWE-787→CWE-134 degradation of -7.9pp.
+
+**Phase 4 — Probe-Gated Routing Accuracy (3-class CWE-type classification):**
+
+| Method | Overall | CWE-787 | CWE-119 | CWE-134 |
+|---|---|---|---|---|
+| LogReg probe L0 | 33.3% | 100.0% | 0.0% | 0.0% |
+| LogReg probe L31 | 66.7% | 85.7% | 14.3% | 100.0% |
+| Direction dot-product (L31) | 38.1% | 100.0% | 0.0% | 14.3% |
+
+All probes had 99.7-100% CV accuracy on adversarial training data.
+CWE-119 neutral prompts systematically misrouted to CWE-787 (semantic overlap in buffer operations).
+
+**Adversarial vs Neutral Complete Comparison:**
+
+| Condition | CWE-787 | CWE-119 | CWE-134 | Avg |
+|---|---|---|---|---|
+| Adversarial baseline | 0.0% | 0.0% | 66.7% | 22.2% |
+| Adversarial + steer | 52.4% | 20.0% | 90.0% | 54.1% |
+| Neutral baseline | 47.1% | 65.0% | 100.0% | 70.7% |
+| Neutral + steer (best α) | 100.0% | 81.4% | 100.0% | 93.8% |
+| Neutral steering Δ | +52.9pp | +16.4pp | +0.0pp | +23.1pp |
+| Instruction resistance* | +47.6pp | +61.4pp | +10.0pp | +39.7pp |
+
+\*Instruction resistance = neutral_steered - adversarial_steered (gap attributable to fighting explicit insecure instructions)
+
+---
+
 ## 2026-02-07: Experiment 7B - Conceptor AND Steering
 
 ### Prompt
