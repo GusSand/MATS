@@ -1,5 +1,68 @@
 # Research Journal
 
+## 2026-02-07: Experiment 9 — Cross-Model Neutral Evaluation (Mistral-7B, Qwen-14B)
+
+### Prompt
+> Run Experiment 9: Cross-Model Neutral Evaluation. Test whether the instruction resistance gap found in Llama-8B (Exp 8) holds across architectures by running neutral prompt evaluations on Mistral-7B-Instruct-v0.3 and Qwen2.5-14B-Instruct for CWE-787, CWE-119, and CWE-134.
+
+### Research Question
+Does the "instruction resistance gap" (neutral_steered - adversarial_steered rates) generalize across model architectures? Is CWE-119 universally hardest to steer? Is CWE-134 universally easy at baseline?
+
+### Methods
+- **Models**: Mistral-7B-Instruct-v0.3 (Layer 31, 4096-dim), Qwen2.5-14B-Instruct (Layer 47, 5120-dim), plus Llama-3.1-8B-Instruct reference data from Exp 8
+- **Prompts**: 21 neutral prompts (7/CWE) from `02-05_cross_cwe_steering/neutral_eval/data/neutral_eval_prompts.jsonl`
+- **Seeds**: 10 per prompt [42, 123, 456, 789, 1000, 1111, 2222, 3333, 4444, 5555]
+- **Generation**: temperature=0.6, top_p=0.9, max_tokens=512, do_sample=True
+- **Steering vectors**: Extracted per-CWE directions (mean_secure - mean_vulnerable) at each model's target layer
+  - CWE-787: from stored NPZ activations (prior experiments)
+  - CWE-119/134: from model forward passes on expanded datasets (~40 pairs each)
+- **Alpha grids**: Mistral CWE-787=[3.5], CWE-119/134=[3.0,3.5,4.0]; Qwen CWE-787=[4.0], CWE-119/134=[3.0,3.5,4.0]
+- **Cross-CWE check**: Applied each CWE vector to 3 prompts from other CWEs, 10 seeds each
+
+### Results (No Interpretation)
+
+**Table 1: Neutral Prompt Security Rate**
+
+| Model | Condition | CWE-787 | CWE-119 | CWE-134 | Avg |
+|-------|-----------|---------|---------|---------|-----|
+| Llama-8B | Baseline | 47.1% | 65.0% | 100.0% | 70.7% |
+| Llama-8B | Steered | 100.0% | 81.4% | 100.0% | 93.8% |
+| Mistral-7B | Baseline | 75.7% | 90.0% | 100.0% | 88.6% |
+| Mistral-7B | Steered | 98.6% (α=3.5) | 75.7% (α=3.0) | 100.0% (α=3.0) | 91.4% |
+| Qwen-14B | Baseline | 78.6% | 100.0% | 100.0% | 92.9% |
+| Qwen-14B | Steered | 100.0% (α=4.0) | 81.4% (α=3.0) | 100.0% (α=3.0) | 93.8% |
+
+**Table 2: Instruction Resistance Gap (CWE-787 only, neutral_steered - adversarial_steered)**
+
+| Model | Gap | Neutral Steered | Adversarial Steered |
+|-------|-----|----------------|---------------------|
+| Llama-8B | +47.6pp | 100.0% | 52.4% |
+| Mistral-7B | +6.2pp | 98.6% | 92.4% |
+| Qwen-14B | +22.9pp | 100.0% | 77.1% |
+
+**Table 3: Cross-CWE Interference (degradation > 5pp flagged)**
+
+| Model | Steering→Target | Delta |
+|-------|-----------------|-------|
+| Mistral-7B | CWE-787→CWE-119 | -6.7pp |
+| Mistral-7B | CWE-134→CWE-787 | -5.7pp |
+| Qwen-14B | CWE-134→CWE-787 | -8.6pp |
+
+**Qwen-14B CWE-119 Alpha Overshoot**: Higher alpha *decreases* security rate (α=3.0: 81.4%, α=3.5: 64.3%, α=4.0: 51.4%)
+
+**Hypothesis Evaluation:**
+- H1 (Gap is architecture-dependent): **CONFIRMED** — ranges from +6.2pp (Mistral) to +47.6pp (Llama)
+- H2 (CWE-134 baselines high): **CONFIRMED** — 100.0% across all 3 models
+- H3 (CWE-119 hardest to steer): **CONFIRMED** — lowest steered rate in all 3 models
+- H4 (No cross-CWE interference): **PARTIAL** — CWE-134→CWE-787 degrades on both Mistral (-5.7pp) and Qwen (-8.6pp)
+
+### Code Location
+- [01_extract_vectors.py](../src/experiments/02-09_cross_model_neutral_eval/01_extract_vectors.py) - Phase 1: vector extraction
+- [02_neutral_eval.py](../src/experiments/02-09_cross_model_neutral_eval/02_neutral_eval.py) - Phases 2-4: baseline + steering + cross-CWE
+- [03_analysis.py](../src/experiments/02-09_cross_model_neutral_eval/03_analysis.py) - Phase 5: cross-model analysis
+
+---
+
 ## Cross-CWE Combination Methods: Grand Comparison
 
 All methods tested on Llama-3.1-8B-Instruct (fp16), Layer 31, 105 prompts per CWE. Strict scoring. Secure rate = % of outputs containing secure function calls.

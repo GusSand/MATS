@@ -1107,6 +1107,45 @@ python 05_inline_harness.py  # Recommended approach
 
 ---
 
+## Experiment 9: Cross-Model Neutral Evaluation (`02-09_cross_model_neutral_eval/`)
+
+### Steering Vectors
+
+**Mistral-7B (Layer 31, 4096-dim):**
+- [`direction_cwe787_L31_20260207_202621.npy`](../src/experiments/02-09_cross_model_neutral_eval/mistral7b/data/direction_cwe787_L31_20260207_202621.npy) — CWE-787 direction (norm=3.90), from stored NPZ activations
+- [`direction_cwe119_L31_20260207_202621.npy`](../src/experiments/02-09_cross_model_neutral_eval/mistral7b/data/direction_cwe119_L31_20260207_202621.npy) — CWE-119 direction (norm=5.38), from model forward passes on 40 pairs
+- [`direction_cwe134_L31_20260207_202621.npy`](../src/experiments/02-09_cross_model_neutral_eval/mistral7b/data/direction_cwe134_L31_20260207_202621.npy) — CWE-134 direction (norm=3.72), from model forward passes on 40 pairs
+- [`vector_metadata_20260207_202621.json`](../src/experiments/02-09_cross_model_neutral_eval/mistral7b/data/vector_metadata_20260207_202621.json) — Metadata including norms and cross-CWE cosine sims
+
+**Qwen-14B (Layer 47, 5120-dim):**
+- [`direction_cwe787_L47_20260207_202621.npy`](../src/experiments/02-09_cross_model_neutral_eval/qwen14b/data/direction_cwe787_L47_20260207_202621.npy) — CWE-787 direction (norm=88.86)
+- [`direction_cwe119_L47_20260207_202621.npy`](../src/experiments/02-09_cross_model_neutral_eval/qwen14b/data/direction_cwe119_L47_20260207_202621.npy) — CWE-119 direction (norm=235.09)
+- [`direction_cwe134_L47_20260207_202621.npy`](../src/experiments/02-09_cross_model_neutral_eval/qwen14b/data/direction_cwe134_L47_20260207_202621.npy) — CWE-134 direction (norm=148.09)
+- [`vector_metadata_20260207_202621.json`](../src/experiments/02-09_cross_model_neutral_eval/qwen14b/data/vector_metadata_20260207_202621.json) — Metadata
+
+**How to recreate**: `python src/experiments/02-09_cross_model_neutral_eval/01_extract_vectors.py`
+
+### Evaluation Results
+
+**Mistral-7B Results (timestamp 20260207_202836):**
+- [`neutral_baseline_results_20260207_202836.json`](../src/experiments/02-09_cross_model_neutral_eval/mistral7b/data/neutral_baseline_results_20260207_202836.json) — 210 generations (21 prompts × 10 seeds), per-CWE secure rates
+- [`neutral_steered_results_20260207_202836.json`](../src/experiments/02-09_cross_model_neutral_eval/mistral7b/data/neutral_steered_results_20260207_202836.json) — Best alpha per CWE and per-alpha grid results
+- [`neutral_steered_full_20260207_202836.json`](../src/experiments/02-09_cross_model_neutral_eval/mistral7b/data/neutral_steered_full_20260207_202836.json) — Full generation outputs with scores
+- [`cross_cwe_sanity_check_20260207_202836.json`](../src/experiments/02-09_cross_model_neutral_eval/mistral7b/data/cross_cwe_sanity_check_20260207_202836.json) — 180 cross-CWE interference check generations
+
+**Qwen-14B Results (timestamp 20260207_210947):**
+- [`neutral_baseline_results_20260207_210947.json`](../src/experiments/02-09_cross_model_neutral_eval/qwen14b/data/neutral_baseline_results_20260207_210947.json) — 210 generations
+- [`neutral_steered_results_20260207_210947.json`](../src/experiments/02-09_cross_model_neutral_eval/qwen14b/data/neutral_steered_results_20260207_210947.json) — Best alpha per CWE
+- [`neutral_steered_full_20260207_210947.json`](../src/experiments/02-09_cross_model_neutral_eval/qwen14b/data/neutral_steered_full_20260207_210947.json) — Full outputs
+- [`cross_cwe_sanity_check_20260207_210947.json`](../src/experiments/02-09_cross_model_neutral_eval/qwen14b/data/cross_cwe_sanity_check_20260207_210947.json) — Cross-CWE check
+
+**How to recreate**: `python src/experiments/02-09_cross_model_neutral_eval/02_neutral_eval.py --model mistral7b` and `--model qwen14b`
+
+**Used in**: Experiment 9 — Cross-model instruction resistance gap comparison
+**Stratification**: 7 prompts per CWE, 10 random seeds per prompt, even split across CWE types
+
+---
+
 ## Scoring Documentation
 
 See [SCORING.md](SCORING.md) for complete documentation of the scoring system including:
