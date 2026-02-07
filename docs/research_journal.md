@@ -1,5 +1,145 @@
 # Research Journal
 
+## 2026-02-07: Experiment 7B - Conceptor AND Steering
+
+### Prompt
+> Test whether computing per-CWE conceptor matrices (soft projection from secure-prompt activations) and composing via Boolean AND yields a shared "security subspace" that can steer across all 3 CWEs simultaneously.
+
+### Research Question
+Does the Boolean AND of three CWE-specific conceptors (computed from secure-prompt activations at L31) capture a shared security subspace that can steer code generation toward secure patterns?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16), Layer 31
+- **Datasets**: 105 pairs each for CWE-787, CWE-119, CWE-134
+- **Activation collection**: Secure-prompt activations at L31 (315 prompts total)
+- **Conceptor computation**: SVD-based C = V diag(s^2/(s^2 + alpha^-2)) V^T per CWE
+- **Boolean AND**: C_AND = (C1^-1 + C2^-1 - I)^-1 with eigenvalue clipping to [0,1]
+- **Apertures**: {1.0, 5.0}
+- **Betas** (planned): {0.3, 0.5, 0.7}
+- **Steering hook** (planned): h_new = (1-beta)*h + beta*(C_AND @ h)
+- **Generation**: seed=42, temperature=0.6, top_p=0.9, max_tokens=256
+
+### Results (No Interpretation)
+
+**Per-CWE conceptor properties (aperture=1.0):**
+
+| CWE | Trace | Significant dims (>0.5) | Max weight |
+|-----|-------|------------------------|------------|
+| 787 | 48.3 | 96 | 0.994 |
+| 119 | 19.8 | 36 | 0.974 |
+| 134 | 23.2 | 46 | 0.975 |
+
+**Per-CWE conceptor properties (aperture=5.0):**
+
+| CWE | Trace | Significant dims (>0.5) | Max weight |
+|-----|-------|------------------------|------------|
+| 787 | 94.4 | 104 | 1.000 |
+| 119 | 47.5 | 78 | 0.999 |
+| 134 | 44.3 | 48 | 0.999 |
+
+**C_security (Boolean AND) for ALL apertures:**
+
+| Aperture | Trace | Dims >0.5 | Dims >0.1 | Dims >0.01 | Max eigenvalue |
+|----------|-------|-----------|-----------|------------|----------------|
+| 1.0 | 0.0026 | 0 | 0 | 0 | 1.14e-05 |
+| 5.0 | 0.0026 | 0 | 0 | 0 | 1.14e-05 |
+
+**Steering was SKIPPED** — C_security is effectively zero for all apertures.
+
+**Success criteria: FAIL.** The Boolean AND of three CWE conceptors finds no shared subspace. Root cause: 105 samples per CWE in 4096-dimensional space means each conceptor spans at most ~36-104 dimensions; the intersection of three such subspaces in R^4096 is essentially zero (sample-to-dimension ratio: 105/4096 ≈ 2.6%).
+
+### Adversarial Prompt Limitation Flag
+Current datasets use prompts that explicitly request insecure functions (e.g., "Use gets()", "Pass directly to printf"). This is an adversarial evaluation — it tests whether steering can override explicit user instructions to use insecure patterns. Real-world steering effectiveness against ambiguous prompts is likely higher. Results should be interpreted as lower bounds.
+
+### Code Location
+- [Detailed report](experiments/02-07_llama8b_pca_conceptor_subspace_steering.md)
+- [conceptor_steering_experiment.py](../src/experiments/02-05_cross_cwe_steering/conceptor_steering_experiment.py)
+
+### Data Location
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/conceptor_steering_results_20260207_052813.json`
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/conceptor_info_20260207_052813.json`
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/secure_activations_L31_20260207_052813.npz`
+
+---
+
+## 2026-02-07: Experiment 7A - PCA Subspace Steering
+
+### Prompt
+> The unified vector (Experiment 6) underperforms native per-CWE vectors. If "write secure code" is a multi-dimensional subspace, PCA decomposition of the 3 CWE direction vectors should reveal the subspace structure. Test whether steering with multiple PCs outperforms the unified single vector.
+
+### Research Question
+Does decomposing the 3 CWE steering vectors via PCA and steering with weighted principal components produce better cross-CWE security rates than the unified single-direction approach?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16), Layer 31
+- **Input vectors**: 3 pre-computed CWE direction vectors (norms: 7.77, 8.66, 8.51)
+- **PCA**: SVD of 3×4096 matrix → 3 principal components (unit-normalized)
+- **Datasets**: 105 pairs each for CWE-787, CWE-119, CWE-134
+- **Multi-steering hook**: `h[:, -1, :] += sum(alpha_i * pc_i for i in 1..k)`
+- **Generation**: seed=42, temperature=0.6, top_p=0.9, max_tokens=256
+
+### PCA Eigenvalue Spectrum
+
+| PC | Singular value | Variance explained | Cumulative |
+|----|---------------|-------------------|------------|
+| PC1 | 11.99 | 69.2% | 69.2% |
+| PC2 | 6.04 | 17.6% | 86.8% |
+| PC3 | 5.24 | 13.2% | 100.0% |
+
+SV-relative weights: [1.0, 0.504, 0.437]
+
+Pairwise cosine similarity of original vectors:
+- CWE-787 vs CWE-119: 0.467
+- CWE-787 vs CWE-134: 0.482
+- CWE-119 vs CWE-134: 0.626
+
+### Alpha Configurations Tested
+
+| Config | α_PC1 | α_PC2 | α_PC3 |
+|--------|-------|-------|-------|
+| PC1-only α=3.0 | 3.0 | 0.0 | 0.0 |
+| PC1+2 weighted | 3.0 | 1.5 | 0.0 |
+| PC1+2+3 weighted | 3.0 | 2.0 | 1.0 |
+| PC1+2+3 sv-weighted | 3.0 | 1.51 | 1.31 |
+
+### Results (No Interpretation)
+
+| Config | CWE-787 | CWE-119 | CWE-134 | Avg |
+|--------|---------|---------|---------|-----|
+| PC1-only α=3.0 | 1.9% | 0.0% | 71.4% | 24.4% |
+| PC1+2 weighted | 0.0% | 0.0% | 67.6% | 22.5% |
+| PC1+2+3 weighted | 1.0% | 0.0% | 70.5% | 23.8% |
+| PC1+2+3 sv-weighted | 1.9% | 0.0% | 74.3% | 25.4% |
+
+Reference comparison:
+
+| Method | CWE-787 | CWE-119 | CWE-134 | Avg |
+|--------|---------|---------|---------|-----|
+| Baseline (no steering) | 0.0% | 0.0% | 66.7% | 22.2% |
+| Native per-CWE best | 52.4% | 20.0% | 90.0% | 54.1% |
+| Unified single vector | 21.0% | 4.8% | 69.5% | 31.8% |
+| **PCA best (sv-weighted)** | **1.9%** | **0.0%** | **74.3%** | **25.4%** |
+
+**Success criteria: FAIL on all 4 configs.** No config approached native per-CWE performance. PCA steering is worse than the unified single vector on CWE-787 (1.9% vs 21.0%) and CWE-119 (0.0% vs 4.8%). Only CWE-134 shows marginal improvement over baseline (+7.6pp for sv-weighted), but still below unified.
+
+Likely cause: PCA unit-normalizes the principal components, but original direction vectors had norms 7.77-8.66. At α=3.0, effective perturbation is α×1.0=3.0, whereas native vectors perturb by α×norm≈α×8.3. The PCs lose magnitude information.
+
+### Adversarial Prompt Limitation Flag
+Current datasets use prompts that explicitly request insecure functions (e.g., "Use gets()", "Pass directly to printf"). This is an adversarial evaluation — it tests whether steering can override explicit user instructions to use insecure patterns. Real-world steering effectiveness against ambiguous prompts is likely higher. Results should be interpreted as lower bounds.
+
+### Code Location
+- [Detailed report](experiments/02-07_llama8b_pca_conceptor_subspace_steering.md)
+- [pca_analysis.py](../src/experiments/02-05_cross_cwe_steering/pca_analysis.py) - PCA decomposition
+- [pca_steering_experiment.py](../src/experiments/02-05_cross_cwe_steering/pca_steering_experiment.py) - PCA steering
+
+### Data Location
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/pca_analysis_20260207_025304.json`
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/pc{1,2,3}_security_L31_20260207_025304.npy`
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/pca_subspace_steering_results_20260207_030444.json`
+- `src/experiments/02-05_cross_cwe_steering/cross_cwe_analysis/data/pca_subspace_steering_full_20260207_030444.json`
+
+---
+
 ## 2026-02-06: Experiment 7 - Stacked Vectors Test
 
 ### Prompt
