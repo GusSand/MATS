@@ -4,6 +4,113 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Python CWE Datasets: CWE-89, CWE-78, CWE-79 (02-09)
+
+### Overview
+
+Adversarial prompt pair datasets for 3 Python-language CWEs, designed for mean-difference activation steering. Each CWE has 7 base scenarios × 15 linguistic instruction variations = 105 pairs. Variations change ONLY the docstring instruction — function signatures, imports, and skeleton remain identical. Also includes 21 neutral evaluation prompts (7 per CWE) and per-CWE regex-based scoring functions.
+
+### CWE-89: SQL Injection Dataset
+`src/experiments/02-05_cross_cwe_steering/datasets/cwe89/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [scoring.py](../src/experiments/02-05_cross_cwe_steering/datasets/cwe89/scoring.py) | Regex scorer: parameterized queries (secure) vs string formatting (insecure) | ~2 KB |
+| [data/cwe89_expanded_20260209_221808.jsonl](../src/experiments/02-05_cross_cwe_steering/datasets/cwe89/data/cwe89_expanded_20260209_221808.jsonl) | 105 prompt pairs (7 base × 15 variations) | ~80 KB |
+
+**Base scenarios**: user_login, product_search, order_history, user_profile_update, log_entry, admin_delete, report_filter
+**Secure pattern**: `cursor.execute("...?...", (params,))` — parameterized queries
+**Insecure pattern**: `f"SELECT...{var}"`, `"SELECT..." + var` — string formatting
+
+### CWE-78: OS Command Injection Dataset
+`src/experiments/02-05_cross_cwe_steering/datasets/cwe78/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [scoring.py](../src/experiments/02-05_cross_cwe_steering/datasets/cwe78/scoring.py) | Regex scorer: subprocess with list args (secure) vs os.system/shell=True (insecure) | ~2 KB |
+| [data/cwe78_expanded_20260209_221808.jsonl](../src/experiments/02-05_cross_cwe_steering/datasets/cwe78/data/cwe78_expanded_20260209_221808.jsonl) | 105 prompt pairs (7 base × 15 variations) | ~70 KB |
+
+**Base scenarios**: ping_host, dns_lookup, disk_usage, file_compress, process_grep, git_clone, convert_image
+**Secure pattern**: `subprocess.run(["cmd", arg1, arg2])` — list arguments
+**Insecure pattern**: `os.system(f"cmd {arg}")`, `subprocess.run(..., shell=True)` — shell injection
+
+### CWE-79: Cross-Site Scripting (XSS) Dataset
+`src/experiments/02-05_cross_cwe_steering/datasets/cwe79/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [scoring.py](../src/experiments/02-05_cross_cwe_steering/datasets/cwe79/scoring.py) | Regex scorer: html.escape/render_template (secure) vs raw f-string HTML (insecure) | ~2 KB |
+| [data/cwe79_expanded_20260209_221808.jsonl](../src/experiments/02-05_cross_cwe_steering/datasets/cwe79/data/cwe79_expanded_20260209_221808.jsonl) | 105 prompt pairs (7 base × 15 variations) | ~65 KB |
+
+**Base scenarios**: welcome_page, search_results, user_comment, error_message, profile_display, admin_panel, email_preview
+**Secure pattern**: `html.escape(var)`, `render_template()`, `bleach.clean()` — escaping
+**Insecure pattern**: `f"<div>{var}</div>"`, `"<p>" + var + "</p>"` — raw insertion
+
+### Python Neutral Evaluation Prompts
+`src/experiments/02-05_cross_cwe_steering/datasets/neutral_eval/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [neutral_python_prompts.jsonl](../src/experiments/02-05_cross_cwe_steering/datasets/neutral_eval/data/neutral_python_prompts.jsonl) | 21 neutral prompts (7 per CWE) — task described without specifying approach | ~8 KB |
+
+**Stratification**: 7 prompts per CWE (CWE-89, CWE-78, CWE-79). Each describes the programming task neutrally without mentioning secure or insecure patterns.
+
+### Shared Files
+
+| File | Description |
+|------|-------------|
+| [expand_python_datasets.py](../src/experiments/02-05_cross_cwe_steering/datasets/expand_python_datasets.py) | Expansion script: base definitions + JSONL generation |
+| [test_scorers.py](../src/experiments/02-05_cross_cwe_steering/datasets/test_scorers.py) | Scorer validation: 25 tests per CWE (75 total), all passing |
+
+### JSONL Structure
+
+```python
+import json
+
+with open('cwe89/data/cwe89_expanded_20260209_221808.jsonl') as f:
+    pairs = [json.loads(line) for line in f]
+
+# Each pair has:
+{
+    "pair_id": "cwe89_user_login_v01",
+    "base_id": "user_login",
+    "cwe": "CWE-89",
+    "variation": 1,
+    "insecure_prompt": "...",
+    "secure_prompt": "...",
+    "insecure_instruction": "...",
+    "secure_instruction": "..."
+}
+```
+
+### How to Recreate
+
+```bash
+cd src/experiments/02-05_cross_cwe_steering/datasets
+
+# Generate all 3 JSONL files (315 pairs total)
+python expand_python_datasets.py
+
+# Validate scorers (must pass before any downstream use)
+python test_scorers.py
+```
+
+### Counts Summary
+
+| Dataset | Pairs | Base Scenarios | Variations |
+|---------|-------|---------------|------------|
+| CWE-89 | 105 | 7 | 15 |
+| CWE-78 | 105 | 7 | 15 |
+| CWE-79 | 105 | 7 | 15 |
+| **Total adversarial** | **315** | **21** | **15** |
+| Neutral (Python) | 21 | — | — |
+| Neutral (C, existing) | 21 | — | — |
+| **Total neutral** | **42** | — | — |
+
+**Used in**: Upcoming steering experiments for Python-language CWEs.
+
+---
+
 ## Experiment 8.5: Neutral-Trained CWE Router & 2-Tier Deployment (02-07)
 
 ### Overview

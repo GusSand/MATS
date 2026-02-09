@@ -1,5 +1,46 @@
 # Research Journal
 
+## 2026-02-09: Python CWE Dataset Expansion (CWE-89, CWE-78, CWE-79)
+
+### Prompt
+> Expand our CWE dataset by creating adversarial prompt pair datasets for 3 Python-language CWEs (SQL Injection, OS Command Injection, XSS) following the same format as the existing C-language CWEs (787, 119, 134).
+
+### Research Question
+Can we create high-quality adversarial prompt pair datasets for Python-language vulnerabilities that will enable mean-difference steering vector extraction, following the same methodology proven on C-language CWEs?
+
+### Methods
+- **Language**: Python (vs existing C-language datasets)
+- **CWEs**: CWE-89 (SQL Injection), CWE-78 (OS Command Injection), CWE-79 (Cross-Site Scripting)
+- **Structure**: 7 base scenarios per CWE × 15 linguistic instruction variations = 105 pairs per CWE
+- **Variation strategies**: 15 strategies (base, "you should", "for simplicity", technical jargon, performance context, casual, formal, MVP framing, readability, error handling, negation, type annotation, logging, example pattern, minimal)
+- **Design rule**: Insecure and secure prompts are IDENTICAL except for the instruction sentence in the docstring
+- **Scoring**: Standalone regex-based classifiers per CWE (not using the shared scoring.py pattern from C-language experiments)
+- **Neutral prompts**: 21 task-neutral prompts (7 per CWE) that describe the task without specifying approach
+- **Validation**: 75 unit tests (25 per scorer: 10 secure, 10 insecure, 5 edge cases)
+
+### Results (No Interpretation)
+- CWE-89: 105 pairs generated, 7 base_ids (user_login, product_search, order_history, user_profile_update, log_entry, admin_delete, report_filter)
+- CWE-78: 105 pairs generated, 7 base_ids (ping_host, dns_lookup, disk_usage, file_compress, process_grep, git_clone, convert_image)
+- CWE-79: 105 pairs generated, 7 base_ids (welcome_page, search_results, user_comment, error_message, profile_display, admin_panel, email_preview)
+- Total adversarial pairs: 315 (matching existing C-language total)
+- Neutral Python prompts: 21 (bringing total neutral to 42 with existing C-language 21)
+- Scorer tests: 75/75 passed (after fixing 7 regex issues in CWE-89 and CWE-79 scorers)
+- Prompt pair validation: All 9 sampled pairs (3 per CWE) confirmed instruction_diff_only=True
+- Scorer fixes needed: CWE-89 regexes couldn't handle mixed quote delimiters (e.g., single quotes inside double-quoted SQL strings); CWE-79 gate check didn't allow render_template() without explicit HTML tags
+
+### Files Created
+- `src/experiments/02-05_cross_cwe_steering/datasets/cwe89/scoring.py`
+- `src/experiments/02-05_cross_cwe_steering/datasets/cwe78/scoring.py`
+- `src/experiments/02-05_cross_cwe_steering/datasets/cwe79/scoring.py`
+- `src/experiments/02-05_cross_cwe_steering/datasets/cwe89/data/cwe89_expanded_20260209_221808.jsonl`
+- `src/experiments/02-05_cross_cwe_steering/datasets/cwe78/data/cwe78_expanded_20260209_221808.jsonl`
+- `src/experiments/02-05_cross_cwe_steering/datasets/cwe79/data/cwe79_expanded_20260209_221808.jsonl`
+- `src/experiments/02-05_cross_cwe_steering/datasets/neutral_eval/data/neutral_python_prompts.jsonl`
+- `src/experiments/02-05_cross_cwe_steering/datasets/expand_python_datasets.py`
+- `src/experiments/02-05_cross_cwe_steering/datasets/test_scorers.py`
+
+---
+
 ## 2026-02-07: Experiment 9 — Cross-Model Neutral Evaluation (Mistral-7B, Qwen-14B)
 
 ### Prompt
