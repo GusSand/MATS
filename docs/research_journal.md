@@ -1,5 +1,65 @@
 # Research Journal
 
+## 2026-02-09: Experiment 9b — Probe-Then-Steer Architecture
+
+### Prompt
+> Implement a probe-then-steer architecture that decouples probe classification from the generation loop, replacing per-token Python hooks with hook-free steering methods to reduce overhead from +102% to <10%.
+
+### Research Question
+Can we reduce the ~100% generation overhead from hook-based activation steering by using a two-phase architecture (probe classification → hook-free steered generation)?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-8B-Instruct on A100-80GB
+- **Architecture**: Phase 1 (probe forward pass, ~28ms) → Phase 2 (steered generation, no hooks)
+- **Probe**: Binary logistic regression on L31 activations (from Exp 8.5), classifying "buffer" (CWE-787/119) vs "format_string" (CWE-134)
+- **Steering vectors**: Mean-difference vectors from Exp 8.5, alphas: buffer=4.0, format_string=1.0
+- **Steering methods tested**:
+  - Option A: Monkey-patch layer forward (Python wrapper)
+  - Option B: torch.compile (kernel fusion)
+  - Option C: Post-attention layernorm bias (Python wrapper)
+  - Option D: MLP down_proj weight bias (zero Python wrapper)
+  - Persistent weight_bias: bias set once, no per-iteration teardown
+  - Persistent monkeypatch: forward patched once, no per-iteration teardown
+- **Benchmark**: 50 iterations, max_new_tokens=64, min_new_tokens=64, do_sample=False, torch.cuda.synchronize()
+- **E2E validation**: 21 neutral prompts × 10 seeds (same protocol as Exp 8.5)
+
+### Results (No Interpretation)
+
+**Critical finding: The ~100% overhead from Exp 8.5 was a measurement artifact from unequal token counts, NOT from hook overhead.**
+- Without min_new_tokens: baseline generates ~32 tokens (EOS), steered generates ~64 → ~100% apparent overhead
+- With min_new_tokens=64 (forced equal token count):
+
+| Method | Mean (ms) | Overhead |
+|--------|-----------|----------|
+| Baseline (no steering) | 1522.7 | +0.0% |
+| Hook-based (Exp 8.5) | 1569.5 | +3.1% |
+| Monkey-patch (Option A) | 1544.4 | +1.4% |
+| torch.compile (Option B) | 1551.9 | +1.9% |
+| Weight bias (Option D) | 1548.8 | +1.7% |
+| Persistent weight_bias | 1525.5 | +0.2% |
+| Persistent monkeypatch | 1515.9 | -0.4% |
+
+- **Routing accuracy**: 20/21 (95.2%) — PASS
+- **Best method overhead**: -0.4% (persistent monkeypatch) — PASS (<10% target)
+
+**E2E Security Results**:
+
+| CWE | Secure Rate | Secured | Routing |
+|-----|------------|---------|---------|
+| CWE-787 | 98.6% | 69/70 | 6/7 |
+| CWE-119 | 67.1% | 47/70 | 7/7 |
+| CWE-134 | 100.0% | 70/70 | 7/7 |
+| **Overall** | **88.6%** | **186/210** | **20/21** |
+
+- Exactly matches Exp 8.5 baseline: 88.6% overall (delta = -0.0pp)
+- Routing accuracy: 95.2% — PASS
+- Overall secure rate >= 87% — PASS
+
+### Interpretation (Claude's)
+The original experiment premise that "hooks cause +102% overhead" was incorrect. The overhead was due to the baseline hitting EOS after ~32 tokens while steered models generated the full 64. When forced to generate equal token counts, ALL steering methods (hooks, monkey-patches, weight bias) add <5% overhead. This means the hook-based architecture from Exp 8.5 was already performant — the perceived overhead was a benchmarking confound from token count differences. The probe-then-steer architecture is still useful for clean separation of classification and generation, but performance optimization was unnecessary.
+
+---
+
 ## 2026-02-09: Python CWE Dataset Expansion (CWE-89, CWE-78, CWE-79)
 
 ### Prompt
