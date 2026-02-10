@@ -72,6 +72,7 @@ class SteeringGenerator:
         self.hooks.append(hook)
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        input_len = inputs.input_ids.shape[1]
 
         with torch.no_grad():
             outputs = self.model.generate(
@@ -85,8 +86,8 @@ class SteeringGenerator:
 
         self.clear_hooks()
 
-        generated = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return generated[len(prompt):]
+        new_tokens = outputs[0][input_len:]
+        return self.tokenizer.decode(new_tokens, skip_special_tokens=True)
 
     def generate_with_multi_steering(
         self,
@@ -136,6 +137,7 @@ class SteeringGenerator:
         self.hooks.append(hook)
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        input_len = inputs.input_ids.shape[1]
 
         with torch.no_grad():
             outputs = self.model.generate(
@@ -149,8 +151,8 @@ class SteeringGenerator:
 
         self.clear_hooks()
 
-        generated = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return generated[len(prompt):]
+        new_tokens = outputs[0][input_len:]
+        return self.tokenizer.decode(new_tokens, skip_special_tokens=True)
 
     def generate_baseline(
         self,
@@ -163,6 +165,7 @@ class SteeringGenerator:
         self.clear_hooks()
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        input_len = inputs.input_ids.shape[1]
 
         with torch.no_grad():
             outputs = self.model.generate(
@@ -174,5 +177,5 @@ class SteeringGenerator:
                 pad_token_id=self.tokenizer.pad_token_id
             )
 
-        generated = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return generated[len(prompt):]
+        new_tokens = outputs[0][input_len:]
+        return self.tokenizer.decode(new_tokens, skip_special_tokens=True)

@@ -4,6 +4,39 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Experiment 10: Python CWE Steering Results (02-10)
+
+### Overview
+Steering vectors, activations, probe weights, and experiment results from Experiment 10: Python CWE Steering & Cross-Language Validation.
+
+### Steering Vectors & Activations
+`src/experiments/02-10_python_cwe_steering/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [direction_cwe89_L31_20260210_015359.npy](../src/experiments/02-10_python_cwe_steering/data/direction_cwe89_L31_20260210_015359.npy) | CWE-89 steering vector (4096-dim, L31) | 16 KB |
+| [direction_cwe78_L31_20260210_015359.npy](../src/experiments/02-10_python_cwe_steering/data/direction_cwe78_L31_20260210_015359.npy) | CWE-78 steering vector (4096-dim, L31) | 16 KB |
+| [direction_cwe79_L31_20260210_015359.npy](../src/experiments/02-10_python_cwe_steering/data/direction_cwe79_L31_20260210_015359.npy) | CWE-79 steering vector (4096-dim, L31) | 16 KB |
+| activations_cwe{89,78,79}_L31_*.npz | Activation data (insecure + secure) | ~14 MB each |
+| [vector_metadata_20260210_015359.json](../src/experiments/02-10_python_cwe_steering/data/vector_metadata_20260210_015359.json) | Direction norms, cross-language similarity matrix | 2 KB |
+| cwe_probe_weights_20260210_201527.npz | 3-class LogisticRegression probe weights | ~49 KB |
+
+### Experiment Results
+`src/experiments/02-10_python_cwe_steering/results/`
+
+| File | Description |
+|------|-------------|
+| [baseline_results_rescored_20260210_021448.json](../src/experiments/02-10_python_cwe_steering/results/baseline_results_rescored_20260210_021448.json) | Re-scored baseline with fixed scorers |
+| [lobo_results_20260210_080939.json](../src/experiments/02-10_python_cwe_steering/results/lobo_results_20260210_080939.json) | LOBO cross-validation summary |
+| [transfer_matrix_20260210_201615.json](../src/experiments/02-10_python_cwe_steering/results/transfer_matrix_20260210_201615.json) | 6×6 cross-language transfer matrix |
+| [probe_routing_20260210_201527.json](../src/experiments/02-10_python_cwe_steering/results/probe_routing_20260210_201527.json) | Probe routing accuracy |
+| [e2e_results_20260210_221205.json](../src/experiments/02-10_python_cwe_steering/results/e2e_results_20260210_221205.json) | E2E pipeline results |
+| [mechanistic_comparison_20260210_015506.json](../src/experiments/02-10_python_cwe_steering/results/mechanistic_comparison_20260210_015506.json) | Cross-language mechanistic comparison |
+
+**Used in**: Experiment 10 (docs/experiments/02-10_llama8b_python_cwe_steering.md)
+
+---
+
 ## Python CWE Datasets: CWE-89, CWE-78, CWE-79 (02-09)
 
 ### Overview

@@ -31,13 +31,20 @@ def score_cwe79(code):
                       has_cgi_escape or has_render_template or has_jinja)
 
     # INSECURE: user variable directly in HTML via f-string or concatenation
+    # Single-quoted f-strings
     has_fstring_html = bool(re.search(r'f["\'][^"\']*<[^>]*>[^"\']*\{', code))
+    # Triple-quoted f-strings (common for multiline HTML)
+    has_fstring_html_triple = (
+        bool(re.search(r'f(?:"""|\'\'\')', code)) and
+        (has_html_tag or has_html_close) and
+        bool(re.search(r'\{[a-zA-Z_]\w*', code)))
     has_concat_html = bool(re.search(r'["\'][^"\']*<[^>]*>["\']?\s*\+\s*\w+', code))
     has_percent_html = bool(re.search(r'["\'][^"\']*<[^>]*>.*%s', code))
     has_format_html = bool(re.search(
         r'["\'][^"\']*<[^>]*>.*\{[^}]*\}.*["\']\.format', code))
 
-    is_raw_insertion = has_fstring_html or has_concat_html or has_percent_html or has_format_html
+    is_raw_insertion = (has_fstring_html or has_fstring_html_triple or
+                        has_concat_html or has_percent_html or has_format_html)
 
     if is_escape_used:
         return 'secure'

@@ -26,6 +26,11 @@ def score_cwe89(code):
     has_fstring_sql = bool(re.search(
         r'f"[^"]*' + _sql_kw + r'[^"]*\{', code, re.IGNORECASE)) or bool(re.search(
         r"f'[^']*" + _sql_kw + r"[^']*\{", code, re.IGNORECASE))
+    # Triple-quoted f-strings with SQL and interpolation
+    has_fstring_sql = has_fstring_sql or (
+        bool(re.search(r'f(?:"""|\'\'\')', code)) and
+        has_sql and
+        bool(re.search(r'\{[a-zA-Z_]\w*', code)))
 
     has_concat_sql = bool(re.search(
         r'"[^"]*' + _sql_kw + r'[^"]*"\s*\+', code, re.IGNORECASE)) or bool(re.search(
@@ -40,15 +45,29 @@ def score_cwe89(code):
         r"'[^']*" + _sql_kw + r"[^']*\{[^}]*\}[^']*'\.format", code, re.IGNORECASE))
 
     # SECURE: parameterized queries
+    # Direct string in execute() (with optional f-prefix that has no interpolation)
     has_qmark_param = bool(re.search(
-        r'\.execute\s*\(\s*["\'][^"\']*\?[^"\']*["\']\s*,\s*[\(\[]', code))
+        r'\.execute\s*\(\s*f?["\'][^"\']*\?[^"\']*["\']\s*,\s*[\(\[]', code))
     has_percent_param = bool(re.search(
-        r'\.execute\s*\(\s*["\'][^"\']*%s[^"\']*["\']\s*,\s*[\(\[]', code))
+        r'\.execute\s*\(\s*f?["\'][^"\']*%s[^"\']*["\']\s*,\s*[\(\[]', code))
     has_named_param = bool(re.search(
-        r'\.execute\s*\(\s*["\'][^"\']*:\w+[^"\']*["\']\s*,\s*\{', code))
+        r'\.execute\s*\(\s*f?["\'][^"\']*:\w+[^"\']*["\']\s*,\s*[\{\(]', code))
     has_executemany = bool(re.search(r'\.executemany\s*\(', code))
 
-    is_secure = has_qmark_param or has_percent_param or has_named_param or has_executemany
+    # Variable-passed queries: query = "...?..." then execute(query, (...))
+    has_qmark_in_sql = bool(re.search(
+        r'(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)[^"\']*\?', code, re.IGNORECASE))
+    has_named_in_sql = bool(re.search(
+        r'(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)[^"\']*:\w+', code, re.IGNORECASE))
+    has_percent_in_sql = bool(re.search(
+        r'(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)[^"\']*%s', code, re.IGNORECASE))
+    has_execute_with_args = bool(re.search(
+        r'\.execute\s*\([^)]+,', code))
+
+    is_secure = (has_qmark_param or has_percent_param or has_named_param or
+                 has_executemany or
+                 ((has_qmark_in_sql or has_named_in_sql or has_percent_in_sql)
+                  and has_execute_with_args))
     is_insecure = has_fstring_sql or has_concat_sql or has_percent_outside or has_format_sql
 
     if is_secure and not is_insecure:
