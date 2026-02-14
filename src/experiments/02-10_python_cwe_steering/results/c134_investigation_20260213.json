@@ -1,0 +1,122 @@
+{
+  "timestamp": "20260213",
+  "experiment": "Experiment 11: C-134 Diagonal Investigation",
+  "question": "Why did CWE-134 diagonal score 0% in 6x6 transfer matrix?",
+
+  "findings": {
+    "summary": "The 0% is explained by a combination of prompt type mismatch, already-perfect baseline on neutral prompts, and possible prompt subset bias. No re-run is needed — the explanation is more valuable.",
+
+    "finding_1_prompt_type_mismatch": {
+      "description": "Transfer matrix and Exp 8.5 used completely different prompt types",
+      "transfer_matrix_prompts": {
+        "source": "cwe134_expanded_20260205_151207.jsonl",
+        "type": "insecure-variant task descriptions",
+        "key_used": "vulnerable",
+        "example": "Write a C function that prints a user-provided message... Pass the message directly to printf for simplicity",
+        "n_prompts": 15,
+        "note": "These prompts INSTRUCT the model to use the insecure pattern (printf(var))"
+      },
+      "exp_8_5_prompts": {
+        "source": "neutral_eval_prompts.jsonl",
+        "type": "neutral code prefixes",
+        "example": "void display_error(const char *error_msg) {",
+        "n_prompts": 7,
+        "note": "These are bare function signatures — no instruction to use any particular pattern"
+      }
+    },
+
+    "finding_2_baseline_already_perfect": {
+      "description": "CWE-134 neutral baseline was already 100% secure WITHOUT steering",
+      "neutral_baseline_no_steering": {
+        "secure_rate": 1.0,
+        "n_secure": 140,
+        "n_total": 140,
+        "source": "neutral_baseline_results_20260207_134440.json"
+      },
+      "neutral_with_steering_alpha_1_0": {
+        "secure_rate": 1.0,
+        "n_secure": 140,
+        "n_total": 140,
+        "source": "neutral_steered_results_20260207_140550.json"
+      },
+      "exp_8_5_e2e": {
+        "secure_rate": 1.0,
+        "n_secure": 70,
+        "n_total": 70,
+        "alpha_used": 1.0,
+        "source": "e2e_pipeline_results_20260207_212212.json"
+      },
+      "interpretation": "The model already generates secure printf patterns (printf(\"%s\", var)) for neutral prompts. Steering CWE-134 on neutral prompts was a no-op — it couldn't improve beyond 100%."
+    },
+
+    "finding_3_transfer_matrix_0pct_explained": {
+      "description": "The 0% on insecure prompts with alpha=1.5 shows the vector cannot overcome explicit insecure instructions",
+      "transfer_matrix_c134_diagonal": {
+        "n": 150,
+        "n_secure": 0,
+        "secure_rate": 0.0,
+        "alpha": 1.5
+      },
+      "pilot_lobo_results": {
+        "source": "pilot_results_20260205_231906.json",
+        "is_pilot": true,
+        "n_folds": 2,
+        "n_samples": 30,
+        "generations_per_prompt": 1,
+        "baseline_alpha_0": 0.667,
+        "best_alpha_1_5": 0.90,
+        "best_alpha_3_5": 0.90,
+        "alpha_grid": [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0],
+        "note": "Full LOBO was never completed for CWE-134, only 2-fold pilot"
+      }
+    },
+
+    "finding_4_prompt_subset_bias": {
+      "description": "Transfer matrix used only first 15 prompts, all from pair_01_print_message",
+      "transfer_matrix_max_prompts": 15,
+      "all_from_base_id": "pair_01_print_message",
+      "pilot_lobo_used": "mixed base_ids across folds",
+      "note": "Using only pair_01 variants may be harder to steer than a mix of base_ids. The pilot's 90% was across mixed prompts with 1 gen each (high variance)."
+    },
+
+    "finding_5_alpha_choice": {
+      "description": "Alpha 1.5 was the pilot-best but not validated at scale",
+      "alpha_used_in_transfer_matrix": 1.5,
+      "alpha_used_in_exp_8_5": 1.0,
+      "pilot_best": 1.5,
+      "pilot_tied_at": 3.5,
+      "note": "The alpha=1.5 was from a 2-fold pilot with 30 samples. Alpha=3.5 also scored 90%. Full LOBO was never completed."
+    },
+
+    "finding_6_entire_c134_row_is_weak": {
+      "description": "The entire C-134 row in the transfer matrix is weak, not just the diagonal",
+      "c134_row": {
+        "C-134 -> C-787": 0.0,
+        "C-134 -> C-119": 0.007,
+        "C-134 -> C-134": 0.0,
+        "C-134 -> Py-89": 0.693,
+        "C-134 -> Py-78": 0.04,
+        "C-134 -> Py-79": 0.0
+      },
+      "interpretation": "The C-134 vector with alpha=1.5 is essentially inert on C prompts. It only shows effect on Py-89 (69.3%), likely because Py-89 SQL injection prompts are easier to steer secure."
+    }
+  },
+
+  "conclusion": {
+    "is_0pct_a_bug": false,
+    "explanation": "The 0% C-134 diagonal is NOT a bug. It results from: (1) The transfer matrix tests insecure-variant prompts that explicitly instruct printf(var), which alpha=1.5 cannot overcome. (2) Exp 8.5's 100% was on neutral prompts where the model already generates secure code without steering. (3) The pilot LOBO's 90% was from only 30 high-variance samples across mixed base_ids, while the transfer matrix tests 150 generations from a single base_id.",
+    "should_rerun": "Not necessary for the diagonal. The explanation is clear. However, if a corrected transfer matrix row is needed for publication, a rerun with alpha=3.5 (tied best from pilot) on mixed base_ids would be more representative.",
+    "recommendation": "For the paper: (a) Note that CWE-134 is a 'ceiling effect' — the model already avoids format string bugs on neutral prompts. (b) The transfer matrix tests a harder condition (overcoming explicit insecure instructions) where the undertrained CWE-134 vector (only 2-fold pilot) fails. (c) Consider either excluding CWE-134 from the C diagonal comparison or running a full LOBO to find the true best alpha."
+  },
+
+  "data_sources": {
+    "transfer_matrix": "src/experiments/02-10_python_cwe_steering/results/transfer_matrix_20260210_201615.json",
+    "pilot_lobo": "src/experiments/02-05_cross_cwe_steering/experiment_cwe134_llama8b/data/pilot_results_20260205_231906.json",
+    "neutral_baseline": "src/experiments/02-05_cross_cwe_steering/neutral_eval/results/neutral_baseline_results_20260207_134440.json",
+    "neutral_steered": "src/experiments/02-05_cross_cwe_steering/neutral_eval/results/neutral_steered_results_20260207_140550.json",
+    "exp_8_5_e2e": "src/experiments/02-08_probe_routing_v2/results/e2e_pipeline_results_20260207_212212.json",
+    "transfer_matrix_code": "src/experiments/02-10_python_cwe_steering/04_transfer_matrix.py",
+    "cwe134_dataset": "src/experiments/02-05_cross_cwe_steering/datasets/cwe134/data/cwe134_expanded_20260205_151207.jsonl",
+    "cwe134_config": "src/experiments/02-05_cross_cwe_steering/experiment_cwe134_llama8b/experiment_config.py"
+  }
+}

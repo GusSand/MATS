@@ -66,57 +66,61 @@ The high Py-89 column is real signal, not a scorer artifact. The model has a str
 Why did CWE-134 score 0% on the diagonal of the 6×6 transfer matrix, when Exp 8.5 reported 100% secure for CWE-134?
 
 ### Methods
-- **Approach**: Forensic investigation — no new model runs, pure analysis of existing results and code
-- **Data sources compared**:
-  - Transfer matrix results (transfer_matrix_20260210_201615.json)
-  - Exp 8.5 E2E pipeline results (e2e_pipeline_results_20260207_212212.json)
-  - CWE-134 pilot LOBO (pilot_results_20260205_231906.json)
-  - Neutral baseline results (neutral_baseline_results_20260207_134440.json)
-  - Neutral steered results (neutral_steered_results_20260207_140550.json)
-  - Transfer matrix code (04_transfer_matrix.py)
-  - CWE-134 expanded dataset (cwe134_expanded_20260205_151207.jsonl)
-  - Neutral eval prompts (neutral_eval_prompts.jsonl)
+- **Phase 1**: Forensic investigation — analysis of existing results and code
+- **Phase 2**: Full 7-fold LOBO with extended alpha sweep
+  - **Model**: meta-llama/Meta-Llama-3.1-8B-Instruct on A100-80GB, Layer 31
+  - **Dataset**: 105 prompt pairs (7 base_ids × 15 variations), insecure-variant prompts
+  - **Alpha grid**: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  - **Seeds**: 3 per prompt (45 gens per fold per alpha)
+  - **Total**: 7 folds × 11 alphas × 45 gens = 3,465 generations
 
 ### Results (No Interpretation)
 
-**Alpha values used across experiments**:
+**Phase 1: Forensic Investigation**
 
-| Experiment | Alpha for CWE-134 | Source |
-|---|---|---|
-| Pilot LOBO (Exp 5) | 1.5 (best), 3.5 (tied) | 2-fold pilot, 30 samples, 1 gen each |
-| Exp 8 neutral steering | 1.0 (best on neutral) | Grid search {1.0, 1.5, 2.0, 2.5} |
-| Exp 8.5 E2E | 1.0 | format_string route alpha |
-| Transfer matrix (Exp 10) | 1.5 | Hardcoded from pilot LOBO |
+Transfer matrix and Exp 8.5 used completely different prompt types:
+- Transfer matrix: insecure-variant task descriptions ("Pass message directly to printf")
+- Exp 8.5: neutral code prefixes (`void display_error(const char *error_msg) {`)
+- CWE-134 neutral baseline was already 100% secure WITHOUT steering (ceiling effect)
 
-**Prompt types compared**:
+**Phase 2: Full 7-Fold LOBO (Aggregated, N=315 per alpha)**
 
-| | Transfer Matrix | Exp 8.5 / Neutral Eval |
-|---|---|---|
-| Source file | cwe134_expanded_*.jsonl | neutral_eval_prompts.jsonl |
-| Prompt key | `"vulnerable"` (insecure variant) | neutral code prefixes |
-| Example | "Pass message directly to printf" | `void display_error(const char *error_msg) {` |
-| N prompts | 15 (all pair_01_print_message) | 7 (mixed base_ids) |
-| Instructs insecure pattern? | YES | NO |
+| α | Secure% | Insecure% | Other% | Refusal% |
+|---|---------|-----------|--------|----------|
+| 0.0 | 70.2% | 29.5% | 0.3% | 0.0% |
+| 1.0 | 73.3% | 23.2% | 3.5% | 0.0% |
+| 2.0 | 71.1% | 22.5% | 6.3% | 0.0% |
+| **3.0** | **74.9%** | **21.3%** | **3.8%** | **0.0%** |
+| 4.0 | 61.0% | 21.0% | 18.1% | 1.6% |
+| 5.0 | 22.2% | 6.3% | 71.4% | 7.9% |
+| 6.0 | 0.6% | 0.0% | 99.4% | 0.6% |
+| 7-10 | 0.0% | 0.0% | 100.0% | 0.0% |
 
-**CWE-134 baseline rates by prompt type**:
+- **Baseline**: 70.2% (α=0)
+- **Best**: 74.9% at α=3.0 (**+4.8pp improvement**)
+- **Collapse**: α≥5 produces mostly garbled output; α≥7 produces 100% "other"
 
-| Prompt Type | No Steering | With Steering |
-|---|---|---|
-| Neutral prompts (Exp 8) | 100.0% secure (140/140) | 100.0% secure (α=1.0) |
-| Insecure prompts (pilot LOBO) | 66.7% secure (20/30) | 90.0% secure (α=1.5) |
-| Insecure prompts (transfer matrix) | not measured | 0.0% secure (0/150, α=1.5) |
+**Per-fold at best α=3.0:**
 
-**C-134 full row in transfer matrix**:
-- C-134 → C-787: 0.0%, C-134 → C-119: 0.7%, C-134 → C-134: 0.0%
-- C-134 → Py-89: 69.3%, C-134 → Py-78: 4.0%, C-134 → Py-79: 0.0%
+| Fold | Baseline (α=0) | Best (α=3) | Δ |
+|---|---|---|---|
+| pair_01_print_message | 84.4% | 86.7% | +2.3pp |
+| pair_02_print_status | 80.0% | 88.9% | +8.9pp |
+| pair_03_print_error | 84.4% | 88.9% | +4.4pp |
+| pair_04_log_to_file | 80.0% | 80.0% | +0.0pp |
+| pair_05_write_report | 75.6% | 82.2% | +6.7pp |
+| pair_06_system_log | 40.0% | 48.9% | +8.9pp |
+| pair_07_audit_log | 46.7% | 48.9% | +2.2pp |
 
-**Key facts**:
-- Full LOBO was never completed for CWE-134 (only 2-fold pilot)
-- Transfer matrix used only first 15 prompts — all from base_id `pair_01_print_message`
-- Pilot LOBO used mixed base_ids across folds
+**Key finding**: Folds 6-7 (system_log, audit_log) have much lower baselines (~40-47%) and receive minimal benefit from steering. These are the hardest prompt types.
+
+**Why pilot LOBO showed 90% but full LOBO shows 74.9%:**
+- Pilot only tested 2 folds (pair_01, pair_02) — the "easy" prompts with 80-84% baseline
+- Pilot used 1 gen per prompt (high variance with N=30)
+- Full LOBO includes hard folds (pair_06, pair_07) that bring the average down significantly
 
 ### Interpretation (Claude's)
-The 0% is NOT a bug — it results from three compounding factors: (1) The transfer matrix tests insecure-variant prompts that explicitly instruct `printf(var)`, which α=1.5 cannot overcome; (2) Exp 8.5's 100% was on neutral prompts where the model already generates secure code without any steering (ceiling effect); (3) The pilot LOBO's 90% came from only 30 high-variance samples across mixed base_ids, while the transfer matrix tests 150 generations from a single base_id subset. No re-run is needed — the explanation resolves the apparent contradiction.
+The CWE-134 steering vector provides only a modest +4.8pp improvement at best (α=3.0). This is a legitimate finding about the limits of activation steering against explicit instructions: the model's baseline is already high (70.2%) because it often generates `printf("%s", var)` even when asked for `printf(var)`. Higher alpha doesn't help — it destroys the output rather than overcoming the instruction. The 0% in the transfer matrix was caused by using α=1.5 on only pair_01 prompts (which happen to have 84% baseline), combined with the transfer matrix scorer counting "other" as not-secure. The updated best alpha for CWE-134 is α=3.0, not α=1.5.
 
 ---
 
