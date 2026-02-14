@@ -150,23 +150,50 @@ The full LOBO best alpha (3.0) achieves 74.9% secure on held-out CWE-134 prompts
 
 However, even at best alpha, CWE-134 steering on adversarial prompts remains the weakest of all CWE types tested.
 
+---
+
+## Phase 3: Transfer Matrix Row Re-run with α=3.0
+
+### Methodology
+
+Re-ran only the C-134 row (6 cells) of the 6×6 transfer matrix with α=3.0 (from full LOBO), keeping all other parameters identical to the original:
+- Same direction vector (cross_cwe_analysis, trained on all data)
+- 10 seeds, 15 prompts per cell, 512 max_new_tokens
+- Same prompt sets and scorers as original transfer matrix
+
+### Results
+
+| C-134 → | C-787 | C-119 | C-134 | Py-89 | Py-78 | Py-79 |
+|----------|-------|-------|-------|-------|-------|-------|
+| Original (α=1.5) | 0.0% | 0.7% | 0.0% | 69.3% | 4.0% | 0.0% |
+| **Updated (α=3.0)** | **0.0%** | **0.0%** | **0.0%** | **62.0%** | **6.7%** | **0.0%** |
+| Delta | 0.0pp | -0.7pp | 0.0pp | -7.3pp | +2.7pp | 0.0pp |
+
+### Key Observations
+
+1. **C-134 diagonal still 0%**: But the failure mode changed — at α=1.5, outputs were recognizable insecure code; at α=3.0, all 150 outputs are "other" (garbled). The higher alpha *destroyed* the output rather than making it secure.
+2. **Py-89 dropped**: Cross-language transfer to SQL injection prompts decreased from 69.3% to 62.0%, suggesting α=3.0 is too aggressive for cross-CWE transfer.
+3. **C columns unchanged**: All C prompt sets still show 0% secure — the C-134 vector simply cannot steer C code to be secure when prompts explicitly instruct the vulnerability.
+4. **Matrix summary unchanged**: Overall diagonal (49.9%) and off-diagonal (13.0%) are essentially the same since C-134 was already 0%.
+
 ## Final Resolution
 
-The 0% C-134 diagonal resulted from compounding factors:
-1. **Suboptimal alpha** (1.5 vs. optimal 3.0)
-2. **Prompt subset bias** (only pair_01 variants, which happen to be moderately easy)
-3. **Undertrained vector** (2-fold pilot vs. needed 7-fold)
+The 0% C-134 diagonal is **confirmed as a legitimate finding**, not a bug or alpha selection error:
 
-The full LOBO confirms CWE-134 steering **does work** (+4.8pp), but is **modest** — especially on hard prompt types (system_log, audit_log). This is a legitimate finding about the limits of activation steering against explicit vulnerability instructions.
+1. At α=1.5 (original): outputs are insecure code (model follows instructions)
+2. At α=3.0 (optimal LOBO): outputs are garbled (model is disrupted but not redirected)
+3. At α≥5: complete output destruction
+
+The CWE-134 vector works modestly in the LOBO setting (+4.8pp when testing on held-out base_ids from the same distribution), but **completely fails** on the transfer matrix's insecure-variant prompts which explicitly instruct the vulnerability pattern. This represents a fundamental limit: activation steering cannot overcome explicit task instructions for format-string vulnerabilities.
 
 ## Recommendations
 
 For the paper:
 1. Note CWE-134 as a **ceiling effect** case on neutral prompts (100% baseline)
-2. On adversarial prompts, CWE-134 steering provides modest improvement (+4.8pp) — the weakest of all CWEs
-3. The transfer matrix C-134 row should be re-run with α=3.0 for a fair comparison
-4. Hard folds (system_log, audit_log) reveal that format-string steering is function-specific: `syslog()` and `fprintf()` patterns are harder to steer than `printf()`
-5. The "output collapse" at α≥5 is consistent across all CWE types and represents a general steering limit
+2. On adversarial prompts, CWE-134 is the weakest CWE — even optimal alpha produces 0% on transfer matrix diagonal
+3. The updated transfer matrix (with α=3.0) confirms the original finding; no further re-runs needed
+4. Hard folds (system_log, audit_log) reveal function-specific difficulty: `syslog()` and `fprintf()` are harder than `printf()`
+5. The distinction between LOBO improvement (+4.8pp) and transfer matrix failure (0%) highlights that steering effectiveness depends heavily on prompt type
 
 ## Code / Files Generated
 
@@ -175,6 +202,9 @@ For the paper:
 - [c134_full_lobo_20260213_222152.json](../../src/experiments/02-13_c134_full_lobo/results/c134_full_lobo_20260213_222152.json) - Aggregated LOBO results
 - [c134_full_lobo_full_20260213_222152.json](../../src/experiments/02-13_c134_full_lobo/results/c134_full_lobo_full_20260213_222152.json) - Full per-fold breakdown
 - [activations_cwe134_L31_20260213_221204.npz](../../src/experiments/02-13_c134_full_lobo/data/activations_cwe134_L31_20260213_221204.npz) - Layer 31 activations (210 prompts)
+- [rerun_c134_transfer_row.py](../../src/experiments/02-13_c134_full_lobo/rerun_c134_transfer_row.py) - Transfer matrix row re-run script
+- [c134_transfer_row_20260214_121747.json](../../src/experiments/02-13_c134_full_lobo/results/c134_transfer_row_20260214_121747.json) - Row re-run results
+- [transfer_matrix_updated_20260214_121747.json](../../src/experiments/02-13_c134_full_lobo/results/transfer_matrix_updated_20260214_121747.json) - Updated full transfer matrix
 
 ## Data Sources
 

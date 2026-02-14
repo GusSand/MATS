@@ -119,8 +119,34 @@ Transfer matrix and Exp 8.5 used completely different prompt types:
 - Pilot used 1 gen per prompt (high variance with N=30)
 - Full LOBO includes hard folds (pair_06, pair_07) that bring the average down significantly
 
+**Phase 3: Transfer Matrix Row Re-run (α=3.0)**
+
+Re-ran C-134 row of transfer matrix with α=3.0 (was 1.5). Same parameters as original: 10 seeds, 15 prompts, 512 max_new_tokens.
+
+| C-134 → | C-787 | C-119 | C-134 | Py-89 | Py-78 | Py-79 |
+|----------|-------|-------|-------|-------|-------|-------|
+| Original (α=1.5) | 0.0% | 0.7% | 0.0% | 69.3% | 4.0% | 0.0% |
+| Updated (α=3.0) | 0.0% | 0.0% | 0.0% | 62.0% | 6.7% | 0.0% |
+
+- C-134 diagonal: **still 0%** — all 150 outputs scored "other" (garbled), not insecure
+- Py-89 cross-language transfer: **dropped** from 69.3% to 62.0%
+- Higher alpha made things worse, not better, on the transfer matrix prompts
+
+**Updated transfer matrix summary** (with C-134 row at α=3.0):
+- Overall diagonal avg: 49.9% (unchanged — C-134 was 0% before and still 0%)
+- Off-diagonal avg: 13.0% (was 13.1%)
+
 ### Interpretation (Claude's)
-The CWE-134 steering vector provides only a modest +4.8pp improvement at best (α=3.0). This is a legitimate finding about the limits of activation steering against explicit instructions: the model's baseline is already high (70.2%) because it often generates `printf("%s", var)` even when asked for `printf(var)`. Higher alpha doesn't help — it destroys the output rather than overcoming the instruction. The 0% in the transfer matrix was caused by using α=1.5 on only pair_01 prompts (which happen to have 84% baseline), combined with the transfer matrix scorer counting "other" as not-secure. The updated best alpha for CWE-134 is α=3.0, not α=1.5.
+The CWE-134 steering vector provides only a modest +4.8pp improvement in the LOBO setting (α=3.0 on held-out base_ids). However, on the transfer matrix's insecure-variant prompts (which explicitly instruct the vulnerability), **even the optimal alpha cannot produce secure code**. The C-134 diagonal remains 0% because at α=3.0, the vector destroys the output (150/150 "other") rather than redirecting it to secure patterns. This confirms CWE-134 as the weakest CWE for activation steering: the model simply cannot be steered to write `printf("%s", var)` when the prompt says "Pass the message directly to printf for simplicity." This is a legitimate finding about the limits of activation steering against explicit vulnerability instructions.
+
+### Files
+- Investigation JSON: `src/experiments/02-10_python_cwe_steering/results/c134_investigation_20260213.json`
+- Full LOBO script: `src/experiments/02-13_c134_full_lobo/run_full_lobo.py`
+- Full LOBO results: `src/experiments/02-13_c134_full_lobo/results/c134_full_lobo_20260213_222152.json`
+- Transfer row re-run script: `src/experiments/02-13_c134_full_lobo/rerun_c134_transfer_row.py`
+- Transfer row results: `src/experiments/02-13_c134_full_lobo/results/c134_transfer_row_20260214_121747.json`
+- Updated transfer matrix: `src/experiments/02-13_c134_full_lobo/results/transfer_matrix_updated_20260214_121747.json`
+- Experiment doc: `docs/experiments/02-13_llama8b_c134_transfer_matrix_investigation.md`
 
 ---
 
