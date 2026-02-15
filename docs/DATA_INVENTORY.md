@@ -1297,6 +1297,37 @@ See [SCORING.md](SCORING.md) for complete documentation of the scoring system in
 
 ---
 
+## Experiment 11: CWE-134 Investigation & Full LOBO (02-13/14)
+
+### Activations
+
+- [`activations_cwe134_L31_20260213_221204.npz`](../src/experiments/02-13_c134_full_lobo/data/activations_cwe134_L31_20260213_221204.npz) — Layer 31 last-token activations for 210 CWE-134 prompts (105 insecure + 105 secure). Shape: (210, 4096). 2MB.
+
+**How to recreate**: `python src/experiments/02-13_c134_full_lobo/run_full_lobo.py` (activation collection phase)
+
+### Results
+
+**Phase 1 — Investigation:**
+- [`c134_investigation_20260213.json`](../src/experiments/02-10_python_cwe_steering/results/c134_investigation_20260213.json) — Forensic investigation of why C-134 diagonal was 0% in transfer matrix
+
+**Phase 2 — Full 7-Fold LOBO:**
+- [`c134_full_lobo_20260213_222152.json`](../src/experiments/02-13_c134_full_lobo/results/c134_full_lobo_20260213_222152.json) — Aggregated LOBO results (7 folds × 11 alphas, N=315 per alpha). Best: α=3.0, 74.9% secure (+4.8pp).
+- [`c134_full_lobo_full_20260213_222152.json`](../src/experiments/02-13_c134_full_lobo/results/c134_full_lobo_full_20260213_222152.json) — Full per-fold, per-alpha breakdown with all generation details
+- `fold_pair_0[1-7]_*_20260213_222152.json` (7 files) — Individual fold results
+
+**How to recreate**: `python src/experiments/02-13_c134_full_lobo/run_full_lobo.py`
+
+**Phase 3 — Transfer Matrix Row Re-run:**
+- [`c134_transfer_row_20260214_121747.json`](../src/experiments/02-13_c134_full_lobo/results/c134_transfer_row_20260214_121747.json) — C-134 row re-run with α=3.0 (6 cells, 150 gens each). Diagonal still 0%.
+- [`transfer_matrix_updated_20260214_121747.json`](../src/experiments/02-13_c134_full_lobo/results/transfer_matrix_updated_20260214_121747.json) — Updated 6×6 transfer matrix with C-134 row at α=3.0
+
+**How to recreate**: `python src/experiments/02-13_c134_full_lobo/rerun_c134_transfer_row.py`
+
+**Used in**: Experiment 11 — C-134 transfer matrix diagonal investigation
+**Stratification**: 7 base_ids × 15 variations = 105 pairs; 3 seeds (LOBO) or 10 seeds (transfer row) per prompt
+
+---
+
 ## Usage Notes
 
 1. **For mechanistic analysis**: Use the 7 validated CWE-787 pairs listed above
