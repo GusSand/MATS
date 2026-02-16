@@ -4,6 +4,123 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Experiment 15: Mistral-7B E2E Pipeline (02-18)
+
+### Overview
+Probe weights, E2E pipeline results, and latency benchmark for Mistral-7B deployment pipeline validation.
+
+### Probe Weights & Data
+`src/experiments/02-18_mistral_e2e_pipeline/data/`
+
+| File | Description |
+|------|-------------|
+| probe_weights.npy | Binary probe (buffer vs injection) LogisticRegression weights |
+| probe_bias.npy | Probe bias term |
+| probe_scaler_mean.npy | StandardScaler mean |
+| probe_scaler_scale.npy | StandardScaler scale |
+
+### Experiment Results
+`src/experiments/02-18_mistral_e2e_pipeline/results/`
+
+| File | Description |
+|------|-------------|
+| [e2e_results_20260216_230544.json](../src/experiments/02-18_mistral_e2e_pipeline/results/e2e_results_20260216_230544.json) | Summary: routing accuracy (25%), secure rates, latency overhead (2.0%) |
+| [e2e_full_20260216_230544.json](../src/experiments/02-18_mistral_e2e_pipeline/results/e2e_full_20260216_230544.json) | Full generation-level outputs |
+
+**Key finding**: Probe trained on adversarial data misroutes all C neutral prompts to "injection". Latency overhead confirmed at 2.0%.
+
+**How to recreate**: Run `python src/experiments/02-18_mistral_e2e_pipeline/01_run_experiment.py`. Requires Exp 12, 13, 14 data.
+
+**Used in**: Experiment 15 (docs/experiments/02-16_mistral7b_e2e_pipeline.md)
+
+---
+
+## Experiment 16: Qwen-14B CWE-89 LOBO (02-19)
+
+### Overview
+Steering vector, activations, and LOBO results for CWE-89 (SQL injection) on Qwen2.5-14B-Instruct, Layer 47. Third architecture replication.
+
+### Steering Vector & Activations
+`src/experiments/02-19_qwen14b_cwe89_lobo/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [activations_qwen14b_cwe89_L47.npz](../src/experiments/02-19_qwen14b_cwe89_lobo/data/activations_qwen14b_cwe89_L47.npz) | Activation data (insecure + secure) at Layer 47 | ~20 MB |
+| [direction_qwen14b_cwe89_L47_20260216_111452.npy](../src/experiments/02-19_qwen14b_cwe89_lobo/data/direction_qwen14b_cwe89_L47_20260216_111452.npy) | CWE-89 steering vector (5120-dim, L47) | 20 KB |
+
+### Experiment Results
+`src/experiments/02-19_qwen14b_cwe89_lobo/results/`
+
+| File | Description |
+|------|-------------|
+| [lobo_results_20260216_111452.json](../src/experiments/02-19_qwen14b_cwe89_lobo/results/lobo_results_20260216_111452.json) | LOBO summary: aggregated + per-fold, 3-way comparison |
+| [lobo_full_20260216_111452.json](../src/experiments/02-19_qwen14b_cwe89_lobo/results/lobo_full_20260216_111452.json) | Full generation-level results |
+| fold_*_20260216_111452.json (x7) | Per-fold detailed results |
+
+**How to recreate**: Run `python src/experiments/02-19_qwen14b_cwe89_lobo/01_run_experiment.py` on A100-80GB with Qwen2.5-14B-Instruct in fp16.
+
+**Used in**: Experiment 16 (docs/experiments/02-16_qwen14b_cwe89_lobo_third_architecture.md)
+
+---
+
+## Experiment 14: Mistral-7B CWE-119 LOBO (02-17)
+
+### Overview
+Steering vector, activations, and LOBO results for CWE-119 (buffer read overflow) on Mistral-7B, Layer 31. Tests whether CWE-119 steering limitation replicates on Mistral.
+
+### Steering Vector & Activations
+`src/experiments/02-17_mistral_cwe119_lobo/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [activations_mistral_cwe119_L31.npz](../src/experiments/02-17_mistral_cwe119_lobo/data/activations_mistral_cwe119_L31.npz) | Activation data (insecure + secure) at Layer 31 | ~14 MB |
+| [direction_mistral_cwe119_L31_20260216_060857.npy](../src/experiments/02-17_mistral_cwe119_lobo/data/direction_mistral_cwe119_L31_20260216_060857.npy) | CWE-119 steering vector (4096-dim, L31) | 16 KB |
+
+### Experiment Results
+`src/experiments/02-17_mistral_cwe119_lobo/results/`
+
+| File | Description |
+|------|-------------|
+| [lobo_results_20260216_060857.json](../src/experiments/02-17_mistral_cwe119_lobo/results/lobo_results_20260216_060857.json) | LOBO summary: aggregated + per-fold, cosine similarity |
+| [lobo_full_20260216_060857.json](../src/experiments/02-17_mistral_cwe119_lobo/results/lobo_full_20260216_060857.json) | Full generation-level results |
+| fold_*_20260216_060857.json (x7) | Per-fold detailed results |
+
+**Key data point**: CWE-787 vs CWE-119 cosine similarity = 0.005 (near orthogonal on Mistral, unlike Llama where they were inseparable).
+
+**How to recreate**: Run `python src/experiments/02-17_mistral_cwe119_lobo/01_run_experiment.py` on A100-80GB with Mistral-7B-Instruct-v0.3 in fp16.
+
+**Used in**: Experiment 14 (docs/experiments/02-16_mistral7b_cwe119_lobo_limitation_replication.md)
+
+---
+
+## Experiment 13: Mistral-7B CWE-89 LOBO (02-16)
+
+### Overview
+Steering vector, activations, and LOBO results for CWE-89 (SQL injection) on Mistral-7B, Layer 31. Cross-architecture replication of Llama-8B CWE-89 steering.
+
+### Steering Vector & Activations
+`src/experiments/02-16_mistral_cwe89_lobo/data/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [activations_mistral_cwe89_L31.npz](../src/experiments/02-16_mistral_cwe89_lobo/data/activations_mistral_cwe89_L31.npz) | Activation data (insecure + secure) at Layer 31 | ~14 MB |
+| [direction_mistral_cwe89_L31_20260216_025624.npy](../src/experiments/02-16_mistral_cwe89_lobo/data/direction_mistral_cwe89_L31_20260216_025624.npy) | CWE-89 steering vector (4096-dim, L31) | 16 KB |
+
+### Experiment Results
+`src/experiments/02-16_mistral_cwe89_lobo/results/`
+
+| File | Description |
+|------|-------------|
+| [lobo_results_20260216_025624.json](../src/experiments/02-16_mistral_cwe89_lobo/results/lobo_results_20260216_025624.json) | LOBO summary: aggregated + per-fold, Llama comparison |
+| [lobo_full_20260216_025624.json](../src/experiments/02-16_mistral_cwe89_lobo/results/lobo_full_20260216_025624.json) | Full generation-level results |
+| fold_*_20260216_025624.json (x7) | Per-fold detailed results |
+
+**How to recreate**: Run `python src/experiments/02-16_mistral_cwe89_lobo/01_run_experiment.py` on A100-80GB with Mistral-7B-Instruct-v0.3 in fp16.
+
+**Used in**: Experiment 13 (docs/experiments/02-16_mistral7b_cwe89_lobo_cross_architecture.md)
+
+---
+
 ## Experiment 10: Python CWE Steering Results (02-10)
 
 ### Overview
