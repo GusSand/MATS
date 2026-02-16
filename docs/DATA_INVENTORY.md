@@ -1328,6 +1328,42 @@ See [SCORING.md](SCORING.md) for complete documentation of the scoring system in
 
 ---
 
+## Experiment 12: Mistral-7B Probe Layer Sweep (02-15)
+
+### Overview
+Activations, metadata, and probe sweep results from Experiment 12: Mistral-7B Linear Probe Layer Sweep (Mechanistic Replication). Tests whether the hierarchical convergence pattern from Llama-3.1-8B generalizes to Mistral-7B-Instruct-v0.3.
+
+### Activations
+`src/experiments/02-15_mistral_probe_sweep/results/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [activations_CWE-787_20260215_223524.npz](../src/experiments/02-15_mistral_probe_sweep/results/activations_CWE-787_20260215_223524.npz) | Last-token activations for CWE-787 prompts at 9 layers ([0,4,8,12,16,20,24,28,31]). 105 insecure + 105 secure = 210 prompts per layer. | ~60 MB |
+| [activations_CWE-89_20260215_223524.npz](../src/experiments/02-15_mistral_probe_sweep/results/activations_CWE-89_20260215_223524.npz) | Last-token activations for CWE-89 prompts at 9 layers. 105 insecure + 105 secure = 210 prompts per layer. | ~60 MB |
+
+### Metadata
+`src/experiments/02-15_mistral_probe_sweep/results/`
+
+| File | Description |
+|------|-------------|
+| [metadata_CWE-787_20260215_223524.json](../src/experiments/02-15_mistral_probe_sweep/results/metadata_CWE-787_20260215_223524.json) | CWE-787 prompt metadata (base_ids, labels, prompt text) |
+| [metadata_CWE-89_20260215_223524.json](../src/experiments/02-15_mistral_probe_sweep/results/metadata_CWE-89_20260215_223524.json) | CWE-89 prompt metadata (base_ids, labels, prompt text) |
+
+### Results
+`src/experiments/02-15_mistral_probe_sweep/results/`
+
+| File | Description |
+|------|-------------|
+| [probe_sweep_results_20260215_223524.json](../src/experiments/02-15_mistral_probe_sweep/results/probe_sweep_results_20260215_223524.json) | Full probe sweep results: per-layer accuracy, std, vector norms, logit lens probabilities for both CWEs |
+
+**How to recreate**: `python src/experiments/02-15_mistral_probe_sweep/01_probe_sweep.py`
+
+**Used in**: Experiment 12 (docs/experiments/02-15_mistral7b_cwe787_cwe89_probe_layer_sweep.md)
+**Model**: mistralai/Mistral-7B-Instruct-v0.3 (fp16)
+**Stratification**: 7 base_ids x 15 variations = 105 pairs per CWE; LOBO 7-fold CV
+
+---
+
 ## Usage Notes
 
 1. **For mechanistic analysis**: Use the 7 validated CWE-787 pairs listed above
