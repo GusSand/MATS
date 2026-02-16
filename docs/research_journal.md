@@ -1,5 +1,43 @@
 # Research Journal
 
+## 2026-02-16: Experiment 10b — LOBO Alpha Extension for Python CWEs
+
+### Prompt
+> Extend LOBO cross-validation to higher alphas (6, 7, 8, 10, 12, 15) for the three Python CWE steering vectors to determine if alpha=5 was truly optimal or if smaller-norm vectors benefit from higher multipliers.
+
+### Research Question
+Does extending the alpha sweep beyond 5 yield further improvements? Is there a universal effective steering magnitude (norm x alpha) sweet spot?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (8-bit), Layer 31
+- **Dataset**: Python CWE-89, CWE-78, CWE-79 (105 prompt pairs each)
+- **Protocol**: 7-fold LOBO, 15 prompts x 10 seeds per fold per alpha
+- **New alphas**: {6, 7, 8, 10, 12, 15} (extending prior {0, 1, 2, 3, 4, 5})
+- **Scripts**: `03b_lobo_alpha_extension.py` (CWE-89/78), `03c_lobo_alpha_cwe79_only.py` (CWE-79)
+
+### Results (No Interpretation)
+
+| CWE | Dir. Norm | Prior Best (alpha=5) | New Best | Best Alpha | Eff. Magnitude |
+|-----|-----------|---------------------|----------|------------|----------------|
+| CWE-89 | ~2.8 | 70.3% | **78.5%** (+8.2pp) | 12.0 | ~33.6 |
+| CWE-78 | ~5.0 | 22.0% | No improvement | 5.0 | ~25.0 |
+| CWE-79 | ~7.1 | 30.5% | No improvement | 5.0 | ~35.5 |
+
+- CWE-89: Secure rate keeps climbing through alpha=12 (78.5%), with only 6.4% other. Rolls over at alpha=15 (75.6%, 13.0% other).
+- CWE-78: Alpha=6 gives marginal gain (22.6%) but 10.3% other. Coherence collapse at alpha>=7. Process killed at fold 6/7 (pattern conclusive).
+- CWE-79: Already declining at alpha=6 (27.8%, 60.0% other). Complete collapse by alpha=10.
+- Effective magnitude sweet spot appears to be ~30-35 (norm x alpha).
+
+### Interpretation (Claude's)
+The optimal alpha is not universal but depends on direction norm. The effective steering magnitude (norm x alpha) has a sweet spot around ~30-35. Small-norm vectors (CWE-89, norm ~2.8) need high alphas to reach it; large-norm vectors (CWE-79, norm ~7.1) hit coherence collapse at or before it. This means alpha must be tuned per-vector, and the norm of the steering direction is a useful predictor of the appropriate alpha range.
+
+### Files
+- Detailed report: `docs/experiments/02-16_llama8b_python_cwes_alpha_extension.md`
+- Scripts: `src/experiments/02-10_python_cwe_steering/03b_lobo_alpha_extension.py`, `03c_lobo_alpha_cwe79_only.py`
+- Merged results: `src/experiments/02-10_python_cwe_steering/results/alpha_curve_merged_20260215_015309.json`
+
+---
+
 ## 2026-02-13: Investigation 2 — CWE-89 Scorer Validation
 
 ### Prompt
