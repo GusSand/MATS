@@ -1,5 +1,38 @@
 # Research Journal
 
+## 2026-02-17: Experiment 12b — Mistral-7B Corrected Logit Lens Investigation
+
+### Prompt
+> Investigate why Experiment 12's logit lens showed P(secure token) ≈ 0 at ALL layers on Mistral-7B, while Llama showed dramatic emergence (0.15% → 37% at L31). Is this a bug or a real finding?
+
+### Research Question
+Is the zero-emergence logit lens result on Mistral-7B a bug (wrong token IDs, chat template mismatch) or a genuine architectural difference?
+
+### Methods
+- **Phase 1**: Token ID verification — compared tokenization of "snprintf" on Llama vs Mistral tokenizers
+- **Phase 2**: Top-K logit lens diagnostic — loaded Mistral-7B, ran forward passes on CWE-787 secure/vulnerable prompts at layers [0,16,31], reported top-20 tokens and tracked token probabilities
+- **Phase 3**: Re-ran logit lens with corrections: raw completion-style prompts (no chat template), tracked P("sprintf") (single token) and P("sn") (first subtoken of multi-token "snprintf"), all 32 layers
+- **Architecture check**: Verified lm_head configuration (tie_word_embeddings=False, separate lm_head with cosine similarity ≈ 0.001 to embed_tokens)
+
+### Results (No Interpretation)
+- **Bug 1 confirmed**: "snprintf" is 1 token on Llama (ID 37546) but 2 tokens on Mistral ["sn" (3270), "printf" (5399)]. Script tracked P("sn") ≈ 0, missing the signal.
+- **Bug 2 confirmed**: Chat-templated prompts make next-token prediction target "Here"/"```" (response start), not code tokens. Raw prompts fix this.
+- **Corrected P("sn") trajectory (secure prompt)**: L0=0.005%, L16=0.065%, L21=6.49%, L24=13.1%, L28=**96.4%**, L31=34.3%
+- **Corrected P("sn") trajectory (vulnerable prompt)**: L0=0.005%, L16=0.016%, L21=2.39%, L24=4.93%, L28=**75.0%**, L31=13.6%
+- **P("sprintf") at L31**: Secure=0.70%, Vulnerable=2.71% (higher for vulnerable, correct direction)
+- Architecture: lm_head is correct (separate matrix, not tied), not a bug
+
+### Interpretation (Claude's)
+The zero-emergence was a bug from tokenizer mismatch, not a real finding. Once corrected, Mistral DOES show emergence, but with a mechanistically different pattern than Llama. Llama concentrates the security decision in a single-token probability jump at L31 (0.15% → 37%). Mistral distributes it across layers L21-28 as multi-token planning: P("sn") peaks at 96.4% at L28 then partially decays. This is forced by Mistral's tokenizer splitting "snprintf" into two tokens — the model must "plan ahead" for the multi-token output earlier in the forward pass. The original Exp 12 conclusion (hierarchical convergence replicates) remains correct, but the logit lens section needs correction.
+
+### Files
+- Detailed report: `docs/experiments/02-15_mistral7b_cwe787_cwe89_probe_layer_sweep.md` (updated)
+- Investigation script: `src/experiments/02-15_mistral_probe_sweep/investigate_logit_lens.py`
+- Corrected script: `src/experiments/02-15_mistral_probe_sweep/02_logit_lens_corrected.py`
+- Results: `src/experiments/02-15_mistral_probe_sweep/results/logit_lens_corrected_20260217_020743.json`
+
+---
+
 ## 2026-02-17: Experiment 15b — Mistral-7B E2E Pipeline (Llama-Equivalent Design Fix)
 
 ### Prompt

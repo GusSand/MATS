@@ -1488,6 +1488,17 @@ Activations, metadata, and probe sweep results from Experiment 12: Mistral-7B Li
 **Model**: mistralai/Mistral-7B-Instruct-v0.3 (fp16)
 **Stratification**: 7 base_ids x 15 variations = 105 pairs per CWE; LOBO 7-fold CV
 
+### Corrected Logit Lens (Exp 12b)
+`src/experiments/02-15_mistral_probe_sweep/results/`
+
+| File | Description |
+|------|-------------|
+| [logit_lens_corrected_20260217_020743.json](../src/experiments/02-15_mistral_probe_sweep/results/logit_lens_corrected_20260217_020743.json) | Corrected logit lens: P("sprintf"), P("sn"), top-20 per layer for static + 5 dataset prompts |
+
+**Bugs fixed**: (1) "snprintf" is 2 tokens on Mistral — original tracked P("sn")≈0; (2) chat template caused next-token to be "Here"/"\`\`\`", not code tokens. Fix: raw completion prompts + track P("sprintf") as single token.
+
+**How to recreate**: `python src/experiments/02-15_mistral_probe_sweep/02_logit_lens_corrected.py`
+
 ---
 
 ## Usage Notes
