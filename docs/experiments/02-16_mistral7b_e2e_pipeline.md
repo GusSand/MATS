@@ -95,8 +95,94 @@ The root cause of poor routing is **training on adversarial activations, testing
 
 At Layer 8, the probe perfectly separates CWE-787 (C code) from CWE-89 (Python code) — but it's learning **language** not **vulnerability type**. When presented with neutral C prompts, it confidently classifies them as "not buffer_overflow" (i.e., injection) because they don't match the adversarial distribution.
 
+---
+
+## Experiment 15b: Re-run with Llama-Equivalent Design
+
+**Date**: 2026-02-17
+
+### Root Cause Analysis
+
+Two compounding issues caused the 25% routing failure:
+
+1. **Cross-language probe (design flaw)**: Probe classified C (CWE-787) vs Python (CWE-89). At Layer 8, the dominant feature is programming language, not vulnerability type. 100% CV accuracy was trivial C-vs-Python separation.
+2. **Distribution shift**: Adversarial C activations at Layer 8 differ substantially from neutral C activations. Neutral C prompts fell outside the probe's learned "buffer" region.
+
+### Fix Applied
+
+Mirrored the Llama-8B E2E design exactly:
+- **Probe task**: format_string (CWE-134) vs buffer (CWE-787 + CWE-119) — all C code
+- **Probe layer**: 31 (same as steering layer, encodes semantic features)
+- **Training data**: Adversarial activations at L31 (630 total: 420 buffer + 210 format_string)
+- **Test data**: 21 neutral C prompts only (no Python)
+
+### Configuration (15b)
+
+| Parameter | Value |
+|-----------|-------|
+| Model | Mistral-7B-Instruct-v0.3 |
+| Layer | 31 (probe + steering) |
+| Probe type | Binary LogisticRegression (format_string vs buffer) |
+| Training data | 210 CWE-787 + 210 CWE-119 + 210 CWE-134 = 630 samples at L31 |
+| Neutral prompts | 21 C (7 CWE-787 + 7 CWE-119 + 7 CWE-134) |
+| Seeds | 10 per prompt |
+| Alpha (buffer) | 3.5 |
+| Alpha (format_string) | 3.5 |
+| Total generations | 210 |
+
+### Probe Training (15b)
+
+- Train accuracy: 100.0%
+- 5-fold CV accuracy: **97.1% +/- 5.7%** (no longer trivially perfect — now learning vulnerability semantics)
+- Cosine(buffer, format_string vectors): 0.4385
+
+### Results (15b)
+
+#### Routing Accuracy
+
+| True Route | Correct | Total | Accuracy |
+|------------|---------|-------|----------|
+| buffer (CWE-787+119) | 14 | 14 | **100.0%** |
+| format_string (CWE-134) | 2 | 7 | **28.6%** |
+| **Overall** | **16** | **21** | **76.2%** |
+
+Buffer routing is now perfect. Format-string routing remains weak — CWE-134 is the minority class (1:2 ratio) and Mistral may encode this distinction less cleanly at L31 than Llama.
+
+#### Per-CWE Security
+
+| CWE | Secure Rate | Routing |
+|-----|-------------|---------|
+| CWE-787 | 60.0% | 7/7 correct |
+| CWE-119 | 50.0% | 7/7 correct |
+| CWE-134 | 98.6% | 2/7 correct |
+| **Overall** | **69.5%** | **16/21** |
+
+CWE-134 achieves near-ceiling security regardless of routing (format-string vulnerabilities are easily avoided by Mistral baseline).
+
+#### Latency Benchmark (15b)
+
+| Component | Time (ms) | % of baseline |
+|-----------|-----------|---------------|
+| Baseline generation | 2029.6 | 100.0% |
+| + Steering hook | 2033.0 | 100.2% |
+| Full pipeline | 2069.3 | 102.0% |
+| **Overhead** | **39.7** | **2.0%** |
+
+### Cross-Architecture Comparison (Updated)
+
+| Pipeline | Overall Secure | Routing Accuracy |
+|----------|---------------|-----------------|
+| Llama-8B E2E | 88.6% | 95.2% |
+| Mistral Exp 15 (C vs Py, L8) | 63.9% | 25.0% |
+| **Mistral Exp 15b (Llama design)** | **69.5%** | **76.2%** |
+
+### Key Takeaway
+
+The Llama-equivalent design improved routing from 25% → 76.2% (+51.2pp). Buffer routing went from 0% → 100%. The remaining gap vs Llama (76.2% vs 95.2%) is due to CWE-134 misrouting, which is a weaker signal in Mistral's L31 representations. However, CWE-134 misrouting has no practical impact since those prompts achieve 98.6% security regardless of which steering vector is applied.
+
 ## Code
 
-- [01_run_experiment.py](../../src/experiments/02-18_mistral_e2e_pipeline/01_run_experiment.py) — Full pipeline: probe training, E2E generation, latency benchmark
+- [01_run_experiment.py](../../src/experiments/02-18_mistral_e2e_pipeline/01_run_experiment.py) — Original pipeline (Exp 15)
+- [02_rerun_llama_design.py](../../src/experiments/02-18_mistral_e2e_pipeline/02_rerun_llama_design.py) — Re-run with Llama-equivalent design (Exp 15b)
 - Results: `src/experiments/02-18_mistral_e2e_pipeline/results/`
 - Probe weights: `src/experiments/02-18_mistral_e2e_pipeline/data/`

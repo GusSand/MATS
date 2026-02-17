@@ -4,34 +4,43 @@ This document tracks all datasets created during experiments.
 
 ---
 
-## Experiment 15: Mistral-7B E2E Pipeline (02-18)
+## Experiment 15/15b: Mistral-7B E2E Pipeline (02-18)
 
 ### Overview
-Probe weights, E2E pipeline results, and latency benchmark for Mistral-7B deployment pipeline validation.
+Probe weights, E2E pipeline results, and latency benchmark for Mistral-7B deployment pipeline validation. Exp 15 used C-vs-Python probe at L8 (failed, 25% routing). Exp 15b used Llama-equivalent design: format_string-vs-buffer at L31 (76.2% routing).
 
 ### Probe Weights & Data
 `src/experiments/02-18_mistral_e2e_pipeline/data/`
 
 | File | Description |
 |------|-------------|
-| probe_weights.npy | Binary probe (buffer vs injection) LogisticRegression weights |
-| probe_bias.npy | Probe bias term |
-| probe_scaler_mean.npy | StandardScaler mean |
-| probe_scaler_scale.npy | StandardScaler scale |
+| probe_weights.npy | Exp 15 probe (buffer vs injection, L8) — failed |
+| probe_bias.npy | Exp 15 probe bias |
+| probe_scaler_mean.npy | Exp 15 StandardScaler mean |
+| probe_scaler_scale.npy | Exp 15 StandardScaler scale |
+| probe_v2_weights.npy | Exp 15b probe (format_string vs buffer, L31) — Llama design |
+| probe_v2_bias.npy | Exp 15b probe bias |
+| probe_v2_scaler_mean.npy | Exp 15b StandardScaler mean |
+| probe_v2_scaler_scale.npy | Exp 15b StandardScaler scale |
+| activations_mistral_cwe134_L31.npz | CWE-134 adversarial activations on Mistral at L31 (210 samples: X, y, base_ids) |
 
 ### Experiment Results
 `src/experiments/02-18_mistral_e2e_pipeline/results/`
 
 | File | Description |
 |------|-------------|
-| [e2e_results_20260216_230544.json](../src/experiments/02-18_mistral_e2e_pipeline/results/e2e_results_20260216_230544.json) | Summary: routing accuracy (25%), secure rates, latency overhead (2.0%) |
-| [e2e_full_20260216_230544.json](../src/experiments/02-18_mistral_e2e_pipeline/results/e2e_full_20260216_230544.json) | Full generation-level outputs |
+| [e2e_results_20260216_230544.json](../src/experiments/02-18_mistral_e2e_pipeline/results/e2e_results_20260216_230544.json) | Exp 15: routing 25%, secure 63.9%, overhead 2.0% |
+| [e2e_full_20260216_230544.json](../src/experiments/02-18_mistral_e2e_pipeline/results/e2e_full_20260216_230544.json) | Exp 15: full generation outputs |
+| [e2e_v2_results_20260216_235227.json](../src/experiments/02-18_mistral_e2e_pipeline/results/e2e_v2_results_20260216_235227.json) | Exp 15b: routing 76.2%, secure 69.5%, overhead 2.0% |
+| [e2e_v2_full_20260216_235227.json](../src/experiments/02-18_mistral_e2e_pipeline/results/e2e_v2_full_20260216_235227.json) | Exp 15b: full generation outputs |
 
-**Key finding**: Probe trained on adversarial data misroutes all C neutral prompts to "injection". Latency overhead confirmed at 2.0%.
+**Key finding**: Changing probe from C-vs-Python (L8) to format_string-vs-buffer (L31) improved routing from 25% → 76.2%. Buffer routing 100% perfect; CWE-134 routing weak (28.6%) but no practical impact (98.6% secure anyway).
 
-**How to recreate**: Run `python src/experiments/02-18_mistral_e2e_pipeline/01_run_experiment.py`. Requires Exp 12, 13, 14 data.
+**How to recreate**:
+- Exp 15: `python src/experiments/02-18_mistral_e2e_pipeline/01_run_experiment.py` (requires Exp 12, 13, 14 data)
+- Exp 15b: `python src/experiments/02-18_mistral_e2e_pipeline/02_rerun_llama_design.py` (requires Exp 12, 14 data + CWE-134 dataset)
 
-**Used in**: Experiment 15 (docs/experiments/02-16_mistral7b_e2e_pipeline.md)
+**Used in**: Experiment 15/15b (docs/experiments/02-16_mistral7b_e2e_pipeline.md)
 
 ---
 

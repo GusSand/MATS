@@ -1,5 +1,43 @@
 # Research Journal
 
+## 2026-02-17: Experiment 15b — Mistral-7B E2E Pipeline (Llama-Equivalent Design Fix)
+
+### Prompt
+> Investigate the routing issue with Experiment 15 (25% routing). How is it different from Llama-8B? Fix by applying the same probe design as Llama E2E.
+
+### Research Question
+Does mirroring the Llama-8B probe design (format_string vs buffer at L31, all C) fix the Mistral E2E routing failure?
+
+### Methods
+- **Model**: Mistral-7B-Instruct-v0.3 (fp16)
+- **Probe + Steering layer**: 31 (both at same layer, matching Llama design)
+- **Probe**: Binary LogisticRegression, format_string (CWE-134) vs buffer (CWE-787+119)
+- **Training data**: 630 adversarial activations at L31 (210 CWE-787 + 210 CWE-119 + 210 CWE-134)
+- **CWE-134 activations**: Collected fresh on Mistral (Phase 0) since no prior Mistral CWE-134 NPZ existed
+- **Neutral prompts**: 21 C (7 CWE-787 + 7 CWE-119 + 7 CWE-134) — no Python
+- **Seeds**: 10 per prompt; **Total generations**: 210
+- **Alphas**: buffer=3.5, format_string=3.5
+
+### Results (No Interpretation)
+- Probe train accuracy: 100.0%; 5-fold CV: 97.1% +/- 5.7%
+- Cosine(buffer, format_string vectors): 0.4385
+- **Routing accuracy: 76.2% (16/21)** — buffer 14/14 correct, format_string 2/7 correct
+- Per-CWE secure rates: CWE-787 60.0%, CWE-119 50.0%, CWE-134 98.6%
+- **Overall secure rate: 69.5%**
+- Latency overhead: 2.0% (39.7ms)
+- Comparison: Exp 15 original was 25.0% routing / 63.9% secure; Llama-8B is 95.2% routing / 88.6% secure
+
+### Interpretation (Claude's)
+The Llama-equivalent design improved routing from 25% → 76.2% (+51.2pp). The critical fix was changing the probe from C-vs-Python (which learns language) to format_string-vs-buffer (which learns vulnerability semantics). Buffer routing is now 100% perfect. CWE-134 routing is weak (28.6%) because Mistral's L31 representations may encode format-string vs buffer distinctions less cleanly than Llama. However, CWE-134 misrouting has zero practical impact — those prompts achieve 98.6% security regardless of which vector is applied. The remaining secure-rate gap vs Llama (69.5% vs 88.6%) is driven by CWE-119 (50%) and CWE-787 (60%), which are inherently harder on Mistral (confirmed by LOBO experiments 4a and 14).
+
+### Files
+- Detailed report: `docs/experiments/02-16_mistral7b_e2e_pipeline.md` (updated with 15b section)
+- Script: `src/experiments/02-18_mistral_e2e_pipeline/02_rerun_llama_design.py`
+- Results: `src/experiments/02-18_mistral_e2e_pipeline/results/e2e_v2_results_20260216_235227.json`
+- CWE-134 activations: `src/experiments/02-18_mistral_e2e_pipeline/data/activations_mistral_cwe134_L31.npz`
+
+---
+
 ## 2026-02-16: Experiment 15 — Mistral-7B E2E Probe-Gated Steering Pipeline
 
 ### Prompt
