@@ -270,6 +270,36 @@ The optimal alpha is not universal but depends on direction norm. The effective 
 
 ---
 
+## 2026-02-15: Experiment 12 — Mistral-7B Linear Probe Layer Sweep
+
+### Prompt
+> Replicate the "hierarchical convergence" finding from Llama-3.1-8B-Instruct on Mistral-7B-Instruct-v0.3
+
+### Research Question
+Does the early-encoding / late-emergence pattern generalize across architectures?
+
+### Methods
+- **Model**: Mistral-7B-Instruct-v0.3 (fp16)
+- **Datasets**: CWE-787 (105 pairs, 7 base_ids, C), CWE-89 (105 pairs, 7 base_ids, Python)
+- **Probes**: LogisticRegression (LOBO 7-fold) at layers [0, 4, 8, 12, 16, 20, 24, 28, 31]
+- Also: logit lens (unembedding projection) and steering vector norms
+
+### Results (No Interpretation)
+- CWE-787 probe accuracy: 87.6% (L0) → 95.2% (L8) → 85.2% (L31). High std (0.08-0.15).
+- CWE-89 probe accuracy: 95.7% (L0) → 100% (L16) → 98.6% (L31). Low std (0.00-0.06).
+- Logit lens: P(secure token) ≈ 0 at all layers for both CWEs. No emergence.
+- Vector norms increase monotonically: CWE-787 (0.01 → 3.80), CWE-89 (0.00 → 2.08).
+
+### Interpretation (Claude's)
+Pattern replicates. Mistral-7B shows same hierarchical convergence as Llama-8B: probes detect the security distinction from very early layers, but logit lens cannot. This supports the claim that the finding is architecture-general.
+
+### Files
+- Detailed report: [02-15_mistral7b_cwe787_cwe89_probe_layer_sweep.md](experiments/02-15_mistral7b_cwe787_cwe89_probe_layer_sweep.md)
+- Script: `src/experiments/02-15_mistral_probe_sweep/01_probe_sweep.py`
+- Results: `src/experiments/02-15_mistral_probe_sweep/results/probe_sweep_results_20260215_223524.json`
+
+---
+
 ## 2026-02-13: Investigation 2 — CWE-89 Scorer Validation
 
 ### Prompt
@@ -3196,26 +3226,3 @@ This is **concrete validation** that the security decision is fundamentally dist
 
 ---
 
-## Experiment 12 — Mistral-7B Linear Probe Layer Sweep (2026-02-15)
-
-**Prompt**: Replicate the "hierarchical convergence" finding from Llama-3.1-8B-Instruct on Mistral-7B-Instruct-v0.3
-
-**Research Question**: Does the early-encoding / late-emergence pattern generalize across architectures?
-
-**Methods**:
-- Model: Mistral-7B-Instruct-v0.3 (fp16)
-- Datasets: CWE-787 (105 pairs, 7 base_ids, C), CWE-89 (105 pairs, 7 base_ids, Python)
-- Probes: LogisticRegression (LOBO 7-fold) at layers [0, 4, 8, 12, 16, 20, 24, 28, 31]
-- Also: logit lens (unembedding projection) and steering vector norms
-
-**Results (no interpretation)**:
-- CWE-787 probe accuracy: 87.6% (L0) → 95.2% (L8) → 85.2% (L31). High std (0.08-0.15).
-- CWE-89 probe accuracy: 95.7% (L0) → 100% (L16) → 98.6% (L31). Low std (0.00-0.06).
-- Logit lens: P(secure token) ≈ 0 at all layers for both CWEs. No emergence.
-- Vector norms increase monotonically: CWE-787 (0.01 → 3.80), CWE-89 (0.00 → 2.08).
-
-**Interpretation (Claude's)**: Pattern replicates. Mistral-7B shows same hierarchical convergence as Llama-8B: probes detect the security distinction from very early layers, but logit lens cannot. This supports the claim that the finding is architecture-general.
-
-**Detailed report**: [02-15_mistral7b_cwe787_cwe89_probe_layer_sweep.md](experiments/02-15_mistral7b_cwe787_cwe89_probe_layer_sweep.md)
-
----
