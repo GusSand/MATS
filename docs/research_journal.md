@@ -1,5 +1,126 @@
 # Research Journal
 
+## 2026-02-26: Experiment 17 — Llama-3.1-70B-Instruct CWE-787 LOBO Cross-Validation
+
+### Prompt
+> Run full 7-fold LOBO cross-validation on Llama-3.1-70B-Instruct for CWE-787 (buffer overflow). Tests whether activation steering scales to 70B parameter models.
+
+### Research Question
+Does activation steering for secure code generation scale from 7B-14B models to 70B? What is the optimal alpha and how does the improvement compare to smaller architectures?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-70B-Instruct (4-bit NF4 quantization, ~42.7GB VRAM)
+- **Steering layer**: 79 (last hidden layer, 80 layers total)
+- **Dataset**: CWE-787 expanded (105 pairs, 7 base_ids)
+- **Protocol**: 7-fold LOBO, 9 alphas [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 7.0, 10.0], 1 generation per prompt
+- **Scoring**: Strict pattern matching (snprintf=secure, sprintf=insecure)
+- **Infrastructure**: Shared ModelLoader with `max_memory={0: "60GiB", "cpu": "60GiB"}` for CPU offloading
+- **Runtime**: ~8h on A100-80GB
+
+### Results (No Interpretation)
+
+| Alpha | Secure% | Insecure% | Refusal% |
+|-------|---------|-----------|----------|
+| 0.0   | 1.9%    | 88.6%     | 0.0%     |
+| 0.5   | 1.0%    | 90.5%     | 0.0%     |
+| 1.0   | 4.8%    | 88.6%     | 0.0%     |
+| 2.0   | 8.6%    | 78.1%     | 0.0%     |
+| 3.0   | 32.4%   | 60.0%     | 0.0%     |
+| **4.0** | **52.4%** | **35.2%** | **0.0%** |
+| 5.0   | 44.8%   | 7.6%      | 0.0%     |
+| 7.0   | 7.6%    | 0.0%      | 0.0%     |
+| 10.0  | 0.0%    | 0.0%      | 0.0%     |
+
+- Best alpha: **4.0** → 52.4% secure rate (+50.5pp over baseline)
+- Direction norms: 9.9–12.0 across folds (larger than 8B's 7.3–8.1 range)
+- At alpha=7.0+, output degenerates (0% secure AND 0% insecure = gibberish)
+- Zero refusals at any alpha
+
+**Cross-model CWE-787 comparison:**
+
+| Model | Params | Baseline | Best Rate | Best Alpha | Improvement |
+|-------|--------|----------|-----------|------------|-------------|
+| Llama-8B | 8B | 6.7% | 73.3% | 4.0 | +66.6pp |
+| Mistral-7B | 7B | 3.8% | 74.3% | 3.0 | +70.5pp |
+| Qwen-14B | 14B | 3.8% | 54.3% | 5.0 | +50.5pp |
+| **Llama-70B** | **70B** | **1.9%** | **52.4%** | **4.0** | **+50.5pp** |
+
+### Interpretation (Claude's)
+Steering works on 70B but with a narrower effective window. The optimal alpha (4.0) matches Llama-8B, suggesting the direction norm × alpha sweet spot is consistent within the Llama family. However, the peak secure rate (52.4%) is lower than the 7B models (~73%). The 70B model may have stronger internal representations that resist perturbation, or the 4-bit quantization may lose some steering precision. The steep falloff at alpha=5.0+ (degeneration) suggests 70B is more sensitive to over-steering.
+
+### Files
+- Running script: `src/experiments/02-05_cross_model_cwe787_steering/experiment_4b_llama70b/05_full_lobo.py`
+- Config: `src/experiments/02-05_cross_model_cwe787_steering/experiment_4b_llama70b/experiment_config.py`
+- Results: `src/experiments/02-05_cross_model_cwe787_steering/experiment_4b_llama70b/data/lobo_results_20260226_001742.json`
+- Fold results: `src/experiments/02-05_cross_model_cwe787_steering/experiment_4b_llama70b/data/fold_results/`
+
+---
+
+## 2026-02-26: Experiment 18 — Llama-3.1-70B-Instruct CWE-89 LOBO Cross-Validation
+
+### Prompt
+> Run full 7-fold LOBO cross-validation on Llama-3.1-70B-Instruct for CWE-89 (SQL injection). Tests cross-CWE generalization of steering at 70B scale.
+
+### Research Question
+Does CWE-89 (Python SQL injection) activation steering scale to 70B? How does the higher baseline secure rate at 70B affect improvement margins?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-70B-Instruct (4-bit NF4 quantization)
+- **Steering layer**: 79 (last hidden layer)
+- **Dataset**: CWE-89 expanded (105 pairs, 7 base_ids: admin_delete, log_entry, order_history, product_search, report_filter, user_login, user_profile_update)
+- **Protocol**: 7-fold LOBO, 8 alphas [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0], 3 seeds [42, 123, 456], 15 test prompts per fold
+- **Scoring**: CWE-89 pattern matching (parameterized queries=secure, string concatenation/f-strings=insecure)
+- **Runtime**: ~5.75h on A100-80GB
+
+### Results (No Interpretation)
+
+| Alpha | Secure% | Insecure% | Other% |
+|-------|---------|-----------|--------|
+| 0.0 (baseline) | 52.1% | 47.6% | 0.3% |
+| 1.0 | 54.0% | 46.0% | 0.0% |
+| 2.0 | 54.9% | 45.1% | 0.0% |
+| 3.0 | 58.1% | 41.6% | 0.3% |
+| 4.0 | 60.3% | 38.7% | 1.0% |
+| **5.0** | **60.6%** | **37.8%** | **1.6%** |
+| 6.0 | 59.7% | 36.5% | 3.8% |
+| 7.0 | 54.0% | 36.2% | 9.8% |
+
+- Best alpha: **5.0** → 60.6% secure rate (+8.6pp over baseline)
+- Direction norms: 5.4–6.0 across folds (smaller than CWE-787's 9.9–12.0)
+- At alpha=7.0, output starts degenerating (9.8% "other")
+
+**Per-fold breakdown (baseline → best):**
+
+| Fold | Baseline | Best | Best Alpha | Notes |
+|------|----------|------|------------|-------|
+| admin_delete | 0.0% | 0.0% | — | Completely resistant to steering |
+| log_entry | 82.2% | 93.3% | 7.0 | Already high baseline |
+| order_history | 91.1% | 93.3% | 1.0–3.0 | Already high baseline |
+| product_search | 71.1% | 97.8% | 5.0 | Strong responder |
+| report_filter | 68.9% | 77.8% | 3.0 | Moderate responder |
+| user_login | 48.9% | 84.4% | 7.0 | Strong responder |
+| user_profile_update | 2.2% | 4.4% | 5.0–6.0 | Nearly resistant |
+
+**Cross-model CWE-89 comparison:**
+
+| Model | Params | Baseline | Best Rate | Best Alpha | Improvement |
+|-------|--------|----------|-----------|------------|-------------|
+| Llama-8B | 8B | 57.0% | 70.3% | 5.0 | +13.3pp |
+| Mistral-7B | 7B | 42.9% | 63.5% | 6.0 | +20.6pp |
+| Qwen-14B | 14B | 38.4% | 54.0% | 7.0 | +15.6pp |
+| **Llama-70B** | **70B** | **52.1%** | **60.6%** | **5.0** | **+8.6pp** |
+
+### Interpretation (Claude's)
+CWE-89 steering works at 70B scale but with diminished returns compared to smaller models. The 70B baseline is already 52.1% (higher than Mistral and Qwen), leaving less room for improvement. Two folds (admin_delete, user_profile_update) are completely resistant to steering — these may represent prompt patterns where the model's SQL generation is deeply entrenched. The direction norms are notably smaller (5.4–6.0) compared to CWE-787 (9.9–12.0), suggesting the secure/insecure activation separation is weaker for SQL injection at this scale. The best alpha=5.0 matches Llama-8B, consistent with the Llama-family pattern seen in CWE-787.
+
+### Files
+- Script: `src/experiments/02-26_llama70b_full_suite/01_cwe89_lobo.py`
+- Results summary: `src/experiments/02-26_llama70b_full_suite/results/cwe89_lobo_results_20260226_112800.json`
+- Full results: `src/experiments/02-26_llama70b_full_suite/results/cwe89_lobo_full_20260226_112800.json`
+- Per-fold results: `src/experiments/02-26_llama70b_full_suite/results/cwe89_fold_*.json`
+
+---
+
 ## 2026-02-17: Experiment 12b — Mistral-7B Corrected Logit Lens Investigation
 
 ### Prompt
