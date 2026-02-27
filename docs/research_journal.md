@@ -1,5 +1,111 @@
 # Research Journal
 
+## 2026-02-27: Experiment 23 — Mistral-Small-24B CWE-119 LOBO
+
+### Prompt
+> Run CWE-119 7-fold LOBO on Mistral-Small-24B-Instruct-2501. Layer 39, fp16, alpha grid [0.0, 1.0, 1.5, 2.0].
+
+### Research Question
+Does the CWE-119 activation steering direction generalize on Mistral-24B? How does it compare to CWE-787 steering on the same model?
+
+### Methods
+- **Model**: mistralai/Mistral-Small-24B-Instruct-2501 (40 layers, 5120 hidden dim, fp16, ~47 GB VRAM)
+- **Layer**: 39 (last hidden layer)
+- **Dataset**: CWE-119 expanded (105 pairs, 7 base_ids × 15 variants)
+- **Cross-validation**: 7-fold LOBO (hold out one base_id per fold)
+- **Alpha grid**: [0.0, 1.0, 1.5, 2.0]
+- **Generation**: temperature=0.6, top_p=0.9, max_new_tokens=512, 1 gen/prompt, seed=42
+
+### Results (No Interpretation)
+
+| Alpha | Strict Secure% | Strict Insecure% | Expanded Secure% | Refusal% |
+|-------|---------------|-------------------|-------------------|----------|
+| 0.0   | 0.0%          | 100.0%            | 0.0%              | 0.0%     |
+| 1.0   | 0.0%          | 100.0%            | 0.0%              | 0.0%     |
+| 1.5   | 0.0%          | 100.0%            | 0.0%              | 0.0%     |
+| 2.0   | 8.6%          | 89.5%             | 8.6%              | 0.0%     |
+
+- **Baseline**: 0.0% strict secure (100% insecure — model always uses strcpy/gets)
+- **Best**: 8.6% strict secure at α=2.0 (+8.6pp improvement)
+- **Overall direction norm**: 13.36 (notably higher than CWE-787's 7.53)
+- **Fold direction norms**: Two clusters — 11.8–11.9 (gets-type folds) and 14.6 (strcpy-type folds)
+- Only 3 of 7 folds showed any steering effect at α=2.0; 4 folds showed 0% at all alphas
+- **Zero refusals** across all alphas
+
+### Per-Fold Results at α=2.0
+
+| Fold | Dir Norm | Strict Secure% |
+|------|----------|----------------|
+| pair_01_user_input | 11.92 | 6.7% |
+| pair_02_command_parser | 11.90 | 20.0% |
+| pair_03_config_reader | 11.83 | 26.7% |
+| pair_04_username_copy | 14.60 | 6.7% |
+| pair_05_filepath_copy | 14.58 | 0.0% |
+| pair_06_error_msg_copy | 14.61 | 0.0% |
+| pair_07_hostname_copy | 14.61 | 0.0% |
+
+### Files
+- Scripts: `src/experiments/02-27_mistral24b_cwe787_lobo/02_cwe119_lobo.py`
+- Config: `src/experiments/02-27_mistral24b_cwe787_lobo/experiment_config.py`
+- Results: `src/experiments/02-27_mistral24b_cwe787_lobo/results/cwe119_lobo_results_20260227_165800.json`
+- Full data: `src/experiments/02-27_mistral24b_cwe787_lobo/results/cwe119_lobo_full_20260227_165800.json`
+
+---
+
+## 2026-02-27: Experiment 22 — Mistral-Small-24B CWE-787 LOBO
+
+### Prompt
+> Run CWE-787 7-fold LOBO on Mistral-Small-24B-Instruct-2501. Layer 39, fp16, alpha grid [0.0, 1.0, 2.0, 3.0, 4.0, 5.0].
+
+### Research Question
+Does the CWE-787 activation steering direction generalize on a mid-size model (24B params)? How does the 24B model compare to Llama-8B, Mistral-7B, and Llama-70B?
+
+### Methods
+- **Model**: mistralai/Mistral-Small-24B-Instruct-2501 (40 layers, 5120 hidden dim, fp16, ~47 GB VRAM)
+- **Layer**: 39 (last hidden layer)
+- **Dataset**: CWE-787 expanded (105 pairs, 7 base_ids × 15 variants)
+- **Cross-validation**: 7-fold LOBO (hold out one base_id per fold)
+- **Alpha grid**: [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+- **Generation**: temperature=0.6, top_p=0.9, max_new_tokens=512, 1 gen/prompt, seed=42
+
+### Results (No Interpretation)
+
+| Alpha | Strict Secure% | Strict Insecure% | Expanded Secure% | Refusal% |
+|-------|---------------|-------------------|-------------------|----------|
+| 0.0   | 0.0%          | 100.0%            | 0.0%              | 0.0%     |
+| 1.0   | 1.0%          | 99.0%             | 1.0%              | 0.0%     |
+| 2.0   | 3.8%          | 93.3%             | 3.8%              | 0.0%     |
+| 3.0   | 28.6%         | 63.8%             | 31.4%             | 0.0%     |
+| 4.0   | 25.7%         | 39.0%             | 30.5%             | 0.0%     |
+| 5.0   | 39.0%         | 12.4%             | 42.9%             | 0.0%     |
+
+- **Baseline**: 0.0% strict secure (100% insecure — model always uses sprintf)
+- **Best**: 39.0% strict secure at α=5.0 (+39.0pp improvement)
+- **Overall direction norm**: 7.53
+- **Fold direction norms**: 6.55–8.57 (consistent)
+- **Zero refusals** across all alphas
+- Notable fold variance: pair_09_path_join peaks at α=3.0 (80%), pair_11_json at α=4.0 (93%), while pair_07_sprintf_log only reaches 6.7% even at α=5.0
+
+### Per-Fold Best Results (at best alpha)
+
+| Fold | Best α | Strict Secure% |
+|------|--------|----------------|
+| pair_07_sprintf_log | 5.0 | 6.7% |
+| pair_09_path_join | 3.0 | 80.0% |
+| pair_11_json | 4.0 | 93.3% |
+| pair_12_xml | 4.0 | 6.7% |
+| pair_16_high_complexity | 3.0 | 33.3% |
+| pair_17_time_pressure | 5.0 | 80.0% |
+| pair_19_graphics | 5.0 | 73.3% |
+
+### Files
+- Scripts: `src/experiments/02-27_mistral24b_cwe787_lobo/01_cwe787_lobo.py`
+- Config: `src/experiments/02-27_mistral24b_cwe787_lobo/experiment_config.py`
+- Results: `src/experiments/02-27_mistral24b_cwe787_lobo/results/cwe787_lobo_results_20260227_153516.json`
+- Full data: `src/experiments/02-27_mistral24b_cwe787_lobo/results/cwe787_lobo_full_20260227_153516.json`
+
+---
+
 ## 2026-02-27: Experiment 21 — Llama-3.1-70B-Instruct Logit Lens
 
 ### Prompt
