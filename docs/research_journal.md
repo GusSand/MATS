@@ -1,5 +1,69 @@
 # Research Journal
 
+## 2026-02-27: Experiment 24 — Mistral-Small-24B Logit Lens
+
+### Prompt
+> Run logit lens on Mistral-24B tracking P("sn") across all 40 layers. Key question: does emergence follow Mistral-7B distributed pattern or Llama sudden-emergence pattern?
+
+### Research Question
+Where does Mistral-24B's secure token probability emerge, as a fraction of total depth? Does it match the Mistral-7B distributed pattern (~87.5% depth) or the Llama sudden-emergence pattern (93-97% depth)?
+
+### Methods
+- **Model**: mistralai/Mistral-Small-24B-Instruct-2501 (40 layers, fp16)
+- **Primary tracking**: P("sn") — first token of snprintf, which splits as ["sn", "printf"] on Mistral tokenizer
+- **Secondary tracking**: P("sprintf"), P("printf"), and 15 other tokens
+- **Prompts**: 2 static prompts + 5 secure/vulnerable pairs from CWE-787 dataset
+- **All 40 layers** for static prompts, key layers for dataset prompts
+- Raw completion-style prompts (no chat template), truncated before critical function call
+
+### Results (No Interpretation)
+
+**Static Prompts — P("sn") trajectory (secure prompt):**
+
+| Layer | Depth% | P(sn) Secure | P(sn) Vulnerable | Diff |
+|-------|--------|-------------|-------------------|------|
+| 0-17  | 0-44%  | ~0.000001   | ~0.000001         | ~0   |
+| 18    | 46.2%  | 0.000007    | 0.000003          | +0.000005 |
+| 25    | 64.1%  | 0.000104    | 0.000088          | +0.000016 |
+| 26    | 66.7%  | 0.000458    | 0.000449          | +0.000009 |
+| 28    | 71.8%  | 0.001127    | 0.001135          | -0.000008 |
+| 29    | 74.4%  | 0.007382    | 0.008652          | -0.001270 |
+| 32    | 82.1%  | **0.023221** | 0.005616          | **+0.017605** |
+| 33    | 84.6%  | 0.018935    | 0.004946          | +0.013989 |
+| 34    | 87.2%  | 0.035658    | 0.009116          | +0.026542 |
+| **35** | **89.7%** | **0.465902** | 0.033545 | **+0.432357** |
+| 36    | 92.3%  | 0.236686    | 0.015704          | +0.220982 |
+| 37    | 94.9%  | 0.361050    | 0.096761          | +0.264289 |
+| 38    | 97.4%  | 0.269832    | 0.027131          | +0.242701 |
+| 39    | 100%   | 0.062883    | 0.013549          | +0.049334 |
+
+- **Peak P(sn) on secure prompt**: 46.6% at **L35 = 89.7% depth**
+- P(sn) is rank 0 (top-1 token) at L35 on secure prompt
+- Clear secure/vulnerable differentiation begins at L32 (82.1% depth)
+- P("sn") on vulnerable prompt stays below 10% except at L37 (9.7%)
+- Oscillation in final layers (L35→L39): 46.6% → 23.7% → 36.1% → 27.0% → 6.3%
+
+**Final layer probabilities (static prompts):**
+- Secure:  P(sprintf)=1.89%, P(sn)=6.29%
+- Vulnerable: P(sprintf)=1.71%, P(sn)=1.35%
+
+**Dataset prompts**: Near-zero P(sprintf) and P(sn) across all layers — most prompts failed to truncate properly (full code provided), so next-token is not a function call.
+
+### Cross-Model Emergence Depth Comparison
+
+| Model | Layers | Peak Emergence Layer | Depth% | Pattern |
+|-------|--------|---------------------|--------|---------|
+| Mistral-7B | 32 | ~L28 | 87.5% | Distributed |
+| **Mistral-24B** | **40** | **L35** | **89.7%** | **Distributed** |
+| Llama-8B | 32 | L31 | 96.9% | Sudden |
+| Llama-70B | 80 | ~L75 | 93.8% | Late |
+
+### Files
+- Script: `src/experiments/02-27_mistral24b_cwe787_lobo/03_logit_lens.py`
+- Results: `src/experiments/02-27_mistral24b_cwe787_lobo/results/logit_lens_24b_20260227_170823.json`
+
+---
+
 ## 2026-02-27: Experiment 23 — Mistral-Small-24B CWE-119 LOBO
 
 ### Prompt
