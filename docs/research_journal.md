@@ -1,5 +1,118 @@
 # Research Journal
 
+## 2026-02-27: Experiment 26 — Qwen2.5-14B CWE-119 7-Fold LOBO
+
+### Prompt
+> Run CWE-119 7-fold LOBO on Qwen2.5-14B-Instruct. Layer 47, alphas [0.0, 1.0, 1.5, 2.0, 3.0], 3 seeds [42, 123, 456].
+
+### Research Question
+Does activation steering generalize to CWE-119 (buffer overflow: gets→fgets, strcpy→strncpy) on Qwen2.5-14B-Instruct?
+
+### Methods
+- **Model**: Qwen/Qwen2.5-14B-Instruct (fp16), 48 layers, 5120 hidden dim
+- **Steering layer**: 47 (penultimate, ~98% depth)
+- **Dataset**: cwe119_expanded_20260207_024627.jsonl (105 pairs, 7 base_ids)
+- **Seeds**: [42, 123, 456], temperature=0.6, top_p=0.9, max_new_tokens=512
+- **Alpha grid**: [0.0, 1.0, 1.5, 2.0, 3.0]
+- **Folds**: 7 LOBO folds, 15 test items × 3 seeds × 5 alphas = 225 per fold = 1,575 total
+- **Scoring**: CWE-119 patterns (fgets, strncpy, strncat, snprintf as secure; gets, strcpy, strcat, scanf as insecure)
+
+### Results (No Interpretation)
+
+| Alpha | N | Strict Secure | Strict Insecure | Refusals |
+|-------|---|---------------|-----------------|----------|
+| 0.0 | 315 | **0.0%** | 67.6% | 32.4% |
+| 1.0 | 315 | **0.0%** | 57.8% | 42.2% |
+| 1.5 | 315 | **0.0%** | 59.0% | 41.0% |
+| 2.0 | 315 | **0.0%** | 60.6% | 39.4% |
+| 3.0 | 315 | **0.0%** | 67.3% | 32.7% |
+
+**Complete null result**: 0% secure across ALL alphas, ALL folds. Direction norms extremely high (173-238 vs ~8 for Llama-8B). Steering has no effect on secure function generation. At mid-alphas (1.0-2.0), insecure rate slightly decreases but refusal rate increases — steering pushes toward refusal, not secure code.
+
+### Key Observations
+- Overall direction norm: 209.8 (much higher than Llama-8B ~8 or Mistral-7B ~8)
+- Folds 4-7 (username_copy, filepath_copy, error_msg_copy, hostname_copy) have near-100% insecure rates across ALL alphas including baseline
+- Folds 1-3 (user_input, command_parser, config_reader) show high refusal rates (73-97%) suggesting the model's safety training dominates
+
+---
+
+## 2026-02-27: Experiment 25b — Functional Correctness Re-evaluation (Llama-8B, Untruncated)
+
+### Prompt
+> Rerun functional correctness for Llama-8B only. Fix: regenerate outputs fresh from the model with FULL outputs (no 500-char truncation). Re-evaluate with GPT-4o.
+
+### Research Question
+Does the Exp 25 finding of -28pp functional correctness degradation on Llama-8B hold when outputs are not truncated? Was the high INCOMPLETE rate an artifact of 500-char truncation?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16), layer 31, α=3.5
+- **Judge**: GPT-4o (openai/gpt-4o-2024-05-13) via OpenRouter, temperature=0.0
+- **Approach**: Re-extracted activations at L31 for all 210 samples, computed 7 LOBO fold directions, regenerated 25 steered + 25 baseline outputs with max_new_tokens=512 (no post-hoc truncation)
+- **Same prompt IDs** as Exp 25 for direct comparison
+- **Output lengths**: Steered avg=2432 chars (all >500), Baseline avg=2171 chars (all >500)
+
+### Results (No Interpretation)
+
+| Condition | N | CORRECT | PARTIAL | INCORRECT | INCOMPLETE | Functional% |
+|-----------|---|---------|---------|-----------|------------|-------------|
+| Steered (α=3.5) | 25 | 24.0% | 0.0% | 36.0% | 40.0% | **24.0%** |
+| Baseline (α=0.0) | 25 | 56.0% | 4.0% | 12.0% | 28.0% | **60.0%** |
+
+**Comparison with Exp 25 (truncated):**
+
+| Condition | Exp 25 | Exp 25b | Diff |
+|-----------|--------|---------|------|
+| Steered | 8.0% | 24.0% | +16pp |
+| Baseline | 36.0% | 60.0% | +24pp |
+| Steered−Baseline | -28pp | **-36pp** | — |
+
+### LOBO Fold Direction Norms
+pair_07_sprintf_log: 7.908, pair_09_path_join: 8.106, pair_11_json: 8.195, pair_12_xml: 8.450, pair_16_high_complexity: 7.526, pair_17_time_pressure: 7.346, pair_19_graphics: 8.057
+
+---
+
+## 2026-02-27: Experiment 25 — Functional Correctness of Steered Code
+
+### Prompt
+> Evaluate functional correctness of steered code outputs using GPT-4o as judge. Answer: "does steering produce secure but broken code?"
+
+### Research Question
+Does activation steering degrade functional correctness of generated code? Is the security improvement coming at the cost of broken code?
+
+### Methods
+- **Judge**: GPT-4o (openai/gpt-4o-2024-05-13) via OpenRouter, temperature=0.0
+- **Models evaluated**: Mistral-7B (α=3.5) and Llama-8B (α=3.5)
+- **Conditions**: 25 steered + 25 baseline per model = 100 total
+- **Source data**: LOBO fold result files with raw output text
+- **Rating scale**: CORRECT, PARTIALLY_CORRECT, INCORRECT, INCOMPLETE
+- **Truncation note**: Llama-8B outputs capped at 500 chars in stored results; Mistral-7B varies (avg 419 steered, 467 baseline)
+
+### Results (No Interpretation)
+
+| Condition | N | CORRECT | PARTIAL | INCORRECT | INCOMPLETE | Functional% |
+|-----------|---|---------|---------|-----------|------------|-------------|
+| Mistral-7B steered | 25 | 52.0% | 0.0% | 24.0% | 24.0% | **52.0%** |
+| Mistral-7B baseline | 25 | 36.0% | 8.0% | 16.0% | 40.0% | **44.0%** |
+| Llama-8B steered | 25 | 4.0% | 4.0% | 16.0% | 76.0% | **8.0%** |
+| Llama-8B baseline | 25 | 32.0% | 4.0% | 0.0% | 64.0% | **36.0%** |
+
+**2x2 Summary (Functional = CORRECT + PARTIALLY_CORRECT):**
+
+| Model | Baseline | Steered | Diff |
+|-------|----------|---------|------|
+| Mistral-7B | 44.0% | 52.0% | +8.0pp |
+| Llama-8B | 36.0% | 8.0% | -28.0pp |
+
+- Mistral-7B: steering slightly improves functional correctness (+8pp)
+- Llama-8B: steering appears to hurt correctness (-28pp), but INCOMPLETE rate jumps from 64% to 76%
+- CRITICAL CAVEAT: Llama-8B outputs are all truncated to 500 chars — the high INCOMPLETE rate on steered outputs may reflect longer (but valid) code being truncated, not actual incompleteness
+
+### Files
+- Script: `src/experiments/02-27_functional_correctness/01_evaluate_correctness.py`
+- Results: `src/experiments/02-27_functional_correctness/results/correctness_results_20260227_174107.json`
+
+---
+
 ## 2026-02-27: Experiment 24 — Mistral-Small-24B Logit Lens
 
 ### Prompt
