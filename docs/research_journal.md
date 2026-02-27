@@ -1,5 +1,131 @@
 # Research Journal
 
+## 2026-02-27: Experiment 21 — Llama-3.1-70B-Instruct Logit Lens
+
+### Prompt
+> Run logit lens analysis on Llama-70B to track P(sprintf) and P(snprintf) emergence across all 80 layers.
+
+### Research Question
+Does the 70B model show the same late-layer emergence pattern as Llama-8B and Mistral-7B? Given the CWE-119 direction norm anomaly (24.7 vs ~8.6 on 8B), are there unusual norm growth patterns?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-70B-Instruct (4-bit NF4)
+- **Layers**: All 80 layers + key layer subsets for dataset prompts
+- **Tokens tracked**: sprintf (ID 12075), snprintf (ID 37546) — both single tokens on 70B
+- **Prompts**: 5 secure/vulnerable prompt pairs from CWE-787 dataset + static prompts
+
+### Results (No Interpretation)
+- Both sprintf and snprintf are single tokens on 70B (unlike Mistral-7B where snprintf splits)
+- At final layer: P(sprintf|vulnerable) = 0.0133, P(snprintf|secure) = 0.0202
+- Differentiation emerges at layers 75-79 (last 5 layers)
+- Most layers show near-zero probability for both tokens (ranks >10K)
+- Consistent with late-layer emergence pattern seen in Llama-8B (layer 31/32) and Mistral-7B
+
+### Files
+- Script: `src/experiments/02-26_llama70b_full_suite/04_logit_lens.py`
+- Results: `src/experiments/02-26_llama70b_full_suite/results/logit_lens_70b_20260227_073752.json`
+
+---
+
+## 2026-02-27: Experiment 20 — Llama-3.1-70B-Instruct E2E Pipeline
+
+### Prompt
+> Run end-to-end pipeline on Llama-70B: baseline + steered generations on neutral evaluation prompts for CWE-787, CWE-119, CWE-134.
+
+### Research Question
+Does the CWE-787 steering direction maintain safety on neutral prompts while improving CWE-787 security on 70B? How does cross-CWE interference compare to Llama-8B?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-70B-Instruct (4-bit NF4)
+- **Steering**: CWE-787 direction at α=4.0 (best from LOBO), layer 79
+- **Dataset**: 21 neutral evaluation prompts × 10 seeds × 2 conditions (baseline + steered) = 420 generations
+- **CWEs evaluated**: CWE-787 (70 gens), CWE-119 (70 gens), CWE-134 (70 gens)
+
+### Results (No Interpretation)
+
+| CWE | Baseline | Steered (α=4.0) | Change |
+|-----|----------|-----------------|--------|
+| CWE-787 | 78.6% | **100.0%** | +21.4pp |
+| CWE-119 | 81.4% | 61.4% | -20.0pp |
+| CWE-134 | 100.0% | 100.0% | — |
+| **Overall** | **86.7%** | **87.1%** | **+0.5pp** |
+
+- CWE-787 steering perfectly fixes buffer overflows (100% secure)
+- CWE-119 is hurt by CWE-787 direction (-20pp) — cross-CWE interference
+- CWE-134 unaffected (was already 100%)
+- Llama-8B E2E comparison: 88.6% overall → 70B is 87.1% (-1.5pp)
+
+### Files
+- Script: `src/experiments/02-26_llama70b_full_suite/03_e2e_pipeline.py`
+- Results: `src/experiments/02-26_llama70b_full_suite/results/e2e_results_20260227_061223.json`
+- Full outputs: `src/experiments/02-26_llama70b_full_suite/results/e2e_full_20260227_061223.json`
+
+---
+
+## 2026-02-27: Experiment 19 — Llama-3.1-70B-Instruct CWE-119 LOBO Cross-Validation
+
+### Prompt
+> Run 7-fold LOBO cross-validation on Llama-70B for CWE-119 (general buffer overflow — strcpy, gets). Investigates whether large direction norms at 70B scale create unique challenges.
+
+### Research Question
+Does CWE-119 steering work on 70B? Given the direction norm anomaly (~24.7, vs ~8.6 on 8B), how does the effective magnitude sweet spot shift?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-70B-Instruct (4-bit NF4)
+- **Steering layer**: 79
+- **Dataset**: CWE-119 expanded (105 pairs, 7 base_ids)
+- **Protocol**: 7-fold LOBO. Folds 1-2 used wider grid [0.0, 1.0, 2.0, 3.0, 3.5, 4.0, 5.0], folds 3-7 narrowed to [0.0, 1.0, 1.5]. 3 seeds [42, 123, 456].
+- **Runtime**: ~8h total (original run crashed, resumed from fold 3)
+- **Infrastructure issue**: Silent OOM kill during original run. Zombie GPU process (44GB) from crash prevented restart until killed.
+
+### Results (No Interpretation)
+
+**Aggregated (common alphas across all 7 folds):**
+
+| Alpha | Secure% | Insecure% | Other% |
+|-------|---------|-----------|--------|
+| 0.0   | 0.0%    | 100%      | 0%     |
+| **1.0** | **38.4%** | **13.0%** | **48.6%** |
+
+Best alpha: **1.0** → 38.4% secure rate (+38.4pp from 0% baseline)
+
+**Per-fold breakdown:**
+
+| Fold | Dir Norm | α=1.0 Secure | Response |
+|------|----------|-------------|----------|
+| pair_01_user_input | 24.7 | **91.1%** | Strong |
+| pair_02_command_parser | 24.7 | **88.9%** | Strong |
+| pair_03_config_reader | 24.6 | **82.2%** | Strong |
+| pair_04_username_copy | 28.0 | 6.7% | Resistant |
+| pair_05_filepath_copy | 28.1 | 0.0% | Resistant |
+| pair_06_error_msg_copy | 28.2 | 0.0% | Resistant |
+| pair_07_hostname_copy | 28.1 | 0.0% | Resistant |
+
+- **Bimodal split**: `gets()→fgets()` folds (1-3, norm~24.7) show 82-91% secure; `strcpy()→strncpy()` folds (4-7, norm~28) are resistant
+- Direction norm ~24.7 → effective magnitude at α=1.0 ≈ 25 (sweet spot)
+- Direction norm ~28 → effective magnitude at α=1.0 ≈ 28 (above sweet spot, causes degeneration before achieving secure behavior)
+- Cosine similarity between CWE-787 and CWE-119 directions: 0.12 (near orthogonal)
+
+**Cross-model CWE-119 comparison:**
+
+| Model | Params | Baseline | Best Rate | Best α | Δpp |
+|-------|--------|----------|-----------|--------|-----|
+| Llama-8B | 8B | 0.0% | 20.0% | 4.0 | +20.0 |
+| Mistral-7B | 7B | 0.3% | 1.6% | 3.0 | +1.3 |
+| **Llama-70B** | **70B** | **0.0%** | **38.4%** | **1.0** | **+38.4** |
+
+### Interpretation (Claude's)
+CWE-119 on 70B reveals a fascinating bimodal pattern: the steering direction captures `gets()→fgets()` transitions effectively (82-91%) but fails completely for `strcpy()→strncpy()`. The different direction norms for these sub-groups (24.7 vs 28) may indicate these are mechanistically distinct behaviors in the 70B model. The 70B actually achieves the best aggregated CWE-119 rate of any model tested (+38.4pp vs +20pp on 8B), driven entirely by the strong gets→fgets folds. The near-orthogonal cosine similarity (0.12) with CWE-787 confirms these are truly different security concepts in activation space.
+
+### Files
+- Resume script: `src/experiments/02-26_llama70b_full_suite/02b_cwe119_lobo_resume.py`
+- Original script: `src/experiments/02-26_llama70b_full_suite/02_cwe119_lobo.py`
+- Results: `src/experiments/02-26_llama70b_full_suite/results/cwe119_lobo_results_20260227_001836.json`
+- Full results: `src/experiments/02-26_llama70b_full_suite/results/cwe119_lobo_full_20260227_001836.json`
+- Per-fold results: `src/experiments/02-26_llama70b_full_suite/results/cwe119_fold_*.json`
+
+---
+
 ## 2026-02-26: Experiment 17 — Llama-3.1-70B-Instruct CWE-787 LOBO Cross-Validation
 
 ### Prompt
