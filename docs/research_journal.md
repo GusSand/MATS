@@ -1,5 +1,66 @@
 # Research Journal
 
+## 2026-02-28: Experiment 27 — Functional Correctness on Neutral Prompts
+
+### Prompt
+> Test whether the correctness penalty from steering holds on normal coding prompts, not adversarial ones. Use the 21 neutral evaluation prompts from the E2E pipeline. This is the deployment-relevant correctness question.
+
+### Research Question
+Does activation steering degrade functional correctness on neutral (non-adversarial) coding prompts? Is the correctness penalty from Exp 25b/25d specific to adversarial prompts, or does it generalize to normal coding tasks?
+
+### Methods
+- **Models**: Llama-3.1-8B-Instruct (α=3.0, L31) and Mistral-7B-Instruct-v0.3 (α=3.5, L31)
+- **Prompts**: 21 neutral coding prompts (7 CWE-787, 7 CWE-119, 7 CWE-134) from E2E pipeline
+- **Direction**: Overall mean difference (secure − vulnerable) from ALL 210 CWE-787 training pairs (no LOBO holdout — neutral prompts are out-of-distribution)
+- **Generation**: temperature=0.6, top_p=0.9, max_new_tokens=512, 1 generation per prompt
+- **Judge**: GPT-4o (gpt-4o-2024-05-13) via OpenAI, temperature=0.0
+- **Evaluation fix**: Prompt + completion concatenated before sending to judge (initial run without context produced floor-effect INCOMPLETE rates of 62-81% across all conditions)
+
+### Results (No Interpretation)
+
+| Condition | N | CORRECT | PARTIAL | INCORRECT | INCOMPLETE | Functional% |
+|-----------|---|---------|---------|-----------|------------|-------------|
+| Llama steered (α=3.0) | 21 | 11 | 4 | 6 | 0 | **71.4%** |
+| Llama baseline (α=0.0) | 21 | 12 | 4 | 5 | 0 | **76.2%** |
+| Mistral steered (α=3.5) | 21 | 9 | 2 | 7 | 3 | **52.4%** |
+| Mistral baseline (α=0.0) | 21 | 10 | 3 | 2 | 6 | **61.9%** |
+
+**Correctness penalty (neutral vs adversarial):**
+
+| Model | Neutral (Exp 27) | Adversarial (25b/d) |
+|-------|------------------|---------------------|
+| Llama-8B | **-4.8pp** | -36.0pp |
+| Mistral-7B | **-9.5pp** | -12.0pp |
+
+**Degeneration (steered, improved detector — excludes whitespace false positives):**
+- Llama-8B: 7/21 (33%) — mostly block duplication and EOF repetition
+- Mistral-7B: 2/21 (10%)
+
+**Per-CWE breakdown:**
+- CWE-787 (in-distribution): Llama -14pp, Mistral 0pp
+- CWE-119 (related buffer): Llama 0pp, Mistral -29pp
+- CWE-134 (format string, out-of-distribution): Llama 0pp, Mistral 0pp
+
+### Key Observations
+- Neutral prompt correctness penalties are much smaller than adversarial: Llama -4.8pp (vs -36pp), Mistral -9.5pp (vs -12pp)
+- Baseline functional rates are much higher on neutral prompts (~62-76%) vs adversarial (~48-60%), suggesting neutral prompts are easier
+- Degeneration in Llama steered is high (33%) even on neutral prompts
+- Initial evaluation without prompt context was invalid (floor effect); re-evaluation with prompt+completion concatenation fixed this
+
+### Code
+- [05_exp27_neutral_correctness.py](../src/experiments/02-27_functional_correctness/05_exp27_neutral_correctness.py) - Generation script (both models)
+- [07_exp27_evaluate_with_context.py](../src/experiments/02-27_functional_correctness/07_exp27_evaluate_with_context.py) - Evaluation with prompt+completion context (final)
+- [06_exp27_evaluate_only.py](../src/experiments/02-27_functional_correctness/06_exp27_evaluate_only.py) - Initial evaluation without context (invalid, kept for reference)
+
+### Result Files
+- [correctness_27_20260228_013017.json](../src/experiments/02-27_functional_correctness/results/correctness_27_20260228_013017.json) - Final results (with prompt context)
+- [exp27_raw_outputs_20260227_234501.json](../src/experiments/02-27_functional_correctness/results/exp27_raw_outputs_20260227_234501.json) - Raw generation outputs
+
+### Detailed Report
+- [02-28_exp27_neutral_correctness.md](experiments/02-28_exp27_neutral_correctness.md)
+
+---
+
 ## 2026-02-27: Experiment 26 — Qwen2.5-14B CWE-119 7-Fold LOBO
 
 ### Prompt
@@ -33,6 +94,56 @@ Does activation steering generalize to CWE-119 (buffer overflow: gets→fgets, s
 - Overall direction norm: 209.8 (much higher than Llama-8B ~8 or Mistral-7B ~8)
 - Folds 4-7 (username_copy, filepath_copy, error_msg_copy, hostname_copy) have near-100% insecure rates across ALL alphas including baseline
 - Folds 1-3 (user_input, command_parser, config_reader) show high refusal rates (73-97%) suggesting the model's safety training dominates
+
+---
+
+## 2026-02-27: Experiment 25d — Functional Correctness Re-evaluation (Mistral-7B, Untruncated)
+
+### Prompt
+> Rerun functional correctness for Mistral-7B with full untruncated outputs. Same methodology as Exp 25b but for Mistral-7B.
+
+### Research Question
+Does the Exp 25 finding of +8pp functional correctness improvement on Mistral-7B hold when outputs are regenerated fresh with full (untruncated) outputs?
+
+### Methods
+- **Model**: Mistral-7B-Instruct-v0.3 (fp16), layer 31, α=3.5
+- **Judge**: GPT-4o (openai/gpt-4o-2024-05-13) via OpenRouter, temperature=0.0
+- **Approach**: Used activations from experiment_4a_mistral7b, computed 7 LOBO fold directions, regenerated 25 steered + 25 baseline outputs with max_new_tokens=512
+- **Same prompt IDs** as Exp 25b for cross-model comparison
+- **Output lengths**: Steered avg=618 chars (10 over 500), Baseline avg=617 chars (15 over 500)
+
+### Results (No Interpretation)
+
+| Condition | N | CORRECT | PARTIAL | INCORRECT | INCOMPLETE | Functional% |
+|-----------|---|---------|---------|-----------|------------|-------------|
+| Steered (α=3.5) | 25 | 32.0% | 4.0% | 56.0% | 8.0% | **36.0%** |
+| Baseline (α=0.0) | 25 | 36.0% | 12.0% | 52.0% | 0.0% | **48.0%** |
+
+**Comparison with Exp 25 (from stored outputs):**
+
+| Condition | Exp 25 | Exp 25d | Diff |
+|-----------|--------|---------|------|
+| Steered | 52.0% | 36.0% | -16pp |
+| Baseline | 44.0% | 48.0% | +4pp |
+| Steered−Baseline | +8pp | **-12pp** | — |
+
+**Reverses the Exp 25 finding**: With untruncated outputs, Mistral-7B steering shows a -12pp correctness penalty (vs +8pp in Exp 25). This aligns with the Llama-8B pattern.
+
+### Degeneration
+- 4 degenerate outputs in steered condition (repeated phrases like "buffer size", "buffer,", "buffer_len +")
+- 3 of 4 degenerate outputs were judged INCORRECT
+
+### LOBO Fold Direction Norms
+pair_07_sprintf_log: 4.110, pair_09_path_join: 4.154, pair_11_json: 4.027, pair_12_xml: 4.085, pair_16_high_complexity: 3.903, pair_17_time_pressure: 3.606, pair_19_graphics: 4.128
+
+### Updated Cross-Model Summary (All Untruncated)
+
+| Model | Baseline | Steered | Diff |
+|-------|----------|---------|------|
+| Mistral-7B (Exp 25d) | 48.0% | 36.0% | **-12pp** |
+| Llama-8B (Exp 25b) | 60.0% | 24.0% | **-36pp** |
+
+Both models show correctness degradation from steering when evaluated with full outputs.
 
 ---
 

@@ -119,6 +119,60 @@ Notably, the INCOMPLETE rate remains substantial even with full outputs (40% ste
 - [02_exp25b_llama8b_rerun.py](../../src/experiments/02-27_functional_correctness/02_exp25b_llama8b_rerun.py) - Full regeneration + evaluation script
 - [exp25b_correctness_results_20260227_180052.json](../../src/experiments/02-27_functional_correctness/results/exp25b_correctness_results_20260227_180052.json) - Full results
 
+---
+
+## Experiment 25d: Mistral-7B Re-evaluation (Untruncated)
+
+To mirror Exp 25b's methodology for Mistral-7B, Exp 25d regenerated Mistral-7B outputs fresh from the model with full outputs (no truncation).
+
+### Methods
+- **Model**: Mistral-7B-Instruct-v0.3 (fp16), layer 31, α=3.5
+- **Judge**: GPT-4o (openai/gpt-4o-2024-05-13) via OpenRouter, temperature=0.0
+- **Activations source**: `experiment_4a_mistral7b/data/activations_20260205_042810.npz`
+- **Same prompt IDs** as Exp 25b for cross-model comparison
+- `max_new_tokens=512`, temperature=0.6, top_p=0.9
+- **Output lengths**: Steered avg=618 chars (10 over 500), Baseline avg=617 chars (15 over 500)
+
+### Exp 25d Results
+
+| Condition | N | CORRECT | PARTIAL | INCORRECT | INCOMPLETE | Functional% |
+|-----------|---|---------|---------|-----------|------------|-------------|
+| Steered (α=3.5) | 25 | 32.0% | 4.0% | 56.0% | 8.0% | **36.0%** |
+| Baseline (α=0.0) | 25 | 36.0% | 12.0% | 52.0% | 0.0% | **48.0%** |
+
+### Comparison: Exp 25 vs Exp 25d
+
+| Condition | Exp 25 (stored outputs) | Exp 25d (regenerated) | Change |
+|-----------|------------------------|----------------------|--------|
+| Steered functional | 52.0% | 36.0% | -16pp |
+| Baseline functional | 44.0% | 48.0% | +4pp |
+| Steered−Baseline | +8pp | **-12pp** | — |
+
+### Degeneration Analysis
+- 4 degenerate outputs in steered condition (16% of steered outputs)
+- Patterns: repeated phrases ("buffer size" x3, "buffer," x3, "buffer_len +" x3)
+- 3 of 4 degenerate outputs were judged INCORRECT — degeneration accounts for ~21% of INCORRECT steered verdicts
+
+### LOBO Fold Direction Norms
+pair_07_sprintf_log: 4.110, pair_09_path_join: 4.154, pair_11_json: 4.027, pair_12_xml: 4.085, pair_16_high_complexity: 3.903, pair_17_time_pressure: 3.606, pair_19_graphics: 4.128
+
+### Interpretation (Analyst)
+
+**Exp 25d reverses the Exp 25 finding for Mistral-7B.** With fresh untruncated outputs, Mistral-7B shows a -12pp correctness penalty from steering (vs +8pp in Exp 25). The Exp 25 result was likely an artifact of evaluating stored outputs that may have had different generation conditions.
+
+This means **both models show correctness degradation from steering** when evaluated consistently with full outputs. The penalty is smaller for Mistral-7B (-12pp) than Llama-8B (-36pp), suggesting Mistral-7B is more robust to steering perturbations.
+
+### Updated Cross-Model Summary (All Untruncated)
+
+| Model | Baseline | Steered | Diff | Notes |
+|-------|----------|---------|------|-------|
+| Mistral-7B (Exp 25d) | 48.0% | 36.0% | **-12pp** | Steering degrades correctness (reverses Exp 25) |
+| Llama-8B (Exp 25b) | 60.0% | 24.0% | **-36pp** | Steering degrades correctness |
+
+### Exp 25d Files
+- [04_exp25d_mistral7b.py](../../src/experiments/02-27_functional_correctness/04_exp25d_mistral7b.py) - Full regeneration + evaluation script
+- [correctness_25d_20260227_195601.json](../../src/experiments/02-27_functional_correctness/results/correctness_25d_20260227_195601.json) - Full results with per-output verdicts and degeneration analysis
+
 ## Reproducibility
 
 ```bash
@@ -127,6 +181,8 @@ cd src/experiments/02-27_functional_correctness
 python 01_evaluate_correctness.py
 # Exp 25b (regenerate Llama-8B fresh)
 python 02_exp25b_llama8b_rerun.py
+# Exp 25d (regenerate Mistral-7B fresh)
+python 04_exp25d_mistral7b.py
 ```
 
-Requires: OpenRouter API key set in scripts, `openai` Python package, GPU for Exp 25b.
+Requires: OpenRouter API key set in scripts, `openai` Python package, GPU for Exp 25b/25d.
