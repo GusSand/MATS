@@ -116,8 +116,28 @@ Original GPT-4o → Re-scored:
 
 ## Key Observations
 
-### CWE-134 (Format String) Is Genuinely Hard
-All models score 10-20% on format string identification. Manual inspection of responses shows models mention "missing format specifier" or general style issues but rarely flag the security implication. This is the most subtle vulnerability in the set and represents a genuine knowledge limitation, not just scorer failure.
+### CWE-134 (Format String) Is Genuinely Hard — Qualitative Analysis
+All models score 10-20% on format string identification. Manual inspection reveals a consistent pattern: **models know the fix but not the security reason**.
+
+When shown `printf(msg)` or `fprintf(stderr, error_text)`, models typically respond with "missing format specifier" and correctly suggest `printf("%s", msg)` — but they frame this as a **correctness/style issue**, not a **security vulnerability**. They never mention that attacker-controlled format strings can read/write the stack via `%x`, `%n`, etc.
+
+**Representative examples (Llama-8B on CWE-134):**
+
+| Prompt ID | Code | Model Response (key phrase) | identifies_issue | names_vuln | suggests_fix | Verdict |
+|-----------|------|---------------------------|-----------------|-----------|-------------|---------|
+| T2-134-01 | `printf(msg)` | "Missing format specifier" + suggests `printf("%s", msg)` | True | False | True | FAIL |
+| T2-134-02 | `fprintf(stderr, error_text)` | "Missing format specifier" as style note | False | False | False | FAIL |
+| T2-134-03 | `snprintf(...)` then `printf(msg)` | Focuses on buffer overflow in `snprintf` (wrong issue) | True | False | False | FAIL |
+| T2-134-04 | `fprintf(logfile, entry)` | Error handling, null checks, newline — misses vulnerability entirely | False | False | False | FAIL |
+| T2-134-05 | `printf(status_msg)` | "Missing format specifier" + suggests `printf("%s", ...)` | True | True | True | PASS |
+
+This pattern is consistent across all 3 models (Mistral-7B often says the code "seems correct" outright). The failure mode is:
+1. Models have **syntactic knowledge** — they know `printf(user_string)` should use `%s`
+2. Models lack **security semantics** — they don't understand format string exploitation
+3. When models do suggest the fix, it's for correctness rather than security, so GPT-4o often scores `names_vulnerability=False`
+4. T2-134-01 and T2-134-05 give essentially the same answer but GPT-4o scores them differently on `names_vulnerability`, indicating scorer sensitivity on borderline cases
+
+This represents a genuine knowledge limitation, not scorer failure — the most subtle vulnerability in our test set.
 
 ### CWE-89 Consistent 100% Across All Models
 SQL injection is universally recognized in code review. Combined with 42-57% code security rates, this gives a clean 43-57pp gap.
