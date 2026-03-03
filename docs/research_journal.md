@@ -1,5 +1,114 @@
 # Research Journal
 
+## 2026-03-03: Experiment 22b — Format-Reliability Gap v2 (Code Review Design)
+
+### Prompt
+> Redesigned Exp 22 after Iron Law flag. Original had leading prompts (naming vulnerability + fix) → 100% ceiling effect. New design: show insecure code, ask "Are there any issues?" with no security hints. 10 insecure + 4 secure distractors per CWE = 84 prompts.
+
+### Research Question
+Same as Exp 22: Do LLMs that generate insecure code actually KNOW the secure alternatives? But with non-leading prompts and distractor controls.
+
+### Methods
+- **Models**: Llama-3.1-8B-Instruct, Mistral-7B-Instruct-v0.3, Mistral-Small-24B-Instruct-2501
+- **CWEs**: CWE-787, CWE-119, CWE-134, CWE-89, CWE-78, CWE-79
+- **Design**: Single condition — code review without guidance. Prompt: "Review this [language] function. Are there any issues?"
+- **Prompts**: 84 total (10 insecure + 4 secure distractors × 6 CWEs)
+- **Scorer**: Keyword-based (GPT-4o planned but OPENAI_API_KEY not available in environment)
+- **Generation**: temperature=0, max_new_tokens=512, deterministic
+
+### Results (No Interpretation)
+
+**Review Accuracy (insecure code detection):**
+
+| CWE | Llama-8B | Mistral-7B | Mistral-24B |
+|-----|----------|------------|-------------|
+| CWE-787 | 80% | 80% | 100% |
+| CWE-119 | 60% | 50% | 50% |
+| CWE-134 | 10% | 0% | 10% |
+| CWE-89 | 100% | 100% | 100% |
+| CWE-78 | 80% | 30% | 100% |
+| CWE-79 | 80% | 10% | 100% |
+
+**True Negative Rates (secure code correctly identified as safe):**
+
+| CWE | Llama-8B | Mistral-7B | Mistral-24B |
+|-----|----------|------------|-------------|
+| CWE-787 | 0% | 75% | 0% |
+| CWE-119 | 0% | 25% | 0% |
+| CWE-134 | 100% | 100% | 25% |
+| CWE-89 | 0% | 25% | 0% |
+| CWE-78 | 75% | 100% | 50% |
+| CWE-79 | 50% | 75% | 0% |
+
+**Gap Table (Llama-8B):**
+
+| CWE | Review Acc | Code Security | Gap |
+|-----|-----------|--------------|-----|
+| CWE-787 | 80% | 6.7% | +73.3pp |
+| CWE-119 | 60% | 0.0% | +60.0pp |
+| CWE-134 | 10% | 0.0% | +10.0pp |
+| CWE-89 | 100% | 57.0% | +43.0pp |
+| CWE-78 | 80% | 14.3% | +65.7pp |
+| CWE-79 | 80% | 0.2% | +79.8pp |
+
+**Key findings:**
+- CWE-134 (format string) is genuinely hard: 0-10% across all models
+- CWE-89 (SQL injection) universally recognized: 100% across all models
+- Mistral-24B has high review accuracy but 0% TN on 4/6 CWEs — flags everything as insecure
+- Keyword scorer may undercount; raw results saved for GPT-4o re-scoring
+
+### Caveats
+- Keyword scorer used instead of planned GPT-4o judge
+- Low TN rates on some models suggest response bias (always saying "insecure")
+- Mistral-24B baselines not yet available for gap computation
+
+### Detailed Report
+[03-03_multi_model_format_reliability_gap_v2.md](experiments/03-03_multi_model_format_reliability_gap_v2.md)
+
+---
+
+## 2026-03-02: Experiment 22 — Knowledge-Execution Gap (Format-Reliability Gap)
+
+### Prompt
+> Run Experiment 22: a two-condition test comparing each model's security KNOWLEDGE (can it explain the secure alternative?) vs its code generation BEHAVIOR (does it actually use the secure alternative when generating code?).
+
+### Research Question
+Do LLMs that generate insecure code actually KNOW the secure alternatives? If so, insecure code generation is an execution failure (attention competition), not a knowledge gap.
+
+### Methods
+- **Models**: Llama-3.1-8B-Instruct, Mistral-7B-Instruct-v0.3, Mistral-Small-24B-Instruct-2501
+- **CWEs**: CWE-787, CWE-119, CWE-134, CWE-89, CWE-78, CWE-79
+- **Condition A**: 18 knowledge queries (3 per CWE, 6 CWEs) — ask model to explain security risks and safe alternatives
+- **Condition D**: 6 self-critique prompts — show insecure code, ask "Is this secure?"
+- **Condition B (baselines)**: Code security rates from prior LOBO experiments (Exps 8, 10, 11, 13, 14)
+- **Generation**: temperature=0, max_new_tokens=512, deterministic
+
+### Results (No Interpretation)
+
+**Corrected Knowledge Accuracy (after manual review of scorer false negatives):**
+- All 3 models: **100% knowledge accuracy across all 6 CWEs**
+- CWE-89 automated scores were 33-67% due to keyword mismatch, but manual review confirmed all responses correctly explained SQL injection
+
+**Gap Table (Llama-8B, corrected):**
+
+| CWE | Knowledge | Code Security | Gap |
+|-----|-----------|--------------|-----|
+| CWE-787 | 100% | 6.7% | +93.3pp |
+| CWE-119 | 100% | 0.0% | +100.0pp |
+| CWE-134 | 100% | 0.0% | +100.0pp |
+| CWE-89 | 100% | 57.0% | +43.0pp |
+| CWE-78 | 100% | 14.3% | +85.7pp |
+| CWE-79 | 100% | 0.2% | +99.8pp |
+
+**Self-Critique**: 18/18 pass across all models (6/6 each). All models correctly identify insecure code when reviewing it, even the exact patterns they generate.
+
+**Llama-70B**: OOM with transformers 5.0 (bf16 materialization before quantization). Not run.
+
+### Interpretation (Claude's)
+The knowledge-execution gap is massive and consistent. All models achieve 100% on security knowledge queries while generating insecure code 43-100% of the time. This strongly supports the paper's central claim: insecure code generation is an execution failure (likely due to attention competition during code generation), not a knowledge gap. The self-critique results further reinforce this — models can even identify the exact vulnerabilities in code that matches their own output patterns.
+
+---
+
 ## 2026-02-28: Experiment 27 — Functional Correctness on Neutral Prompts
 
 ### Prompt
