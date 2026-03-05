@@ -162,6 +162,11 @@ BASELINE_CODE_SECURITY = {
         "CWE-119": {"secure_rate": 0.3, "source": "Exp 14 LOBO"},
         "CWE-89": {"secure_rate": 42.9, "source": "Exp 13 LOBO"},
     },
+    "qwen14b": {
+        "CWE-787": {"secure_rate": 2.9, "source": "Exp 4c LOBO"},
+        "CWE-119": {"secure_rate": 0.0, "source": "Exp 26 LOBO"},
+        "CWE-89": {"secure_rate": 38.4, "source": "Exp 16 LOBO"},
+    },
     "mistral24b": {},
     "llama70b": {
         "CWE-787": {"secure_rate": 1.9, "source": "Exp 17 LOBO"},

@@ -4,6 +4,36 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Experiment 23: Qwen-14B Format-Reliability Gap (03-04)
+
+### Overview
+Code review experiment testing Qwen2.5-14B-Instruct's ability to identify security vulnerabilities when reviewing code. Reuses Exp 22b design (84 prompts: 10 insecure + 4 secure distractors × 6 CWEs). GPT-4o judge scoring with CWE-119 relaxed re-scoring.
+
+### Experiment Results
+`src/experiments/03-03_exp22b_format_reliability_gap/results/exp22b_qwen14b_20260304_224313/`
+
+| File | Description |
+|------|-------------|
+| results.json | Full results with GPT-4o scores for all 84 prompts |
+| results_raw.json | Raw results before gap table computation |
+| results_rescored_119.json | Results after CWE-119 re-scoring with relaxed judge |
+| gap_table.csv | Gap table: review accuracy vs code generation security |
+| SUMMARY.md | Auto-generated human-readable summary |
+
+### Key Metrics
+- 84 prompts total, 6 CWEs
+- Review accuracy: CWE-787 100%, CWE-119 100%*, CWE-134 40%, CWE-89 100%, CWE-78 90%, CWE-79 70%
+- Gaps: CWE-787 +97.1pp, CWE-119 +100.0pp, CWE-89 +61.6pp
+
+### Recreation
+```bash
+cd src/experiments/03-03_exp22b_format_reliability_gap
+OPENAI_API_KEY="..." python exp22b_run.py --model qwen14b
+OPENAI_API_KEY="..." python exp22b_rescore_119.py --results-dir results/exp22b_qwen14b_*/
+```
+
+---
+
 ## Experiment 15/15b: Mistral-7B E2E Pipeline (02-18)
 
 ### Overview
