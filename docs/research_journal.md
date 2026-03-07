@@ -18,15 +18,16 @@ Does P(snprintf) still show sudden L31 emergence under the tuned lens [Belrose e
 
 **Primary pair (raw code completion):**
 - Logit lens: P(snprintf) = 0% through L0-L30, sudden jump to 36.9% at L31 (secure), 3.2% (neutral)
-- Tuned lens: P(snprintf) = 0% through L0-L30, sudden jump to 24.0% at L31 (secure), 1.7% (neutral)
+- Tuned lens (WikiText-trained): P(snprintf) = 0% through L0-L30, sudden jump to 42.5% at L31 (secure), 3.5% (neutral)
 - Both methods: first >1% at L31, first >5% at L31, delta >1% at L31
 - No gradual emergence under either method
+- Robustness: Same result with random-token-trained lens (24.0%) and WikiText-trained lens (42.5%)
 
 **Additional pairs (instruction-style prompts):**
 - P(snprintf) < 0.002% at all layers for both methods (expected — these prompts don't elicit direct snprintf next-token prediction)
 
 ### My Interpretation
-Outcome A (best case) confirmed. The tuned lens corroborates the logit lens finding: hierarchical convergence is a genuine circuit property, not representation drift. The security computation is concentrated at a single site (L31) regardless of lens choice.
+Outcome A (best case) confirmed. The tuned lens corroborates the logit lens finding: hierarchical convergence is a genuine circuit property, not representation drift. The security computation is concentrated at a single site (L31) regardless of lens choice. Result robust to tuned lens calibration data.
 
 ---
 

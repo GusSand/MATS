@@ -81,30 +81,23 @@ with torch.no_grad():
 # ============================================================
 # Load calibration data from C4
 # ============================================================
-print("\nGenerating calibration data using random token sequences...")
-# Use random token sequences as calibration data.
-# The tuned lens only needs to learn to project intermediate representations
-# to the output space — any diverse input distribution works.
-import random
-random.seed(42)
-torch.manual_seed(42)
+print("\nLoading calibration data from WikiText-103...")
+dataset = load_dataset("wikitext", "wikitext-103-raw-v1", split="validation")
 
-# Get vocabulary size (excluding special tokens)
-vocab_size = tokenizer.vocab_size
-
-# Generate random sequences with some structure
 all_input_ids = []
-for i in range(NUM_SAMPLES):
-    # Mix of random tokens from common ranges
-    tokens = [tokenizer.bos_token_id] if tokenizer.bos_token_id else []
-    remaining = SEQ_LEN - len(tokens)
-    # Sample from common token IDs (skip special tokens at very low IDs)
-    rand_tokens = torch.randint(100, min(vocab_size, 50000), (remaining,)).tolist()
-    tokens.extend(rand_tokens)
+for example in dataset:
+    text = example.get("text", "")
+    if len(text) < 100:
+        continue
+    tokens = tokenizer.encode(text, add_special_tokens=True, max_length=SEQ_LEN, truncation=True)
+    if len(tokens) < SEQ_LEN:
+        continue  # Only use full-length sequences
     all_input_ids.append(tokens[:SEQ_LEN])
+    if len(all_input_ids) >= NUM_SAMPLES:
+        break
 
 all_input_ids = torch.tensor(all_input_ids, dtype=torch.long)
-print(f"Generated {len(all_input_ids)} random sequences of length {SEQ_LEN}")
+print(f"Collected {len(all_input_ids)} natural language sequences of length {SEQ_LEN}")
 
 # ============================================================
 # Train: layer by layer to save memory

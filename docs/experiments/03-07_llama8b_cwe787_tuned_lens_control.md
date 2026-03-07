@@ -63,15 +63,15 @@ The 4 additional pairs (task-style prompts rather than raw code) showed much low
 
 **Outcome A (Best case): CONFIRMED**
 
-The tuned lens also shows sudden L31 emergence, ruling out representation drift as an explanation for the logit lens pattern. The slightly lower absolute probabilities under the tuned lens (24.0% vs 36.9%) are expected — the tuned lens applies a learned correction, but the correction doesn't reveal hidden convergence in earlier layers.
+The tuned lens also shows sudden L31 emergence, ruling out representation drift as an explanation for the logit lens pattern. The tuned lens actually shows *higher* absolute probabilities (42.5% vs 36.9%), suggesting the logit lens may slightly underestimate the true convergence at L31.
 
 **Key finding:** The security-relevant computation (P(snprintf) divergence between secure/neutral contexts) is concentrated at a single site (L31) regardless of whether we use the raw logit lens or the drift-corrected tuned lens.
 
-**Paper addition:** "The pattern persists under the tuned lens [Belrose et al., 2023], ruling out representation drift as an explanation (Table X). The tuned lens shows P(snprintf) emergence at L31 (24.0% secure vs 1.7% neutral), matching the logit lens pattern (36.9% vs 3.2%), with near-zero probabilities at all earlier layers."
+**Paper addition:** "The pattern persists under the tuned lens [Belrose et al., 2023], ruling out representation drift as an explanation (Table X). The tuned lens shows P(snprintf) emergence at L31 (42.5% secure vs 3.5% neutral), consistent with the logit lens pattern (36.9% vs 3.2%), with near-zero probabilities at all earlier layers."
 
-## Caveat
+## Robustness Check: Training Data
 
-The tuned lens was trained on random token sequences rather than natural language (due to HuggingFace dataset loading issues). While it passes the L31 sanity check (matching logit lens predictions at the final layer), a lens trained on more naturalistic data might produce slightly different intermediate-layer results. However, the core finding — sudden vs gradual emergence — is robust because even a partially-trained lens would show gradual emergence if that were the underlying pattern.
+The tuned lens was initially trained on random token sequences, then retrained on WikiText-103 natural language data. Both versions produced the same result: sudden L31 emergence with no gradual convergence in earlier layers. The WikiText-trained lens showed even stronger emergence (42.5% vs 24.0% for the random-token lens), confirming the finding is robust to calibration data choice.
 
 ## Code
 
@@ -81,4 +81,5 @@ The tuned lens was trained on random token sequences rather than natural languag
 ## Files Generated
 
 - `src/experiments/03-07_tuned_lens_control/tuned_lens_llama8b/` - Trained tuned lens weights
-- `src/experiments/03-07_tuned_lens_control/results/tuned_lens_control_20260307_152258.json` - Full results
+- `src/experiments/03-07_tuned_lens_control/results/tuned_lens_control_20260307_152258.json` - Results (random-token-trained lens)
+- `src/experiments/03-07_tuned_lens_control/results/tuned_lens_control_20260307_154936.json` - Results (WikiText-trained lens, final)
