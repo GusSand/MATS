@@ -1,5 +1,35 @@
 # Research Journal
 
+## 2026-03-07: Experiment 28 — Tuned Lens Control for Hierarchical Convergence
+
+### Prompt
+> Run tuned lens analysis alongside existing logit lens results to address reviewer concern: is the sudden L31 emergence a genuine computational phenomenon or representation drift?
+
+### Research Question
+Does P(snprintf) still show sudden L31 emergence under the tuned lens [Belrose et al., 2023], or does it show gradual convergence (indicating representation drift)?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16)
+- **Tuned Lens**: Trained locally (512 samples, 5 epochs per layer, KL divergence objective). No pretrained probes available on HF for this model.
+- **Prompts**: Primary pair from Exp 01-07 (raw code completion) + 4 additional CWE-787 prompt pairs
+- **Comparison**: Logit lens vs tuned lens P(snprintf) trajectory across all 32 layers
+
+### Results (No Interpretation)
+
+**Primary pair (raw code completion):**
+- Logit lens: P(snprintf) = 0% through L0-L30, sudden jump to 36.9% at L31 (secure), 3.2% (neutral)
+- Tuned lens: P(snprintf) = 0% through L0-L30, sudden jump to 24.0% at L31 (secure), 1.7% (neutral)
+- Both methods: first >1% at L31, first >5% at L31, delta >1% at L31
+- No gradual emergence under either method
+
+**Additional pairs (instruction-style prompts):**
+- P(snprintf) < 0.002% at all layers for both methods (expected — these prompts don't elicit direct snprintf next-token prediction)
+
+### My Interpretation
+Outcome A (best case) confirmed. The tuned lens corroborates the logit lens finding: hierarchical convergence is a genuine circuit property, not representation drift. The security computation is concentrated at a single site (L31) regardless of lens choice.
+
+---
+
 ## 2026-03-04: Experiment 23 — Qwen 14B Format-Reliability Gap
 
 ### Prompt
