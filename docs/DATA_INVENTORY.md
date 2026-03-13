@@ -4,6 +4,23 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Experiment 29c: Format-Token Ablation Powered (03-13)
+
+### Overview
+Token ablation with 18 validated C prefixes and 8 validated Python SQL injection prefixes. 6 conditions per prefix × 32 layers. No new datasets created — prefixes are hard-coded in the script. Results only.
+
+### Experiment Results
+`src/experiments/03-13_format_ablation_logit_lens/results/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [token_ablation_powered_20260313_164536.json](../src/experiments/03-13_format_ablation_logit_lens/results/token_ablation_powered_20260313_164536.json) | Per-prefix, per-condition, per-layer P(snprintf)/P(sprintf) + P(f-string)/P(quote) + top-5 tokens + validation data | ~700 KB |
+
+**How to recreate**: `python src/experiments/03-13_format_ablation_logit_lens/06_token_ablation_powered.py` (requires Llama-3.1-8B-Instruct on GPU)
+**Used in**: Experiment 29c (docs/experiments/03-13_llama8b_format_token_ablation_powered.md)
+
+---
+
 ## Experiment 30: Expanded CodeQL/Static Analysis Validation (03-13)
 
 ### Overview

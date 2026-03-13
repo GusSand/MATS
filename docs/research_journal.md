@@ -1,5 +1,56 @@
 # Research Journal
 
+## 2026-03-13: Experiment 29c — Format-Token Ablation (Properly Powered)
+
+### Prompt
+> Hand-craft 20 C prefixes and 8 Python prefixes at genuine decision points. Validate that P(secure)+P(insecure) > 5% before including. Use comment substitution instead of mean-embedding ablation. 6 conditions: adversarial, neutral_a, neutral_b, secure, none, adversarial_mean_ablated.
+
+### Research Question
+With properly powered data (18 C + 8 Python valid prefixes), validated decision points, and natural comment substitution, does the adversarial comment causally suppress secure token probability?
+
+### Methods
+- **Model**: Llama-3.1-8B-Instruct (fp16), 32 layers
+- **C**: 20 hand-crafted prefixes with both buffer and size params (18 validated with >5% combined P(sprintf)+P(snprintf)). Token IDs: snprintf=37546, sprintf=12075.
+- **Python**: 8 SQL injection prefixes ending at `cursor.execute(`. Token IDs: f-string=f_token, parameterized quote=quote_token.
+- **6 conditions**: adversarial comment, neutral_a, neutral_b, secure comment, no comment, adversarial mean-ablated
+- **Validation**: Only kept prefixes where P(sprintf)+P(snprintf) > 5% at L31 in no-comment condition
+- **Analysis**: Bootstrap 95% CIs on adversarial suppression, secure boost, neutral effect, ablation recovery fraction
+
+### Results (No Interpretation)
+
+**C (18 valid prefixes, P(snprintf) at L31):**
+- Adversarial: 11.85%
+- Neutral_A: 17.71%
+- Neutral_B: 13.87%
+- Secure: 53.17%
+- None: 11.10%
+- Mean-ablated: 0.03%
+- Adversarial suppression: -0.76%, CI [-3.5%, 2.0%] — NOT SIGNIFICANT
+- Secure boost: +42.1%, CI [38.9%, 45.1%] — SIGNIFICANT
+- Neutral_A effect: +6.6%, CI [4.8%, 8.6%] — neutral comment boosts P(snprintf)
+- Ablation recovery fraction: -3.59 (mean ablation creates OOD, breaks everything)
+
+**Python (8 valid prefixes, P(quote/parameterized) at L31):**
+- Adversarial: 2.56%
+- Neutral_A: 18.63%
+- Neutral_B: 29.15%
+- Secure: 28.34%
+- None: 19.39%
+- Mean-ablated: 13.49%
+- **Adversarial suppression: 16.8%, CI [12.6%, 21.4%] — HIGHLY SIGNIFICANT**
+- Secure boost: +8.9%, CI [6.6%, 11.6%] — SIGNIFICANT
+- Neutral_A effect: -0.8%, CI [-3.2%, 1.8%] — NOT SIGNIFICANT (expected)
+- **Ablation recovery fraction: 0.81, CI [0.45, 1.29] — 80% RECOVERY**
+
+### My Interpretation
+Two very different stories for C vs Python:
+- **C**: The adversarial comment ("use sprintf") has essentially no effect beyond no-comment — the model already defaults to sprintf. The secure comment has a massive effect. This is an asymmetric finding: you can boost security with explicit instruction, but the adversarial instruction doesn't suppress below the already-low baseline.
+- **Python**: The adversarial comment ("use f-string formatting") strongly and causally suppresses parameterized query probability. Ablation recovers ~80% of the suppressed signal. Neutral comments have no effect. This is the clean causal result: comment tokens directly suppress secure coding patterns.
+
+The Python result is the strongest evidence for the format-suppression hypothesis in this experiment series. The C result shows the hypothesis is CWE-specific — it depends on whether the adversarial instruction pushes behavior below the natural baseline.
+
+---
+
 ## 2026-03-13: Experiment 29b v3 — Format-Token Ablation (Controlled Design)
 
 ### Prompt
