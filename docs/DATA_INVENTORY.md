@@ -4,6 +4,59 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Experiment 30: Expanded CodeQL/Static Analysis Validation (03-13)
+
+### Overview
+Sampled subsets of CWE-119 and CWE-89 model outputs for validation of regex scoring against static analysis tools (CodeQL, Bandit, Semgrep). Each subset is 30 samples: 10 regex-secure, 10 regex-insecure, 10 regex-other.
+
+### CWE-119 Sampled Outputs
+`src/experiments/03-13_expanded_codeql_validation/results/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [cwe119_sampled_outputs.json](../src/experiments/03-13_expanded_codeql_validation/results/cwe119_sampled_outputs.json) | 30 CWE-119 outputs sampled from Llama-8B LOBO folds (across all alphas) | ~22 KB |
+| [cwe119_codeql_agreement_20260313_160520.json](../src/experiments/03-13_expanded_codeql_validation/results/cwe119_codeql_agreement_20260313_160520.json) | CodeQL agreement results: 70% agreement rate | ~8 KB |
+
+**Source**: Sampled from `src/experiments/02-05_cross_cwe_steering/experiment_cwe119_llama8b/data/fold_results/` (7 fold files, all alpha levels)
+**Stratification**: 10 secure, 10 insecure, 10 other by strict regex label. Random seed=42.
+**How to recreate**: `python src/experiments/03-13_expanded_codeql_validation/01_cwe119_codeql_validation.py` (requires CodeQL at `/opt/codeql/codeql`, query pack `codeql/cpp-queries@0.9.0`)
+**Used in**: Experiment 30 (docs/experiments/03-13_both_cwe119_cwe89_expanded_codeql_validation.md)
+
+### CWE-89 Sampled Outputs
+`src/experiments/03-13_expanded_codeql_validation/results/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [cwe89_sampled_outputs.json](../src/experiments/03-13_expanded_codeql_validation/results/cwe89_sampled_outputs.json) | 30 CWE-89 outputs sampled from Llama-8B baseline (insecure prompts) | ~15 KB |
+| [cwe89_bandit_semgrep_agreement_20260313_160521.json](../src/experiments/03-13_expanded_codeql_validation/results/cwe89_bandit_semgrep_agreement_20260313_160521.json) | Bandit/Semgrep agreement results: 65% agreement rate | ~17 KB |
+
+**Source**: Sampled from `src/experiments/02-10_python_cwe_steering/results/baseline_full_rescored_20260210_021448.json` (insecure_results field, 3150 items)
+**Stratification**: 10 secure, 10 insecure, 10 other by regex label. Random seed=42.
+**How to recreate**: `python src/experiments/03-13_expanded_codeql_validation/02_cwe89_bandit_semgrep_validation.py` (requires `pip install bandit semgrep`)
+**Used in**: Experiment 30 (docs/experiments/03-13_both_cwe119_cwe89_expanded_codeql_validation.md)
+
+---
+
+## Experiment 29: Format Ablation Logit Lens (03-13)
+
+### Overview
+Logit lens measurements across 3 prompt conditions × 7 CWE-787 scenarios × 32 layers. No new datasets created — uses existing neutral eval prompts. Results only.
+
+### Experiment Results
+`src/experiments/03-13_format_ablation_logit_lens/results/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [format_ablation_logit_lens_20260313_160523.json](../src/experiments/03-13_format_ablation_logit_lens/results/format_ablation_logit_lens_20260313_160523.json) | Per-layer P(snprintf)/P(sprintf) for all 3 conditions × 7 scenarios | ~101 KB |
+| format_ablation_main.png | Two-panel figure: P(snprintf) trajectories + security preference signal | ~124 KB |
+| format_ablation_per_scenario.png | Per-scenario subplot figure | ~163 KB |
+
+**Source prompts**: `src/experiments/02-05_cross_cwe_steering/neutral_eval/data/neutral_eval_prompts.jsonl` (7 CWE-787 entries)
+**How to recreate**: `python src/experiments/03-13_format_ablation_logit_lens/01_format_ablation_logit_lens.py` (requires Llama-3.1-8B-Instruct on GPU)
+**Used in**: Experiment 29 (docs/experiments/03-13_llama8b_cwe787_format_ablation_logit_lens.md)
+
+---
+
 ## Experiment 23: Qwen-14B Format-Reliability Gap (03-04)
 
 ### Overview
