@@ -1,0 +1,102 @@
+{
+  "experiment": "R6_patching_clarification",
+  "timestamp": "20260313_203505",
+  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "layer": 10,
+  "n_trials": 100,
+  "total_time_seconds": 435.6522033214569,
+  "patching_specification": {
+    "patching_location": "model.model.layers[10].self_attn output",
+    "tensor_description": "The output of the multi-head attention after W_O projection, before addition to residual stream",
+    "hook_type": "register_forward_hook on self_attn module",
+    "tensor_shape": [
+      1,
+      17,
+      4096
+    ],
+    "head_specific_patching": "For head-specific patching, the output tensor [batch, seq, hidden_dim] is reshaped to [batch, seq, n_heads, head_dim] where head_dim = hidden_dim / n_heads. Individual head slices are then replaced.",
+    "nnsight_equivalent": "lm.model.layers[10].self_attn.output[0]"
+  },
+  "results": {
+    "post_wo_self_attn_output": {
+      "name": "Post-W_O (self_attn output \u2014 paper's method)",
+      "success_rate": 1.0,
+      "successes": 100,
+      "n_trials": 100,
+      "ci": [
+        0.9630051925239981,
+        0.9999999999999999
+      ],
+      "saved_shape": [
+        1,
+        17,
+        4096
+      ],
+      "samples": [
+        "9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger than 9.11 because 9.8",
+        "9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger than 9.11 because 9.8",
+        "9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger than 9.11 because 9.8"
+      ]
+    },
+    "post_o_proj": {
+      "name": "Post-o_proj (output projection only)",
+      "success_rate": 1.0,
+      "successes": 100,
+      "n_trials": 100,
+      "ci": [
+        0.9630051925239981,
+        0.9999999999999999
+      ],
+      "saved_shape": [
+        1,
+        17,
+        4096
+      ],
+      "samples": [
+        "9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger than 9.11 because 9.8",
+        "9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger than 9.11 because 9.8",
+        "9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger than 9.11 because 9.8"
+      ]
+    },
+    "post_v_proj": {
+      "name": "Post-v_proj (value projection)",
+      "success_rate": 1.0,
+      "successes": 100,
+      "n_trials": 100,
+      "ci": [
+        0.9630051925239981,
+        0.9999999999999999
+      ],
+      "saved_shape": [
+        1,
+        17,
+        1024
+      ],
+      "samples": [
+        "9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger than 9.11 because 9.8",
+        "9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger than 9.11 because 9.8",
+        "9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger than 9.11 because 9.8"
+      ]
+    },
+    "post_q_proj": {
+      "name": "Post-q_proj (query projection \u2014 control)",
+      "success_rate": 0.0,
+      "successes": 0,
+      "n_trials": 100,
+      "ci": [
+        0.0,
+        0.03699480747600191
+      ],
+      "saved_shape": [
+        1,
+        17,
+        4096
+      ],
+      "samples": [
+        "9.11 is bigger than 9.8.\nQ: Which is bigger: 9.8 or 9.11?\nA:",
+        "9.11 is bigger than 9.8.\nQ: Which is bigger: 9.8 or 9.11?\nA:",
+        "9.11 is bigger than 9.8.\nQ: Which is bigger: 9.8 or 9.11?\nA:"
+      ]
+    }
+  }
+}
