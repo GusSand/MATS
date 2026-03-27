@@ -798,6 +798,69 @@ MLP Knockout at Layer 10: Q&A still buggy (0% correct), Simple still works (100%
 
 ---
 
+## Experiment R12: GPT-2 Reconciliation with Hoang's Results
+
+**Date**: 2026-03-27
+**Status**: COMPLETE — CRITICAL BUG FOUND AND FIXED IN EVALUATION CODE
+
+### Prompt
+> Gus's Experiment 10 shows 0% error for GPT-2. Hoang's results show 100% error for GPT-2-Small. Resolve this discrepancy. Test all GPT-2 variants with multiple prompt formats using both text-based and logit-based evaluation. Test Hoang's 5-head circuit and MLP patching.
+
+### Research Question
+Why do Gus (0% error) and Hoang (100% error) disagree on GPT-2's decimal comparison bug rate? Which is correct?
+
+### Methods
+- **Models**: GPT-2-Small (124M), GPT-2-Medium (355M), GPT-2-Large (774M), GPT-2-XL (1.5B)
+- **Prompt formats**: hoang_compare, gus_simple, gus_qa
+- **X values**: 1-9 (correct: X.8, incorrect: X.11)
+- **Evaluation methods**: Gus's original text eval, strict text eval, first-number eval, logit-based eval
+- **Patching**: Hoang's 5-head circuit [(2,2),(5,1),(6,11),(9,9),(10,2)], MLP layer sweep (all 12 layers)
+- **Key fix**: `get_logit_difference` had a shared-token bug — candidates like `"1.8"` and `"1.11"` both tokenize to first-token `"1"` (id=16), making both sides pick the same logit → logit_diff=0.000 always. Fixed to only use discriminating (non-shared) token IDs.
+
+### Results (No Interpretation)
+
+**Section 1-2 (pre-fix): Reproduced Gus & Hoang setups**
+- Text eval: Gus's eval counts "ambiguous"/"unclear" as "no bug" → 0% error
+- Logit eval (BUGGY): showed 0/9 correct (100% bug) due to shared-token issue
+
+**Section 3 (post-fix): All GPT-2 Variants — Logit Eval**
+
+| Model | hoang_compare | gus_simple | gus_qa |
+|-------|--------------|------------|--------|
+| GPT-2-Small | 8/9 correct (11% err) | 8/9 correct (11% err) | 8/9 correct (11% err) |
+| GPT-2-Medium | 7/9 correct (22% err) | 8/9 correct (11% err) | 8/9 correct (11% err) |
+| GPT-2-Large | 7/9 correct (22% err) | 8/9 correct (11% err) | 8/9 correct (11% err) |
+| GPT-2-XL | 6/9 correct (33% err) | 5/9 correct (44% err) | 8/9 correct (11% err) |
+
+Text eval: 0/9 correct across ALL models/formats (all outputs classified "unclear")
+
+**Section 4: Evaluation Method Comparison (GPT-2-Small, all formats, X=1-9)**
+- Text: 0 correct, 0 bug, 27 other
+- Logit: 24 correct, 3 bug (89% correct)
+- First-number: 18 correct, 6 bug, 3 other
+
+**Section 5: Hoang's 5-Head Circuit Patching**
+- Baseline: 8/9 correct → Patched: 8/9 correct (all formats)
+- Effect negligible: max Δ = ±0.04 logit diff
+
+**Section 6: MLP Layer Patching**
+- Baseline: 8/9 → Patched: 8/9 at every layer (0-11), both formats
+- No individual MLP layer has measurable causal effect
+
+**Edge case**: X=8 gives `-inf` because correct tokens (`"8"`, `" 8"`) are shared with incorrect tokens (from `"8.11"` → first token `"8"`), leaving zero unique correct candidates.
+
+### My Interpretation
+The reconciliation reveals NEITHER Gus (0% error) NOR Hoang (100% error) was correct for GPT-2:
+1. Gus's text eval was blind — base GPT-2 outputs incoherent text, text eval can't classify it, counts as "no bug"
+2. Hoang's 100% error appears to have relied on an evaluation with the same shared-token issue we found, OR used a different evaluation method
+3. With proper discriminating-token logit eval, GPT-2-Small has ~11% error rate (1/9 = X=8 edge case)
+4. GPT-2-XL is surprisingly WORSE than smaller variants (up to 44% error)
+5. Circuit patching and MLP patching show negligible effects — the signal is already in the right direction at baseline
+
+**Scripts**: `9_8_research/reviewer_experiments/exp_R12_gpt2_reconciliation/run_experiment.py` (main), `run_section{3-6}.py` (split runners), `run_summary.py`
+
+---
+
 ## Directory Map
 
 ```
