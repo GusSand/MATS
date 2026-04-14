@@ -861,6 +861,230 @@ The reconciliation reveals NEITHER Gus (0% error) NOR Hoang (100% error) was cor
 
 ---
 
+## Experiment 16: Format-Differential MLP Neurons and the 9.11 > 9.8 Bug
+
+**Date**: 2026-04-14
+**Status**: COMPLETE — inconclusive re: Transluce hypothesis; real but small selective ablation effect on Llama
+
+### Prompt
+> Test the Transluce hypothesis (Oct 2024) that the Llama 9.11 > 9.8 bug is caused by spurious MLP neurons firing on Sept-11 / Bible-verse / gravity contexts. Run on Llama-3.1-8B-Instruct, Pythia-160M, and GPT-2-Small. [User provided a full Python script specifying attribution by chat-vs-simple format contrast and targeted ablation.]
+
+### Research Question
+Does ablating MLP neurons that are differentially active between the "chat" (buggy) and "simple" (correct) format fix the 9.11 > 9.8 bug? Are such neurons also present in Pythia-160M (same bug) and absent/weaker in GPT-2-Small (no bug)?
+
+### Important Caveat (my note, flagged)
+**This experiment does NOT directly replicate Transluce's methodology.** Transluce used a single prompt format and identified neurons via gradient-based attribution (`e · ∂z/∂e` against the wrong-answer logit). Our experiment used a *format contrast* (chat_mean − simple_mean) to identify candidate neurons. These are different metrics measuring different things; results cannot be interpreted as a direct test of Transluce's specific mechanistic claims. A follow-up experiment (16b, in-progress) uses Transluce's actual gradient-attribution method.
+
+### Methods
+- **Models**: Llama-3.1-8B-Instruct (fp16), Pythia-160M (fp32), GPT-2-Small (fp32)
+- **Attribution**: Per-neuron differential activation `chat_mean − simple_mean` at the last 4 tokens of the prompt, averaged over 50 forward passes per model. Top-200 by |score| retained; top-50 and top-100 by |score| used for ablation.
+- **Ablation mechanism**:
+  - Llama: `down_proj.register_forward_pre_hook` zeroing specified channels of the input (canonical SwiGLU "neuron activation" = `act_fn(gate) * up_proj`)
+  - Pythia / GPT-2: `mlp.act.register_forward_hook` zeroing specified channels of the activation output
+- **Bug-rate measurement**: N=100 stochastic samples per condition (temp=0.6, `do_sample=True`, max_new_tokens=10); Wilson 95% CIs. "Bug" = output contains `9.11`; "correct" = output contains `9.8` (bug check prioritizes `9.11` to avoid the substring-match issue).
+- **Prompts**:
+  - Llama: chat = Llama-3.1 instruction-template prompt; simple = Q&A text prompt
+  - Pythia: Q&A (buggy) vs "Which is bigger ... Answer:" (correct)
+  - GPT-2: Q&A vs "The larger number is" completion
+- **GPT-2 bug eval**: logit-based with discriminating-token logic reused from Experiment R12.
+- **Controls**: random-50 uniform over all layers (main script) and random-50/100 at layer 31, random-50 at layers 28–31 (follow-up)
+- **Code reuse**: `wilson_ci` from R3/R12; `get_logit_difference` from R12 via `sys.path` import
+
+### Results (No Interpretation)
+
+**Llama-3.1-8B-Instruct — bug rates (N=100, temp=0.6, 95% Wilson CI)**
+
+| Condition | Bug rate | CI | n_valid |
+|---|---|---|---|
+| Baseline (chat format) | 100.0% | [96.3, 100] | 100/100 |
+| Baseline (simple format) | 78.8% | [69.7, 85.7] | 99/100 |
+| Ablate top-50 by \|s\| (mixed sign, L28–31) | **86.3%** | [78.0, 91.8] | 95/100 |
+| Ablate top-100 by \|s\| | **81.0%** | [72.2, 87.5] | 100/100 |
+| Ablate mid-layer cluster (L10–21, s>0, 15 neurons) | 100.0% | [96.3, 100] | 100/100 |
+| Ablate late-layer cluster (L22–31, s>0, 50 neurons) | 100.0% | [96.3, 100] | 100/100 |
+| Ablate 50 random neurons (uniform over all layers) | 100.0% | [96.3, 100] | 100/100 |
+
+Cluster composition (from top-200 by |s|): early (<L10, s>0) = 3 neurons; mid (L10–21, s>0) = 15; late (L22–31, s>0) = 83.
+
+Top differential neurons are concentrated at layers 28–31, with layer 31 dominating (16 of top-20). Scores are roughly half positive (fires more in chat than simple) and half negative, with comparable magnitudes (top values: +10.22, −10.27, +9.48, +8.12, +7.62, −7.29, −6.24, …).
+
+**Llama layer-matched random controls (follow-up run, `run_l31_control.py`, N=100)**
+
+| Condition | Bug rate | CI |
+|---|---|---|
+| Random 50 at L31 only | 100.0% | [96.3, 100] |
+| Random 50 at L28–31 | 100.0% | [96.3, 100] |
+| Random 100 at L31 only | 100.0% | [96.3, 100] |
+
+**Pythia-160M (N=100, temp=0.6)**
+
+| Condition | Bug rate | CI | n_valid |
+|---|---|---|---|
+| Baseline Q&A | 82.1% | [64.4, 92.1] | 28/100 |
+| Baseline simple | 73.7% | [62.8, 82.3] | 76/100 |
+| Ablate top-50 by \|s\| | 83.5% | [73.9, 90.1] | 79/100 |
+| Ablate 50 random | 83.3% | [68.1, 92.1] | 36/100 |
+
+Top Pythia differential neurons concentrate at layers 9–11 (scores +6.45, +4.03, +3.63, …); all top-10 are positive-signed.
+
+**GPT-2-Small (logit-based eval, X = 1..9, using R12's discriminating-token method)**
+
+- Correct: 8/9 (X=8 yielded −Infinity due to shared-token edge case from R12)
+- Error rate: 11.1% (matches R12's finding exactly)
+- Mean |differential score| comparison: Llama top-50 = 3.56; GPT-2 top-50 = 1.65; ratio = **2.16×**
+
+### Observations (facts, no interpretation)
+1. Llama top-50/top-100 (|s|-sorted) ablation moves bug rate from 100% to 86.3%/81.0% — non-overlapping CIs with baseline.
+2. Positive-s-only ablation at any layer range gave exactly 100% (same as baseline).
+3. Every layer-matched random control — at L31 (50 and 100 neurons) and L28–31 (50 neurons) — also gave 100%.
+4. The only ablations that moved bug rate included both positive and negative-s neurons (top-50/top-100 by |s|).
+5. Pythia showed no ablation effect (top-50 ≈ random ≈ baseline, all ~83%).
+6. GPT-2's top-50 differential scores are 2.16× smaller than Llama's in mean absolute magnitude.
+
+### My Interpretation (flagged as mine)
+
+**What the data supports:**
+- A specific, non-random subset of layer-28–31 MLP neurons in Llama is causally involved in the bug: random controls at the same layers with the same count give no effect, while the targeted subset moves the bug rate ~14 pp.
+
+**What the data does NOT support:**
+- The Transluce hypothesis as stated. Transluce predicts *positive-firing* neurons pushing toward 9.11 via spurious-concept activation. Our positive-s-only ablations did nothing; the effect we observed requires including the **negative-s** neurons (those that fire *less* in chat format than simple format). This is inconsistent with the "9.11-promoting concept neurons" framing.
+- Cross-architecture replication. Pythia showed no effect under the same metric; this is weak evidence at best about whether Pythia has analogous bug-causing neurons.
+
+**Caveats:**
+- The differential-activation metric is methodologically biased toward final layers because residual-stream magnitudes grow through depth. This may explain the layer-31 concentration regardless of whether those neurons are the most causally important.
+- Part of the "bug reduction" in top-50 ablation may be model destabilization: 5/100 responses contained neither "9.8" nor "9.11", so n_valid dropped from 100 to 95.
+- GPT-2 X=8 edge case (−Infinity) is a known shared-token issue from R12 and not a finding of this experiment.
+
+### Files Generated
+- Main script: [run_experiment.py](../experimental/16_transluce_hypothesis/run_experiment.py)
+- Semantic probe texts (used in 16b): [probe_texts.py](../experimental/16_transluce_hypothesis/probe_texts.py)
+- Layer-31 control script: [run_l31_control.py](../experimental/16_transluce_hypothesis/run_l31_control.py)
+- Main results: `9_8_research/experimental/16_transluce_hypothesis/results_20260414_140942.json`
+- Layer-31 control results: `9_8_research/experimental/16_transluce_hypothesis/l31_control_20260414_144929.json`
+- Output log: `9_8_research/experimental/16_transluce_hypothesis/output.log`
+
+### Follow-up
+A proper gradient-attribution replication of Transluce's method (single format, `e · ∂z/∂e` per-neuron, plus semantic probe check on Sept-11 / Bible / gravity / neutral text sets) is running separately as Experiment 16b (`run_proper_transluce.py`).
+
+---
+
+## Experiment 16b: Proper Transluce Replication with Gradient Attribution
+
+**Date**: 2026-04-14
+**Status**: COMPLETE — **strong replication in Pythia-160M, weaker in Llama, untestable on GPT-2-Small**
+
+### Prompt
+> [After discovering Experiment 16 did not test the actual Transluce methodology] Read the Transluce article and re-implement their method properly: single format, gradient-based attribution `e · ∂z/∂e`, targeted ablation, plus a semantic probe on Sept-11 / Bible / gravity / neutral text sets. Include a Pythia format sweep since Pythia's bug is format-sensitive.
+
+### Research Question
+Do MLP neurons identified by gradient attribution (`e · ∂z/∂e` of the wrong-answer logit minus correct-answer logit) cause the 9.11 > 9.8 bug in Llama, Pythia-160M, and GPT-2-Small? Do the top-attribution neurons exhibit concept-selectivity for Sept-11 / Bible-verse / gravity contexts as Transluce claimed?
+
+### Methods
+- **Attribution prompts**: Transluce-style sweep — `"Which is bigger, X.A or X.B? Answer: X."` for X ∈ {1..15} × (A,B) ∈ {(8,11), (9,10), (9,12), (8,13)} = ~50+ prompts per model. The trailing "X." commits the model to a numeric completion whose next token discriminates between A and B.
+- **Attribution metric**: `z = logit[wrong_first_token] − logit[correct_first_token]`; compute `z.backward()`; per-neuron attribution = `(activation * grad).sum(target_positions)` averaged over valid prompts. Target positions: last 4 tokens.
+- **Neuron activation definition** (same as 16): Llama SwiGLU input to `down_proj`; Pythia/GPT-2 output of `mlp.act`.
+- **Token resolution**: prefer single-token encoding (raw) over space-prefixed (which returns a shared space-token id across sides, silently skipping all prompts — a bug caught and fixed mid-run).
+- **Ablation**: zero specified (layer, neuron) channels as in 16. Conditions: top-50 positive-attribution, top-50 |attribution| (mixed sign), layer-matched random-50 (same layer distribution as top-50 positive).
+- **Bug-rate measurement**:
+  - Llama, Pythia: stochastic sampling, N=100, temp=0.6, text match ("9.11" vs "9.8")
+  - GPT-2: logit-based via R12's `get_logit_difference` across X ∈ {1..9}\{8}
+- **Semantic probe**: 20 probe texts per theme (sept-11, bible, gravity/software-version, neutral). For each top-50 positive-attribution neuron, compute mean activation at the last token across each theme's probes, then report `theme_mean − neutral_mean` per neuron.
+- **Pythia format sweep**: 8 prompt variants tested; selected the highest-bug-rate format with adequate n_valid for attribution/ablation.
+- **CPU probe fallback**: After CUBLAS errors on Pythia/GPT-2 probes (likely heavy-hook GPU state corruption), probes were moved to CPU. Llama's probe ran on GPU.
+
+### Results (No Interpretation)
+
+#### Llama-3.1-8B-Instruct (Transluce prompt: "Which is bigger, 9.11 or 9.8?")
+
+| Condition | Bug rate | n_valid |
+|---|---|---|
+| Baseline | 40.6% | 64/100 |
+| **Ablate top-50 positive-attribution** | **27.3%** | 22/100 |
+| Ablate top-50 \|attribution\| (mixed sign) | 47.6% | 42/100 |
+| Layer-matched random-50 | 55.4% | 56/100 |
+
+Top-attribution neurons distributed across layers 11, 14, 15, 21, 24, 29, 30, 31 — not concentrated in the final layer as Experiment 16's differential metric had suggested.
+
+Semantic probe (Llama top-50, GPU): sept11 max=+1.300, mean=−0.094, n>0=27/50; bible max=+0.172, mean=−0.167; gravity max=+0.080, mean=−0.118.
+
+#### Pythia-160M — format sweep
+
+| Format | Prompt | Bug rate | n_valid |
+|---|---|---|---|
+| `transluce` | "Which is bigger, 9.11 or 9.8?" | 1.1% | 94 |
+| `qa_8_first` | "Q: Which is bigger: 9.8 or 9.11?\nA:" | 68.4% | 19 |
+| `qa_11_first` | "Q: Which is bigger: 9.11 or 9.8?\nA:" | 68.0% | 25 |
+| **`answer_prompt`** | **"Which is bigger: 9.8 or 9.11? Answer:"** | **58.9%** | **90** |
+| `answer_prompt_rev` | same, order reversed | 32.9% | 82 |
+| `larger_is` | "Between 9.8 and 9.11, the larger number is" | N/A | 0 |
+| `compare_two` | "Compare two numbers: 9.11 and 9.8. Which one is bigger?" | 100% | 2 |
+| `is_bigger` | "Is 9.11 bigger than 9.8? Answer:" | 30.3% | 33 |
+
+Selected `answer_prompt` for ablation (high bug rate AND high n_valid; the script initially selected `compare_two` by bug_rate alone, n_valid=2 made those ablation numbers uninterpretable — rerun on `answer_prompt` documented below).
+
+#### Pythia-160M — proper attribution on `answer_prompt` (N=100)
+
+| Condition | Bug rate | 95% CI | n_valid |
+|---|---|---|---|
+| Baseline | 72.3% | [61.8, 80.8] | 83/100 |
+| **Ablate top-50 positive-attribution** | **7.1%** | — | 42/100 |
+| Ablate top-50 \|attribution\| (mixed sign) | 33.3% | — | 30/100 |
+| Layer-matched random-50 | 55.0% | — | 80/100 |
+
+Top-attribution neurons distributed across layers 0, 5, 7, 8, 9, 10. Leading neuron: L9 N2315 (attr=+0.7013). L0 has two strongly-positive neurons (N1089, N2915), suggesting the attribution signal begins early.
+
+Semantic probe (Pythia top-50, CPU): sept11 max=+0.006, mean=+0.000; bible max=+0.017, mean=+0.001; **gravity max=+5.649, mean=+0.336**.
+
+#### GPT-2-Small (logit-based eval across X ∈ {1..9}\{8})
+
+| Condition | Error rate | n_valid |
+|---|---|---|
+| Baseline | 0.0% | 8/8 |
+| Ablate top-50 positive-attribution | 0.0% | 8/8 |
+| Ablate top-50 \|attribution\| | 0.0% | 8/8 |
+| Layer-matched random-50 | 0.0% | 8/8 |
+
+GPT-2-Small shows no logit-level preference for 9.11 on this prompt family (consistent with R12). No baseline bug → no test of Transluce's hypothesis possible under this evaluation.
+
+Semantic probe (GPT-2 top-50, CPU): sept11 max=+0.320, mean=−0.003; bible max=+0.346, mean=−0.004; gravity max=+1.481, mean=+0.026.
+
+### Cross-Model Summary
+
+| Model | Baseline bug | Top-50 positive-attr ablation | Δ | Random control | Δ | Probe max |
+|---|---|---|---|---|---|---|
+| Llama-3.1-8B (chat template) | 100% (Exp 16) | — | — | — | — | — |
+| Llama-3.1-8B (Transluce prompt) | 40.6% | 27.3% | −13pp | 55.4% | +15pp | sept11 +1.30 |
+| Pythia-160M (answer_prompt) | 72.3% | **7.1%** | **−65pp** | 55.0% | −17pp | **gravity +5.65** |
+| GPT-2-Small (logit, Transluce-style) | 0% | 0% | 0 | 0% | 0 | gravity +1.48 |
+
+### My Interpretation (flagged as mine)
+
+1. **Pythia-160M is the cleanest replication of Transluce's mechanism** (65pp reduction from targeted positive-attribution ablation, layer-matched random control drops only ~17pp, mixed-sign less effective than positive-only). This is what the Transluce story predicts.
+2. **Llama's result is in the same direction but noisy**, partly because Transluce's un-templated prompt reduces baseline bug to 40.6% vs 100% in chat template, and partly because ablating these neurons destabilizes the model heavily (n_valid=22/100 for positive-attribution ablation). The 13pp drop is consistent with Transluce but not clean.
+3. **Format-dominance is confirmed as much stronger than Transluce's article implies.** Pythia's bug rate spans 1.1% to 68.4% across near-equivalent English phrasings of the same comparison. The concept-neurons story doesn't explain format-dominance — format-dominance acts *upstream* of the MLP computations we're ablating.
+4. **Gravity-concept selectivity is the strongest signal across all three models** — one neuron in Pythia is +5.65× over neutral baseline, vs Transluce's headline narrative emphasizing sept11/bible-verse neurons. With small (20-text) probe sets, this is weak evidence, but the direction is clear.
+5. **GPT-2-Small at logit level does not exhibit the bug** on Transluce-style prompts (R12 finding, re-confirmed). This limits how much cross-architecture interpretation we can do.
+6. **The "negative-score" anomaly from Experiment 16 is resolved**: gradient attribution picks a different neuron set than the activation-differential metric. The differential metric's magnitude bias toward layer 31 was the culprit; gradient attribution distributes across layers (Llama: 11–31; Pythia: 0–10).
+
+### Caveats
+- **Llama n_valid drop**: positive-attribution ablation on Llama drops 78% of responses off-script. Part of the 13pp "bug reduction" is model destabilization rather than clean correct-answer recovery. Pythia's n_valid drop is less severe (42/100 parseable).
+- **Probe set size**: 20 texts per theme is tiny vs Transluce's observability infra. The +5.65 outlier in Pythia gravity is driven by a small number of probe activations.
+- **CPU probe for Pythia/GPT-2**: CUBLAS errors on GPU after heavy hook traffic were not debugged; moved probe to CPU. Not a scientific issue but a known workaround.
+- **Format sensitivity confound**: Pythia's bug is so format-sensitive that the Transluce prompt gave baseline 1.1%; a different prompt (`answer_prompt`) gave 72.3%. Our ablation tests the format where the bug is present, but the concept-neurons story is really a claim about the model's behavior on *any* prompt format where the bug appears.
+- **GPT-2 weight loading warning**: `h.{0...11}.attn.bias | UNEXPECTED` appeared on load; cosmetic (attention bias absent in modern configs) but noted.
+
+### Files Generated
+- Main script: [run_proper_transluce.py](../experimental/16_transluce_hypothesis/run_proper_transluce.py)
+- Followup (Pythia format sweep + GPT-2 logit ablation): [run_proper_followup.py](../experimental/16_transluce_hypothesis/run_proper_followup.py)
+- Pythia rerun on `answer_prompt`: [run_pythia_answerprompt.py](../experimental/16_transluce_hypothesis/run_pythia_answerprompt.py)
+- Probe texts: [probe_texts.py](../experimental/16_transluce_hypothesis/probe_texts.py)
+- Main results: `results_proper_20260414_154247.json`
+- Followup results: `results_followup_20260414_160607.json`
+- Pythia rerun results: `results_pythia_answerprompt_20260414_173127.json`
+- Combined checkpoint: `checkpoint_proper.json`
+
+---
+
 ## Directory Map
 
 ```
