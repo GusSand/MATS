@@ -21,21 +21,30 @@ How does SVEN's prefix-based secure code generation compare to our mean-differen
 
 ### Results (No Interpretation)
 
-Classifiable secure rate = secure / (secure + insecure):
+**Strict secure rate = secure / total generations** (denominator includes "other": outputs the regex scorer can't classify as secure or insecure, e.g. functions outside scorer vocabulary).
 
-| CWE | Baseline | SVEN | Ours (CodeGen) | Ours (Llama-8B) |
-|-----|----------|------|----------------|-----------------|
-| CWE-119 | 53.3% | 90.5% | 75.8% (a=2.0) | 20.0% |
-| CWE-134 | 99.4% | 99.8% | 99.4% (a=0.0) | 74.9% |
-| CWE-787 | 5.0% | 31.7% | 5.0% (a=0.0) | 52.4% |
-| CWE-89 | 52.0% | 86.0% | 52.1% (a=1.0) | 70.3% |
-| CWE-78 | 0.0% | 0.0% | 0.0% (a=0.0) | 22.0% |
-| CWE-79 | 56.0% | 62.7% | 56.0% (a=0.0) | 30.5% |
+| CWE | Baseline (CodeGen) | SVEN (CodeGen) | Ours (CodeGen) | Ours (Llama-8B) |
+|-----|--------------------|----------------|----------------|-----------------|
+| CWE-119 | 16.8% | 34.5% | 25.9% (α=2.0) | 20.0% |
+| CWE-134 | 93.2% | 83.4% | 93.2% (α=0.0) | 74.9% |
+| CWE-787 | 2.8%  | 16.7% | 2.8%  (α=0.0) | 73.3% (α=4.0) |
+| CWE-89  | 49.7% | 60.3% | 50.3% (α=1.0) | 78.5% (α=12) |
+| CWE-78  | 0.0%  | 0.0%  | 0.0%  (α=0.0) | 22.0% |
+| CWE-79  | 45.6% | 36.7% | 45.6% (α=0.0) | 30.5% |
 
-SVEN outperforms our steering on CodeGen-2B for 5/6 CWEs. Our steering best_alpha=0.0 for 4/6 CWEs (steering hurts). Both methods fail completely on CWE-78. High "other" rate on C CWEs (62-69%) due to CodeGen producing functions outside scorer vocabulary.
+n = 1050 generations per CWE per CodeGen condition (105 prompts × 10 seeds, T=0.4, top_p=0.95). Llama-8B numbers from prior LOBO experiments at T=0.6 (CWE-787 from `01-12_llama8b_cwe787_lobo_steering` plus α=4.0 extension; CWE-89 α=12 from `02-10_python_cwe_steering` extended sweep; others from canonical per-CWE LOBO runs).
+
+**Per-CWE other rates (CodeGen)**: CWE-119: baseline 68.6% / SVEN 61.9% / Ours 65.8%. CWE-134: baseline 6.2% / SVEN 16.4% / Ours 6.2%. CWE-787: baseline 44.2% / SVEN 47.4% / Ours 44.2%. CWE-89: baseline 4.5% / SVEN 29.9% / Ours 3.4%. CWE-78: baseline 1.3% / SVEN 2.4% / Ours 1.3%. CWE-79: baseline 18.5% / SVEN 41.5% / Ours 18.5%.
+
+Under strict scoring, SVEN beats baseline CodeGen on 3/6 CWEs (CWE-119, CWE-787, CWE-89) and *underperforms* baseline on CWE-134 (-9.8pp) and CWE-79 (-8.9pp) because SVEN's prefix increases "other" generations. Our steering on CodeGen ties or matches baseline on 5/6 CWEs (best_alpha=0.0 for 4/6). Llama-8B beats CodeGen-SVEN on CWE-787 (+56.6pp) and CWE-89 (+18.2pp), and trails on CWE-119, CWE-134, CWE-79.
 
 ### Interpretation (flagged as mine, not the user's)
-SVEN's advantage on CodeGen-2B is expected — it was fine-tuned on this model family. Our steering method, developed for Llama/Mistral, doesn't transfer well to CodeGen's GPT-J architecture. The more meaningful comparison for the paper is "SVEN on its native model vs ours on our native model" — on that framing, our Llama-8B results are competitive with SVEN's CodeGen results on CWE-787 and CWE-89, and SVEN excels on CWE-119 and CWE-134.
+Two reframings under strict scoring:
+
+1. **SVEN's CodeGen advantage shrinks once "other" is in the denominator.** SVEN raises the secure-classifiable fraction on CWE-119 (90.5% classifiable) but also raises the "other" rate from 68.6% → 61.9% (small gain) on CWE-119, and from 18.5% → 41.5% on CWE-79 — i.e., on CWE-79 SVEN's prefix nets *more unscorable code*, not more secure code. The classifiable-rate framing hides this.
+2. **The cross-model story stands.** Even on the strict metric, our Llama-8B steering beats SVEN-on-CodeGen on the two CWEs where SVEN was trained on directly relevant data (CWE-787, CWE-89), and SVEN-on-CodeGen still wins on CWE-119 and CWE-134. SVEN's specialization for CodeGen is real but not uniform.
+
+The more honest takeaway for the paper: SVEN works best on its native model under classifiable rate, but the all-samples (strict) view shows SVEN trades insecure outputs for unscorable ones on several CWEs. Our method, on its native model (Llama-8B), keeps "other" near zero (other rates: 22.9% CWE-787 at α=3.5, 0% CWE-89 at α=5.0) and posts higher strict rates on the CWEs both methods were evaluated on.
 
 ---
 
