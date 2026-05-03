@@ -4,6 +4,46 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## SVEN Baseline Comparison (05-02)
+
+### Overview
+Head-to-head comparison of SVEN prefix steering vs our mean-difference steering on CodeGen-2B-multi, using our 105x6 CWE benchmark. Three conditions: unsteered baseline, SVEN secure prefix, our steering with LOBO.
+
+### Adapted Prompts
+`baselines/sven/adapted_prompts/`
+
+| File | Description | Items |
+|------|-------------|-------|
+| [cwe-119_codegen.jsonl](../baselines/sven/adapted_prompts/cwe-119_codegen.jsonl) | CWE-119 prompts adapted to code-completion stubs | 105 |
+| [cwe-134_codegen.jsonl](../baselines/sven/adapted_prompts/cwe-134_codegen.jsonl) | CWE-134 prompts adapted to code-completion stubs | 105 |
+| [cwe-787_codegen.jsonl](../baselines/sven/adapted_prompts/cwe-787_codegen.jsonl) | CWE-787 prompts adapted to code-completion stubs | 105 |
+| [cwe-89_codegen.jsonl](../baselines/sven/adapted_prompts/cwe-89_codegen.jsonl) | CWE-89 prompts (passthrough, already code-completion) | 105 |
+| [cwe-78_codegen.jsonl](../baselines/sven/adapted_prompts/cwe-78_codegen.jsonl) | CWE-78 prompts (passthrough) | 105 |
+| [cwe-79_codegen.jsonl](../baselines/sven/adapted_prompts/cwe-79_codegen.jsonl) | CWE-79 prompts (passthrough) | 105 |
+
+**How to recreate**: `python baselines/sven/adapt_c_prompts.py`
+
+### Experiment Results
+`baselines/sven/results/`
+
+| File | Description | Size |
+|------|-------------|------|
+| [sven_2b_20260502_153631.json](../baselines/sven/results/sven_2b_20260502_153631.json) | SVEN secure prefix results summary | 1.7 KB |
+| [sven_2b_20260502_153631_detail.json](../baselines/sven/results/sven_2b_20260502_153631_detail.json) | SVEN per-completion details (6300 completions) | 7.7 MB |
+| [baseline_codegen_2b_20260502_175009.json](../baselines/sven/results/baseline_codegen_2b_20260502_175009.json) | Unsteered baseline summary | 1.5 KB |
+| [baseline_codegen_2b_20260502_175009_detail.json](../baselines/sven/results/baseline_codegen_2b_20260502_175009_detail.json) | Baseline per-completion details (6300 completions) | 6.2 MB |
+| [steering_codegen_2b_20260502_200433.json](../baselines/sven/results/steering_codegen_2b_20260502_200433.json) | Our steering LOBO results summary | 1.8 KB |
+| [steering_codegen_2b_20260502_200433_detail.json](../baselines/sven/results/steering_codegen_2b_20260502_200433_detail.json) | Steering LOBO details | 71 KB |
+
+**How to recreate**:
+- SVEN: `source baselines/sven/env/bin/activate && python baselines/sven/run_on_our_benchmark.py --n-seeds 10`
+- Baseline: `source baselines/sven/env/bin/activate && python baselines/sven/run_baseline_codegen.py --n-seeds 10`
+- Steering: `source baselines/sven/env/bin/activate && python baselines/sven/run_steering_codegen.py --n-seeds 10`
+
+**Used in**: SVEN baseline comparison ([docs/experiments/05-02_codegen2b_sven_baseline_comparison.md](experiments/05-02_codegen2b_sven_baseline_comparison.md))
+
+---
+
 ## Experiment 29c: Format-Token Ablation Powered (03-13)
 
 ### Overview

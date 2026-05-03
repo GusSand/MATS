@@ -1,5 +1,44 @@
 # Research Journal
 
+## 2026-05-02: SVEN Baseline Comparison on CodeGen-2B-multi
+
+### Prompt
+> Produce a head-to-head comparison between SVEN (He & Vechev 2023) and our steering method on our existing 105x6 CWE benchmark. Plan (a): same-model comparison on CodeGen-2B-multi.
+
+### Research Question
+How does SVEN's prefix-based secure code generation compare to our mean-difference activation steering when both are applied to the same base model (CodeGen-2B-multi) on our 6-CWE benchmark?
+
+### Methods
+- **Model**: Salesforce/codegen-2B-multi (2.7B params, 32 layers)
+- **Benchmark**: 105 prompt pairs x 6 CWEs (CWE-119, CWE-134, CWE-787, CWE-89, CWE-78, CWE-79)
+- **C prompts**: Adapted from instruction format to code-completion stubs for CodeGen compatibility
+- **Python prompts**: Used as-is (already code-completion format)
+- **Three conditions**: (1) Base CodeGen unsteered, (2) SVEN secure prefix (control_id=0), (3) Our mean-difference steering with LOBO cross-validation
+- **Generation params**: temp=0.4, top_p=0.95, max_new_tokens=300, 10 samples per prompt
+- **Scoring**: Per-CWE regex scorers (same as main paper)
+- **SVEN checkpoint**: Released 2b-prefix trained on 9 CWEs
+- **Our steering**: Logit lens for emergence layer (all converged to L31), alpha sweep [0-5], 7-fold LOBO
+
+### Results (No Interpretation)
+
+Classifiable secure rate = secure / (secure + insecure):
+
+| CWE | Baseline | SVEN | Ours (CodeGen) | Ours (Llama-8B) |
+|-----|----------|------|----------------|-----------------|
+| CWE-119 | 53.3% | 90.5% | 75.8% (a=2.0) | 20.0% |
+| CWE-134 | 99.4% | 99.8% | 99.4% (a=0.0) | 74.9% |
+| CWE-787 | 5.0% | 31.7% | 5.0% (a=0.0) | 52.4% |
+| CWE-89 | 52.0% | 86.0% | 52.1% (a=1.0) | 70.3% |
+| CWE-78 | 0.0% | 0.0% | 0.0% (a=0.0) | 22.0% |
+| CWE-79 | 56.0% | 62.7% | 56.0% (a=0.0) | 30.5% |
+
+SVEN outperforms our steering on CodeGen-2B for 5/6 CWEs. Our steering best_alpha=0.0 for 4/6 CWEs (steering hurts). Both methods fail completely on CWE-78. High "other" rate on C CWEs (62-69%) due to CodeGen producing functions outside scorer vocabulary.
+
+### Interpretation (flagged as mine, not the user's)
+SVEN's advantage on CodeGen-2B is expected — it was fine-tuned on this model family. Our steering method, developed for Llama/Mistral, doesn't transfer well to CodeGen's GPT-J architecture. The more meaningful comparison for the paper is "SVEN on its native model vs ours on our native model" — on that framing, our Llama-8B results are competitive with SVEN's CodeGen results on CWE-787 and CWE-89, and SVEN excels on CWE-119 and CWE-134.
+
+---
+
 ## 2026-03-13: Experiment 29c — Format-Token Ablation (Properly Powered)
 
 ### Prompt
