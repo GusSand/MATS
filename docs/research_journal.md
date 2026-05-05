@@ -58,10 +58,22 @@ After the full chain (primary → neutral → combined → α sweep), the story 
 
 Three bug-classes were found and fixed during the experiment (slice index for left-padded outputs, `num_return_sequences>1` degeneration, `truncate_completion` chopping valid `def ...` lines). All earlier in-flight numbers from buggy runs were discarded; final harness reproduces canonical 02-10 baseline within noise.
 
+### Reconciliation against Table 2 (added 2026-05-05)
+
+To validate the harness, I ran `baseline_steer` (steering only, chat template) at Table 2's reported α for the 3 full-knowledge CWEs, both with the global direction and with proper per-fold LOBO directions:
+
+| CWE | α | Table 2 | New harness (global) | New harness (true LOBO) | LOBO vs Table 2 |
+|---|---|---|---|---|---|
+| CWE-787 | 4.0 | 73.3% | 77.6% | **41.2%** | **−32.1pp ⚠️** |
+| CWE-119 | 4.0 | 20.0% | 31.8% | **21.0%** | +1.0pp ✅ |
+| CWE-89 | 12.0 | 78.5% | 79.8% | **80.6%** | +2.1pp ✅ |
+
+CWE-89 and CWE-119 reproduce Table 2 within 2pp under proper LOBO — claims sound. **CWE-787 does NOT reproduce** at α=4.0 under LOBO; achieves only 41% vs the claimed 73.3%. The 73.3% / α=4.0 figure was previously flagged as untraceable to raw data in audit `947b8d0`. The combined-experiment baseline_steer numbers used global directions (training-set leakage), so the reported "best combined" rates for CWE-787 (90.6%) and CWE-119 (66%) would also be lower under proper LOBO.
+
 ### Files
 - Detailed report: [`docs/experiments/05-03_llama8b_prompt_baseline_6cwe.md`](experiments/05-03_llama8b_prompt_baseline_6cwe.md)
 - Code: [`src/experiments/05-03_llama8b_prompt_baseline_6cwe/`](../src/experiments/05-03_llama8b_prompt_baseline_6cwe/)
-- Result summaries: `results/{primary,aux,combined,sweep}_*_summary_*.json`
+- Result summaries: `results/{primary,aux,combined,sweep,recon,lobo_recon}_*_summary_*.json`
 
 ---
 

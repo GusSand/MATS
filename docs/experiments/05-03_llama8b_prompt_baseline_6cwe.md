@@ -174,9 +174,52 @@ The story shifted across the experiment chain.
 2. The CWE-787 result is the strongest evidence for genuine additive value: at the right α, combined beats both alone.
 3. The "prompting-wins-on-3-CWEs" finding is real and should be reported honestly. It supports a CWE-specific deployment story rather than a uniform "always-steer" claim.
 
+## Reconciliation against Table 2 (added 2026-05-05)
+
+After the alpha sweep, I ran `baseline_steer` (steering only, chat template, no prompting) at the exact α values reported in Table 2 for the three "full-knowledge" CWEs (787, 119, 89). Two protocols:
+1. **Global direction** — single direction extracted from all 7 base_ids (the same as used in primary/combined/sweep above)
+2. **True LOBO** — per-fold direction extracted from chat-template activations of the 6 training base_ids, evaluated on the 7th held-out base_id
+
+| CWE | α | Table 2 | New harness (global dir) | New harness (true LOBO) | Δ LOBO vs Table 2 |
+|---|---|---|---|---|---|
+| CWE-787 | 4.0 | **73.3%** | 77.6% | **41.2%** | **−32.1pp ⚠️** |
+| CWE-119 | 4.0 | **20.0%** | 31.8% | **21.0%** | **+1.0pp ✅** |
+| CWE-89 | 12.0 | **78.5%** | 79.8% | **80.6%** | **+2.1pp ✅** |
+
+### Verdict
+
+- **CWE-89 and CWE-119 reproduce Table 2 faithfully** under proper LOBO with the bug-fixed harness. Within ~2pp of the published numbers. The steering claims for these CWEs are sound.
+- **CWE-787 does NOT reproduce.** Table 2 claims 73.3% at α=4.0; true LOBO gives 41.2% at α=4.0 — a 32pp gap. The 73.3% figure was previously flagged as untraceable in the audit committed in `947b8d0` (the canonical 01-12 LOBO grid only went to α=3.5 with 52.4% strict). This LOBO result is consistent with the 73.3% / α=4.0 figure being inflated, likely due to using a global rather than per-fold direction, scoring the wrong way, or a different experimental protocol than described.
+
+### Per-fold breakdown (CWE-787 LOBO @ α=4.0)
+
+| Fold | strict | norm |
+|---|---|---|
+| pair_07_sprintf_log | 69.3% | 5.91 |
+| pair_09_path_join | 4.7% | 6.23 |
+| pair_11_json | 76.7% | 6.63 |
+| pair_12_xml | 16.7% | 6.49 |
+| pair_16_high_complexity | 16.7% | 5.97 |
+| pair_17_time_pressure | 56.0% | 5.06 |
+| pair_19_graphics | 48.7% | 5.43 |
+| **Aggregate** | **41.2%** | — |
+
+Heavy fold variance (4.7% to 76.7%) — `path_join`, `xml`, and `high_complexity` collapse badly under per-fold direction; `sprintf_log` and `json` reproduce the steering effect cleanly.
+
+### Implication for combined-experiment results above
+
+The combined experiment used **global directions**. CWE-787's 90.6% (`usr_verbose_steer α=2.0`) and CWE-119's 66% (`usr_verbose_steer α=1.0`) likely include direction leakage. CWE-89's 86.4% (`sys_verbose_steer α=12.0`) is robust to leakage (LOBO ≈ global). True-LOBO combined numbers were not run; they would likely be substantially lower for CWE-787 (analogous to the 32pp baseline_steer gap) and ~10pp lower for CWE-119, but unchanged for CWE-89.
+
+### Files (reconciliation)
+
+- `01c_lobo_recon.py` — true LOBO eval script (per-fold direction extraction + steered generation)
+- `launch_reconciliation.sh` — launches global-direction recon for CWE-787/119/89
+- `launch_lobo_recon_remaining.sh` — launches true-LOBO recon
+- Result JSONs: `results/recon_CWE-{787,119,89}_a*_summary_*.json`, `results/lobo_recon_CWE-{787,119,89}_a*_*.json`
+
 ## Limitations
 
-1. **Chat-template-only protocol.** Numbers are not directly comparable to Table 2's raw-text steering results for C CWEs. The 73.3% Table-2 number for CWE-787 likely was measured under chat template — our `baseline_steer α=3.5` reproduces 80.7% under chat template, suggesting Table 2's 73.3% was either under chat template at slightly different α or the unverified 73.3% claim should be re-derived from raw data.
+1. **Chat-template-only protocol.** Numbers are not directly comparable to Table 2's raw-text steering results for C CWEs without the LOBO reconciliation above. CWE-89 and CWE-119 reproduce Table 2 closely (+1-2pp); CWE-787 does not (−32pp), suggesting the published 73.3% / α=4.0 figure for CWE-787 needs investigation.
 
 2. **Regex scoring noise.** Spot-checks identified false positives (rejection-with-explanation flagged "insecure" because the explanation mentions banned APIs) and false negatives (variable-indirected secure patterns flagged "other"). Documented agreement with CodeQL/Bandit/Semgrep on a stratified subsample is ~65-70% (per `03-13_expanded_codeql_validation`). Directional findings are robust to this scoring noise; absolute numbers may shift ±5pp.
 
