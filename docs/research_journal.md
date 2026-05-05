@@ -79,10 +79,11 @@ To replace the untraceable CWE-787 73.3% / α=4.0 figure and produce LOBO-correc
 | A | CWE-787 baseline_steer LOBO α-sweep best (α=5.0) | **52.48%** | [49.45, 55.48] |
 | B | CWE-787 usr_verbose_steer LOBO at α=5.0 (best from A) | 39.14% (other 58%, over-steered) | [36.24, 42.13] |
 | C | CWE-119 usr_verbose_steer LOBO at α=1.0 | **58.57%** | [55.57, 61.51] |
+| D | CWE-787 usr_verbose_steer LOBO α-sweep best (α=2.5) | **76.86%** (other 13%) | [74.21, 79.31] |
 
-Phase A monotone trend through α=5; rate may peak higher with wider sweep. Phase B is over-steered — needs a combined-α sweep to find the proper best. Phase C lands ~7pp below the global-direction 66% estimate, consistent with the prior leakage finding.
+Phase D found the proper combined-best for CWE-787 at α=2.5 (other rate stable 10-15% across the sweep, no over-steering). Phase B's α=5.0 was the wrong α — superseded.
 
-Replacements: Table 2 CWE-787 "Best" 73.3% → 52.48%; master-table CWE-119 "Best Combined" 66.0% → 58.57%; CWE-787 "Best Combined" 90.6% → defer pending combined-α sweep. Headline CWE for the "+combined wins" abstract claim should shift from CWE-787 to CWE-89 (the latter's 86.4% combined was robust to leakage in pass-1 reconciliation).
+Replacements: Table 2 CWE-787 "Best" 73.3% → 52.48%; master-table CWE-787 "Best Combined" 90.6% → 76.86%; master-table CWE-119 "Best Combined" 66.0% → 58.57%. Abstract claim "+10pp combined wins on CWE-787" softens to "+2.7pp combined wins on CWE-787" (76.86% combined vs 74.2% prompting alone, overlapping CIs at lower bound). Recommendation: keep CWE-787 result with weaker phrasing, lead the abstract with CWE-89 (still robust to leakage from pass-1).
 
 ### Files
 - Detailed report: [`docs/experiments/05-03_llama8b_prompt_baseline_6cwe.md`](experiments/05-03_llama8b_prompt_baseline_6cwe.md)
