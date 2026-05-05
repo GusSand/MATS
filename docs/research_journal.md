@@ -70,10 +70,24 @@ To validate the harness, I ran `baseline_steer` (steering only, chat template) a
 
 CWE-89 and CWE-119 reproduce Table 2 within 2pp under proper LOBO — claims sound. **CWE-787 does NOT reproduce** at α=4.0 under LOBO; achieves only 41% vs the claimed 73.3%. The 73.3% / α=4.0 figure was previously flagged as untraceable to raw data in audit `947b8d0`. The combined-experiment baseline_steer numbers used global directions (training-set leakage), so the reported "best combined" rates for CWE-787 (90.6%) and CWE-119 (66%) would also be lower under proper LOBO.
 
+### Reconciliation pass 2 (added 2026-05-05 PM)
+
+To replace the untraceable CWE-787 73.3% / α=4.0 figure and produce LOBO-correct combined-cell numbers, ran 3 phases under the bug-fixed harness (chat-template uniform, n=1050 per cell, Wilson 95% CIs):
+
+| Phase | Run | strict | Wilson 95% |
+|---|---|---|---|
+| A | CWE-787 baseline_steer LOBO α-sweep best (α=5.0) | **52.48%** | [49.45, 55.48] |
+| B | CWE-787 usr_verbose_steer LOBO at α=5.0 (best from A) | 39.14% (other 58%, over-steered) | [36.24, 42.13] |
+| C | CWE-119 usr_verbose_steer LOBO at α=1.0 | **58.57%** | [55.57, 61.51] |
+
+Phase A monotone trend through α=5; rate may peak higher with wider sweep. Phase B is over-steered — needs a combined-α sweep to find the proper best. Phase C lands ~7pp below the global-direction 66% estimate, consistent with the prior leakage finding.
+
+Replacements: Table 2 CWE-787 "Best" 73.3% → 52.48%; master-table CWE-119 "Best Combined" 66.0% → 58.57%; CWE-787 "Best Combined" 90.6% → defer pending combined-α sweep. Headline CWE for the "+combined wins" abstract claim should shift from CWE-787 to CWE-89 (the latter's 86.4% combined was robust to leakage in pass-1 reconciliation).
+
 ### Files
 - Detailed report: [`docs/experiments/05-03_llama8b_prompt_baseline_6cwe.md`](experiments/05-03_llama8b_prompt_baseline_6cwe.md)
 - Code: [`src/experiments/05-03_llama8b_prompt_baseline_6cwe/`](../src/experiments/05-03_llama8b_prompt_baseline_6cwe/)
-- Result summaries: `results/{primary,aux,combined,sweep,recon,lobo_recon}_*_summary_*.json`
+- Result summaries: `results/{primary,aux,combined,sweep,recon,lobo_recon,lobo_sweep,lobo_combined}_*_summary_*.json`
 
 ---
 

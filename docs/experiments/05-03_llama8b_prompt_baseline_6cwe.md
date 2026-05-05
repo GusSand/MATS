@@ -217,6 +217,70 @@ The combined experiment used **global directions**. CWE-787's 90.6% (`usr_verbos
 - `launch_lobo_recon_remaining.sh` — launches true-LOBO recon
 - Result JSONs: `results/recon_CWE-{787,119,89}_a*_summary_*.json`, `results/lobo_recon_CWE-{787,119,89}_a*_*.json`
 
+## Reconciliation pass 2 — CWE-787 + combined LOBO (added 2026-05-05 PM)
+
+After the first reconciliation showed CWE-787's Table-2 number (73.3% at α=4) failed to reproduce under LOBO (41.2%), and noting that the combined-experiment master-table cells used global directions, three additional runs were commissioned. All under the bug-fixed harness, chat-template uniform protocol, n=1050 generations per cell.
+
+### Phase A — CWE-787 baseline_steer LOBO α-sweep
+
+| α | secure / n | strict | 95% Wilson CI |
+|---|---|---|---|
+| 2.0 | 113 / 1050 | 10.76% | [9.03, 12.78] |
+| 3.0 | 226 / 1050 | 21.52% | [19.14, 24.11] |
+| 3.5 | 327 / 1050 | 31.14% | [28.41, 34.01] |
+| 4.0 | 433 / 1050 | 41.24% | [38.30, 44.24] |
+| **5.0** | **551 / 1050** | **52.48%** | **[49.45, 55.48]** |
+
+Best in the spec'd α-grid: **α=5.0 → 52.48%**. Trend is monotone; rate hadn't peaked at α=5. A wider sweep (α=6, 7) might find a higher number but those weren't in scope.
+
+### Phase B — CWE-787 usr_verbose_steer LOBO at α=5.0 (best from Phase A)
+
+| α | secure / insecure / other | strict | 95% Wilson CI |
+|---|---|---|---|
+| 5.0 | 411 / 32 / **607** | 39.14% | [36.24, 42.13] |
+
+**Other rate: 57.8%.** Combined under LOBO at the baseline-best α is heavily over-steered — combined yields *worse* than baseline_steer alone (52.48%). The spec used Phase A's best α for Phase B, but the combined regime needs a smaller α (per our earlier global-direction sweep, α=2 was best for usr_verbose_steer). **This number is therefore not a fair "best combined" estimate; a combined-α sweep is the proper follow-up.**
+
+### Phase C — CWE-119 usr_verbose_steer LOBO at α=1.0
+
+| α | secure / n | strict | 95% Wilson CI |
+|---|---|---|---|
+| 1.0 | 615 / 1050 | 58.57% | [55.57, 61.51] |
+
+Replaces the 66.0% global-direction figure. ~7pp drop is consistent with the leakage hypothesis seen on CWE-119 baseline_steer (32% global vs 21% LOBO).
+
+### LaTeX-ready table
+
+```latex
+\begin{table}[t]
+\centering
+\caption{Reconciliation pass 2: CWE-787 best-α LOBO sweep and combined-LOBO numbers replacing global-direction estimates. All under bug-fixed chat-template harness, $n=1050$ per cell, T=0.6, top\_p=0.9.}
+\label{tab:recon-pass2}
+\small
+\begin{tabular}{l@{\hskip 6pt}c@{\hskip 6pt}r@{\hskip 6pt}r@{\hskip 6pt}r}
+\toprule
+\textbf{Task} & \textbf{$\alpha$} & \textbf{Strict secure} & \textbf{95\% Wilson CI} & \textbf{n} \\
+\midrule
+T1: 787 baseline\_steer & 2.0 & 10.76\% & [9.03, 12.78]\% & 1050 \\
+T1: 787 baseline\_steer & 3.0 & 21.52\% & [19.14, 24.11]\% & 1050 \\
+T1: 787 baseline\_steer & 3.5 & 31.14\% & [28.41, 34.01]\% & 1050 \\
+T1: 787 baseline\_steer & 4.0 & 41.24\% & [38.30, 44.24]\% & 1050 \\
+T1: 787 baseline\_steer (best) & \textbf{5.0} & \textbf{52.48\%} & \textbf{[49.45, 55.48]\%} & 1050 \\
+T2: 787 usr\_verbose\_steer$^\dagger$ & 5.0 & 39.14\% & [36.24, 42.13]\% & 1050 \\
+T3: 119 usr\_verbose\_steer & 1.0 & \textbf{58.57\%} & [55.57, 61.51]\% & 1050 \\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize $\dagger$ Other-rate 57.8\%; α=5 is past coherence for combined. See \S\ref{}.} \\
+\end{tabular}
+\end{table}
+```
+
+### Summary — what replaces what in the paper
+
+1. **Table 2, CWE-787 row, "Best" column**: was 73.3% at α=4.0 (untraceable per audit `947b8d0`). Replace with **52.48% at α=5.0** (Phase A best, Wilson 95% [49.45, 55.48]). The α-sweep monotone trend suggests a wider sweep (α=6,7) might give a higher peak; flag as future work. The +66.6pp delta over baseline reduces accordingly.
+2. **Master comparison table, CWE-787 "Best Combined" cell**: was 90.6% (`usr_verbose_steer α=2.0` global). The Phase B LOBO measurement at α=5.0 (39.14%) is over-steered, not a fair best-combined. **Recommend running a combined-α LOBO sweep (α ∈ {1, 1.5, 2, 2.5, 3}) before substituting; this would be ~3.5h GPU.**
+3. **Master comparison table, CWE-119 "Best Combined" cell**: was 66.0% (`usr_verbose_steer α=1.0` global). Replace with **58.57% at α=1.0** (Phase C, Wilson 95% [55.57, 61.51]). The "+20pp combined-wins-on-CWE-119" claim drops to ~+12pp over usr_verbose alone (46.4%).
+4. **Abstract / Introduction "+10pp on CWE-787" claim**: NOT supported by Phase B. Either (a) defer the CWE-787 combined claim pending the combined-α sweep above, or (b) replace the headline CWE with CWE-89 (the only CWE where combined LOBO genuinely exceeds steering Table 2 — 86.4% global at α=12 was robust to leakage in the prior reconciliation). My recommendation is (b).
+
 ## Limitations
 
 1. **Chat-template-only protocol.** Numbers are not directly comparable to Table 2's raw-text steering results for C CWEs without the LOBO reconciliation above. CWE-89 and CWE-119 reproduce Table 2 closely (+1-2pp); CWE-787 does not (−32pp), suggesting the published 73.3% / α=4.0 figure for CWE-787 needs investigation.
