@@ -4,6 +4,41 @@ This document tracks all datasets created during experiments.
 
 ---
 
+## Prompt-Engineering Baseline + Combined Steering (05-03 → 05-05)
+
+### Overview
+End-to-end test of prompt-engineering interventions vs canonical mean-difference steering on Llama-3.1-8B-Instruct, 6 CWEs. Four phases:
+- Primary: 7 prompting conditions × 6 CWEs × 105 prompts × 10 seeds (44,100 generations on adversarial prompts)
+- Neutral: same 7 conditions × 6 CWEs × 7 prompts × 10 seeds (2,940 generations on deployment-realistic prompts)
+- Combined (canonical α): 3 combined conditions × 6 CWEs × 105 × 10 (18,900 generations with steering at LOBO-best α per CWE)
+- Alpha sweep: 7 (CWE, α) combos × 2 conditions × 105 × 10 (14,700 generations exploring the prompt-conditioned-α regime for CWE-787, CWE-89, CWE-78)
+
+No new prompt datasets — reuses canonical 105×6 CWE benchmark and existing 21+21 neutral prompts.
+
+### Result files
+`src/experiments/05-03_llama8b_prompt_baseline_6cwe/results/`
+
+| File pattern | Description | Approx total size |
+|---|---|---|
+| `primary_adversarial_summary_*.json` | Primary aggregated rates (44,100 gens) | small |
+| `primary_adversarial_generations_*.jsonl` | Primary per-generation rows for re-scoring | ~30MB |
+| `aux_neutral_summary_*.json` | Neutral aggregated rates | small |
+| `aux_neutral_generations_*.jsonl` | Neutral per-generation rows | ~2MB |
+| `combined_adversarial_summary_*.json` | Combined canonical-α aggregated | small |
+| `combined_adversarial_generations_*.jsonl` | Combined per-generation rows | ~13MB |
+| `sweep_CWE-{787,89,78}_a{1.0,2.0,8.0,10.0,12.0,3.0}_adversarial_summary_*.json` | 7 alpha-sweep summary files | small |
+| `sweep_*_generations_*.jsonl` | Alpha-sweep per-generation rows | ~10MB |
+
+**How to recreate**:
+- Primary: `env/bin/python 01_run_baseline.py --variants adversarial --batch-size 8 --tag primary`
+- Neutral: `env/bin/python 01_run_baseline.py --variants neutral --batch-size 8 --tag aux`
+- Combined: `env/bin/python 01b_run_combined.py --variants adversarial --batch-size 8 --tag combined`
+- Alpha sweep: `bash launch_alpha_sweep.sh`
+
+**Used in**: Prompt-engineering baseline + combined steering experiment ([docs/experiments/05-03_llama8b_prompt_baseline_6cwe.md](experiments/05-03_llama8b_prompt_baseline_6cwe.md))
+
+---
+
 ## SVEN Baseline Comparison (05-02)
 
 ### Overview

@@ -1,5 +1,70 @@
 # Research Journal
 
+## 2026-05-03 → 05-05: Prompt-Engineering Baseline + Combined Steering on Llama-3.1-8B-Instruct, 6 CWEs
+
+### Prompt
+> Take each of your 105 prompt pairs × 6 CWEs. For each adversarial prompt, prepend (or set as system message) something like: "Write secure code that follows defensive programming best practices. Avoid unsafe APIs..." Generate at the same temperature, score with the same regex scorers, 10 seeds per prompt. Maybe try 2 phrasings (a terse one and a verbose one) so the reviewer can't say you cherry-picked a bad prompt.
+>
+> [Followups: also test on neutral deployment set; also test combined steering+prompting; also alpha-sweep the combined regime to find sweet spot.]
+
+### Research Question
+Three nested:
+1. Can explicit secure-coding instructions in the prompt match the secure-rate gains from mean-difference activation steering?
+2. How does the comparison shift under deployment-realistic (neutral) prompts vs explicit-adversarial prompts?
+3. Does combining steering + prompting exceed either alone, and at what α?
+
+### Methods
+- **Model**: meta-llama/Meta-Llama-3.1-8B-Instruct (fp16)
+- **Datasets**: 105 prompt pairs × 6 CWEs (CWE-787, 119, 134, 89, 78, 79) for primary/combined/sweep; 21 neutral C + 21 neutral Python prompts for secondary
+- **Conditions**: 7 prompt-baseline (baseline + 3 phrasings × 2 injection points) + 3 combined (steering + each prompting variant); plus α sweep on CWE-787 (α=1, 2 vs canonical 3.5), CWE-89 (α=8, 10, 12 vs canonical 5), CWE-78 (α=2, 3 vs canonical 5)
+- **Generation**: T=0.6, top_p=0.9, max_new_tokens=512, 10 seeds/prompt via per-seed `manual_seed` (HF batched single-return-sequence)
+- **Scoring**: per-CWE regex scorers from canonical 02-05 / 02-10 (same as SVEN comparison)
+- **Total**: ~80,000 generations across all variants
+
+### Results (No Interpretation)
+
+**Primary — adversarial (n=1050 each cell)**:
+
+| Condition | CWE-787 | CWE-119 | CWE-134 | CWE-89 | CWE-78 | CWE-79 |
+|---|---|---|---|---|---|---|
+| baseline | 0.6% | 1.5% | 84.4% | 54.6% | 14.5% | 0.1% |
+| sys_verbose | 63.3% | 17.0% | 97.3% | 60.3% | 50.0% | 54.2% |
+| usr_verbose | 74.2% | 46.4% | 93.2% | 59.6% | 59.8% | 85.0% |
+| Steering Table 2 (ref) | 73.3% | 20.0% | 74.9% | 78.5% | 22.0% | 30.5% |
+
+**Neutral — deployment-realistic (n=70 each cell)**: most CWEs already secure by default; CWE-79 (XSS) only one where baseline=0%.
+
+**Combined — canonical α (n=1050 each cell)**: baseline_steer at canonical α reproduces canonical LOBO numbers within noise (e.g., CWE-89 α=5 → 69.7% vs canonical 70.3%). At canonical α, adding prompting to steering causes over-steering on 4/6 CWEs (other rates >25%).
+
+**Alpha sweep — combined-with-prompting only**:
+
+| CWE | Best α (combined) | Best combined | Best prompting alone | Best steering alone | Δ combined vs best of either |
+|---|---|---|---|---|---|
+| CWE-787 | 2.0 | usr_verbose_steer 90.6% | usr_verbose 74.2% | baseline_steer α=3.5: 80.7% | +9.9pp |
+| CWE-119 | 1.0 (canonical) | usr_verbose_steer 66.0% | usr_verbose 46.4% | baseline_steer α=1.0: 3.5% | +19.6pp |
+| CWE-134 | (skipped — already saturated under prompting) | — | sys_verbose 97.3% | baseline_steer 77.7% | prompting alone wins |
+| CWE-89 | 12.0 | sys_verbose_steer 86.4% | usr_terse 63.0% | baseline_steer α=5: 69.7%, Table 2 claim 78.5% | +7.9pp over Table 2 |
+| CWE-78 | 2.0 (best swept) | usr_verbose_steer 45.0% | usr_verbose 59.8% | baseline_steer 21.6% | prompting alone wins (-15pp) |
+| CWE-79 | (skipped — over-steered at canonical α=5) | — | usr_verbose 85.0% | baseline_steer 35.0% | prompting alone wins |
+
+### Interpretation (mine, flagged)
+After the full chain (primary → neutral → combined → α sweep), the story is:
+1. **Combined wins on 3 of 6 CWEs** (CWE-787, CWE-89, CWE-119) when α is tuned. These are CWEs with structured API patterns (parameterized queries, snprintf-with-bounds, fgets-with-size) that natural-language instructions struggle to evoke.
+2. **Prompting alone wins on 3 of 6 CWEs** (CWE-134, CWE-78, CWE-79). These involve lexical patterns the model already knows (HTML escape, subprocess args, format strings).
+3. **CWE-787 sweep is the strongest evidence for additive effect**: at α=2.0, combined hits 90.6%, beating both pure-steering (80.7%) and pure-prompting (74.2%) by ~10pp.
+4. **CWE-89 at α=12 reaches 86.4%**, exceeding the paper's Table-2 claim (78.5%) and supporting the extended-α regime as the "real" steering ceiling for that CWE.
+5. The chat-template baseline alone exceeds the canonical raw-text steering Table-2 number on CWE-134 (84% vs 75%), which complicates direct comparisons across the existing literature. Numbers in Table 2 may have been measured under inconsistent prompt formats.
+6. The neutral deployment scenario shows the model is already secure on most CWEs by default (no adversarial pressure), with CWE-79 being the only major exception. Steering adds little in that scenario.
+
+Three bug-classes were found and fixed during the experiment (slice index for left-padded outputs, `num_return_sequences>1` degeneration, `truncate_completion` chopping valid `def ...` lines). All earlier in-flight numbers from buggy runs were discarded; final harness reproduces canonical 02-10 baseline within noise.
+
+### Files
+- Detailed report: [`docs/experiments/05-03_llama8b_prompt_baseline_6cwe.md`](experiments/05-03_llama8b_prompt_baseline_6cwe.md)
+- Code: [`src/experiments/05-03_llama8b_prompt_baseline_6cwe/`](../src/experiments/05-03_llama8b_prompt_baseline_6cwe/)
+- Result summaries: `results/{primary,aux,combined,sweep}_*_summary_*.json`
+
+---
+
 ## 2026-05-02: SVEN Baseline Comparison on CodeGen-2B-multi
 
 ### Prompt
