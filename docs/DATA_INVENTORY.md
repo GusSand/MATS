@@ -28,12 +28,22 @@ No new prompt datasets — reuses canonical 105×6 CWE benchmark and existing 21
 | `combined_adversarial_generations_*.jsonl` | Combined per-generation rows | ~13MB |
 | `sweep_CWE-{787,89,78}_a{1.0,2.0,8.0,10.0,12.0,3.0}_adversarial_summary_*.json` | 7 alpha-sweep summary files | small |
 | `sweep_*_generations_*.jsonl` | Alpha-sweep per-generation rows | ~10MB |
+| `recon_CWE-{787,119,89}_a{4.0,12.0}_adversarial_summary_*.json` | Reconciliation pass 1: global-direction baseline_steer at Table 2 α | small |
+| `lobo_recon_CWE-{787,119,89}_a{4.0,12.0}_*.json` | Reconciliation pass 1: true LOBO baseline_steer at Table 2 α | small |
+| `lobo_sweep_787_CWE-787_baseline_*.json` | Pass 2 Phase A: CWE-787 baseline_steer LOBO α-sweep | small |
+| `lobo_combined_787_CWE-787_usr_verbose_*.json` | Pass 2 Phase B: CWE-787 usr_verbose_steer LOBO at α=5 (over-steered) | small |
+| `lobo_combined_119_CWE-119_usr_verbose_*.json` | Pass 2 Phase C: CWE-119 usr_verbose_steer LOBO at α=1 | small |
+| `lobo_phase_d_CWE-787_usr_verbose_*.json` | Pass 2 Phase D: CWE-787 usr_verbose_steer LOBO α-sweep (best α=2.5) | small |
 
 **How to recreate**:
 - Primary: `env/bin/python 01_run_baseline.py --variants adversarial --batch-size 8 --tag primary`
 - Neutral: `env/bin/python 01_run_baseline.py --variants neutral --batch-size 8 --tag aux`
 - Combined: `env/bin/python 01b_run_combined.py --variants adversarial --batch-size 8 --tag combined`
 - Alpha sweep: `bash launch_alpha_sweep.sh`
+- Reconciliation pass 1 (global): `bash launch_reconciliation.sh`
+- Reconciliation pass 1 (true LOBO): `bash launch_lobo_recon_remaining.sh` (CWE-787, CWE-89) and `env/bin/python 01c_lobo_recon.py --cwe CWE-119 --alpha 4.0` (originally run separately)
+- Reconciliation pass 2 (Phases A/B/C): `bash launch_lobo_phase_abc.sh`
+- Reconciliation pass 2 (Phase D): `env/bin/python 01d_lobo_combined_sweep.py --cwe CWE-787 --alphas 1.0 1.5 2.0 2.5 3.0 --condition usr_verbose --tag lobo_phase_d`
 
 **Used in**: Prompt-engineering baseline + combined steering experiment ([docs/experiments/05-03_llama8b_prompt_baseline_6cwe.md](experiments/05-03_llama8b_prompt_baseline_6cwe.md))
 

@@ -43,6 +43,28 @@ FILES CHANGED:
 - Commits: 56ac0ce (primary + combined + sweep), 26b6833 (Table 2 reconciliation)
 
 OPEN FOLLOW-UPS:
-- True LOBO version of combined experiment for CWE-787 and CWE-119 (CWE-89 unaffected by leakage). Would re-derive headline combined numbers under correct held-out protocol.
-- Investigate the source of Table 2's 73.3% / α=4.0 figure for CWE-787; canonical 01-12 LOBO grid only went to α=3.5 with 52.4% strict. The 73.3% number may be a transcription error or measured under a different protocol.
 - LLM-as-judge or CodeQL re-scoring on a stratified sample to tighten absolute numbers (regex agreement with static analysis is ~65-70% per `03-13_expanded_codeql_validation`).
+- CWE-89 combined-α LOBO sweep — to confirm 86.4% at α=12 holds under proper LOBO (currently relies on pass-1 finding that α=12 baseline_steer LOBO ≈ Table 2 ≈ global; combined-LOBO sweep would close the loop).
+- CWE-787 baseline_steer LOBO α-sweep at α > 5 — Phase A trend was monotone through α=5; a wider sweep might find the true peak above 52.48%.
+
+# RECONCILIATION PASS 2 — added 2026-05-05/06
+
+After pass 1 found CWE-787's Table 2 number didn't reproduce (73.3% claimed, 41.2% LOBO at α=4), and noting the combined-experiment cells used global directions, ran 4 phases:
+
+- **Phase A** — CWE-787 baseline_steer LOBO α-sweep ∈ {2.0, 3.0, 3.5, 4.0, 5.0}. Monotone climb 10.76% → 52.48%. **Best in spec'd range: α=5.0 → 52.48%** (Wilson 95% [49.45, 55.48]).
+- **Phase B** — CWE-787 usr_verbose_steer LOBO at α=5.0 (best from A) → 39.14% with 57.8% other rate. Over-steered; the baseline-best α is too aggressive for the combined regime.
+- **Phase C** — CWE-119 usr_verbose_steer LOBO at α=1.0 → **58.57%** (Wilson 95% [55.57, 61.51]). ~7pp below the 66% global-direction estimate, consistent with leakage hypothesis.
+- **Phase D** — CWE-787 usr_verbose_steer LOBO α-sweep ∈ {1.0, 1.5, 2.0, 2.5, 3.0} to find proper combined-best. Best **α=2.5 → 76.86%** (Wilson 95% [74.21, 79.31], other 13.4%). Beats primary usr_verbose alone (74.2%) by +2.7pp — modest but real additive effect; CIs touch at lower bound.
+
+Final replacements for the paper:
+- Table 2 CWE-787 "Best": 73.3% (untraceable per audit `947b8d0`) → **52.48% at α=5.0** (Phase A)
+- Master table CWE-787 "Best Combined": 90.6% global → **76.86% at α=2.5** (Phase D)
+- Master table CWE-119 "Best Combined": 66.0% global → **58.57% at α=1.0** (Phase C)
+- Abstract claim "+10pp combined wins on CWE-787" softens to **+2.7pp** under proper LOBO. Recommendation: keep CWE-787 with weaker phrasing, lead the abstract with CWE-89 (the latter survived leakage in pass 1 — Table 2 78.5% ≈ LOBO 80.6%).
+
+ADDITIONAL FILES (pass 2):
+- src/experiments/05-03_llama8b_prompt_baseline_6cwe/01c_lobo_recon.py — true-LOBO single-α eval (used by pass 1 and re-used by pass 2)
+- src/experiments/05-03_llama8b_prompt_baseline_6cwe/01d_lobo_combined_sweep.py — true-LOBO α-sweep with arbitrary prompting condition (used by Phases A/B/C/D)
+- src/experiments/05-03_llama8b_prompt_baseline_6cwe/launch_lobo_phase_abc.sh — Phase A/B/C launcher (auto-determines Phase B α from Phase A best)
+- src/experiments/05-03_llama8b_prompt_baseline_6cwe/results/{recon,lobo_recon,lobo_sweep,lobo_combined,lobo_phase_d}_*.json — all reconciliation result files
+- Commits: 26b6833 (pass 1), 7f0781a (pass 2 Phases A/B/C), b73c589 (Phase D)
