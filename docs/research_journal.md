@@ -85,6 +85,20 @@ Phase D found the proper combined-best for CWE-787 at α=2.5 (other rate stable 
 
 Replacements: Table 2 CWE-787 "Best" 73.3% → 52.48%; master-table CWE-787 "Best Combined" 90.6% → 76.86%; master-table CWE-119 "Best Combined" 66.0% → 58.57%. Abstract claim "+10pp combined wins on CWE-787" softens to "+2.7pp combined wins on CWE-787" (76.86% combined vs 74.2% prompting alone, overlapping CIs at lower bound). Recommendation: keep CWE-787 result with weaker phrasing, lead the abstract with CWE-89 (still robust to leakage from pass-1).
 
+### Reconciliation pass 3 — cross-model CWE-787 verification (added 2026-05-06)
+
+Code-only check (no GPU): all 5 cross-model CWE-787 scripts implement proper LOBO held-out cross-validation. The §7 cross-model claim ("+39 to +71 pp on CWE-787 across five models") is methodologically sound — the broken 73.3% / α=4.0 figure was localized to Table 2 (main paper), not §7. Updated cross-model deltas (recomputed from existing LOBO result files):
+
+| Model | LOBO best | Baseline | Δ pp | α |
+|---|---|---|---|---|
+| Llama-3.1-8B | 52.4% (raw text) | 0.0% | +52.4 | 3.5 |
+| Mistral-7B | 92.4% (raw text) | 26.7% | +65.7 | 3.5 |
+| Qwen-2.5-14B | 77.1% (raw text) | 2.9% | +74.3 | 4.0 |
+| Mistral-Small-24B | 39.0% (chat template) | 0.0% | +39.0 | 5.0 |
+| Llama-3.1-70B | 52.4% (raw text) | 1.9% | +50.5 | 4.0 |
+
+Range +39 to +74 pp (paper's "+71" upper bound should update to +74; Qwen-14B's delta is +74.3, not +71). Heterogeneity caveat: 4 of 5 used raw text, Mistral-24B used chat template — each LOBO-correct internally, but cross-model comparison mixes formats. Footnote-worthy. **No re-measurement needed; Llama-8B cell stays at 52.4%.**
+
 ### Files
 - Detailed report: [`docs/experiments/05-03_llama8b_prompt_baseline_6cwe.md`](experiments/05-03_llama8b_prompt_baseline_6cwe.md)
 - Code: [`src/experiments/05-03_llama8b_prompt_baseline_6cwe/`](../src/experiments/05-03_llama8b_prompt_baseline_6cwe/)

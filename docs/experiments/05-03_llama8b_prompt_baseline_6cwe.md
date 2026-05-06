@@ -317,6 +317,80 @@ T4: 787 usr\_verbose\_steer & 3.0 & 76.38\% & [73.72, 78.85]\% & 1050 \\
 | CWE-78 | 14.5% | usr_verbose **59.8%** | (over-steered) | (over-steered) | Prompting wins |
 | CWE-79 | 0.1% | usr_verbose **85.0%** | (over-steered) | (over-steered) | Prompting wins |
 
+## Cross-model CWE-787 LOBO verification (pass 3, 2026-05-06)
+
+After pass-2 replaced the Llama-8B Table 2 number for CWE-787 (73.3% → 52.5% under proper LOBO), checked whether §7's cross-model "+39 to +71 pp on CWE-787 across five models" claim used the same broken protocol or proper LOBO.
+
+### Code inspection
+
+All 5 per-model CWE-787 scripts implement proper LOBO:
+- `02-05_cross_model_cwe787_steering/experiment_4a_mistral7b/05_full_lobo.py:60` — `get_lobo_splits` holds out one base_id, trains direction on the other 6
+- `02-05_cross_model_cwe787_steering/experiment_4b_llama70b/05_full_lobo.py:60` — same
+- `02-05_cross_model_cwe787_steering/experiment_4c_qwen14b/05_full_lobo.py:60` — same
+- `02-27_mistral24b_cwe787_lobo/01_cwe787_lobo.py` — implements LOBO inline (different file structure)
+- `01-12_llama8b_cwe787_lobo_steering/run_experiment.py:177` — same canonical pattern as Llama-8B reconciliation
+
+Direction extraction: `secure_mean - vulnerable_mean` from training-fold activations. Same pattern as 02-12 Llama-8B canonical LOBO and as our 01c/01d reconciliation harnesses.
+
+**Verdict: case A.** All 5 models used proper LOBO. The §7 cross-model numbers are methodologically sound and do not need re-measurement.
+
+### Caveat: prompt-format heterogeneity
+
+| Model | Prompt format | LOBO held-out? |
+|---|---|---|
+| Llama-3.1-8B | raw text (`vulnerable` directly to tokenizer) | ✅ |
+| Mistral-7B | raw text | ✅ |
+| Qwen-2.5-14B | raw text | ✅ |
+| Llama-3.1-70B | raw text | ✅ |
+| Mistral-Small-24B | chat template ("Complete the following C function...") | ✅ |
+
+4 models use raw text; Mistral-24B uses chat template. Each is LOBO-correct in its own protocol, but the cross-model comparison technically mixes input formats. Worth a footnote in §7.
+
+### Updated cross-model table (CWE-787, LOBO best-α per model)
+
+| Model | LOBO Best | Baseline | Δ pp | α |
+|---|---|---|---|---|
+| Llama-3.1-8B | 52.4% | 0.0% | +52.4 | 3.5 |
+| Mistral-7B | 92.4% | 26.7% | +65.7 | 3.5 |
+| Qwen-2.5-14B | 77.1% | 2.9% | +74.3 | 4.0 |
+| Mistral-Small-24B | 39.0% | 0.0% | +39.0 | 5.0 |
+| Llama-3.1-70B | 52.4% | 1.9% | +50.5 | 4.0 |
+
+**Range: +39.0 to +74.3 pp.** If the paper currently says "+39 to +71 pp", consider updating the upper bound to +74 (Qwen-14B's number from `02-05_cross_model_cwe787_steering/experiment_4c_qwen14b/data/lobo_results_20260205_225229.json`).
+
+### Llama-8B cell — no change needed
+
+The original §7 Llama-8B cell was 52.4% at α=3.5 (raw-text LOBO from `01-12_llama8b_cwe787_lobo_steering`). Our chat-template reconciliation gave 52.5% at α=5.0 — within 0.1pp. The 73.3% / α=4.0 figure that broke under reconciliation was in **Table 2 (main paper)**, not §7's cross-model table. §7's Llama-8B cell stays at 52.4%.
+
+### LaTeX-ready cross-model table
+
+```latex
+\begin{table}[t]
+\centering
+\caption{CWE-787 LOBO results across five instruction-tuned models. Each per-model number is from leave-one-base-id-out cross-validation with the model's own best $\alpha$ at layer~31 (or last hidden layer). Heterogeneity note: Mistral-Small-24B uses chat template; the other four use raw text passed directly to the tokenizer.}
+\label{tab:cross-model-787}
+\small
+\begin{tabular}{l@{\hskip 6pt}c@{\hskip 6pt}r@{\hskip 6pt}r@{\hskip 6pt}r@{\hskip 6pt}c}
+\toprule
+\textbf{Model} & \textbf{Format} & \textbf{Baseline} & \textbf{Best LOBO} & \textbf{$\Delta$} & \textbf{$\alpha$} \\
+\midrule
+Llama-3.1-8B-Instruct        & raw  & 0.0\%  & 52.4\% & +52.4 pp & 3.5 \\
+Mistral-7B-Instruct-v0.3     & raw  & 26.7\% & 92.4\% & +65.7 pp & 3.5 \\
+Qwen2.5-14B-Instruct         & raw  & 2.9\%  & 77.1\% & +74.3 pp & 4.0 \\
+Mistral-Small-24B-Instruct   & chat & 0.0\%  & 39.0\% & +39.0 pp & 5.0 \\
+Llama-3.1-70B-Instruct       & raw  & 1.9\%  & 52.4\% & +50.5 pp & 4.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+```
+
+### Summary
+
+- §7's cross-model claim survives reconciliation: all 5 models used proper LOBO.
+- The "+39 to +71 pp" range should be updated to **+39 to +74 pp** (Qwen-14B's actual delta is +74.3, not +71).
+- A one-sentence footnote should note the prompt-format heterogeneity (4 raw-text + 1 chat-template). Each is internally LOBO-correct.
+- No GPU work needed. Llama-8B cell unchanged (52.4%, matches our reconciliation).
+
 ## Limitations
 
 1. **Chat-template-only protocol.** Numbers are not directly comparable to Table 2's raw-text steering results for C CWEs without the LOBO reconciliation above. CWE-89 and CWE-119 reproduce Table 2 closely (+1-2pp); CWE-787 does not (−32pp), suggesting the published 73.3% / α=4.0 figure for CWE-787 needs investigation.
