@@ -1,0 +1,60 @@
+% Auto-generated from raw JSON:
+%   reviewer_experiments/exp_R2_generalization/results_20260313_184514.json
+%   reviewer_experiments/exp_R4_decimal_pairs/results_20260313_224520.json
+% Model: meta-llama/Meta-Llama-3.1-8B-Instruct.
+% Intervention H*: first 8 even-indexed heads (0,2,4,6,8,10,12,14) at Layer 10.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Prompt variant & Q\&A bug rate & Simple correct rate & Format bug? & Post-$H^{*}$ bug rate \\
+\midrule
+\texttt{original}: \emph{Which is bigger: 9.8 or 9.11?}            & 100\% (20/20) & 100\% (20/20) & yes      & 0\% (0/100) \\
+\texttt{reversed\_order}: \emph{\ldots 9.11 or 9.8?}               & 0\% (0/20)    & 100\% (20/20) & no       & --- \\
+\texttt{synonym\_larger}: \emph{Which is larger\ldots}             & 0\% (0/20)    & 100\% (20/20) & no       & --- \\
+\texttt{synonym\_greater}: \emph{Which is greater\ldots}           & 100\% (20/20) & 0\% (0/20)    & no$^{*}$ & --- \\
+\texttt{rephrased\_1}: \emph{Is 9.8 or 9.11 the bigger number?}    & 100\% (20/20) & 0\% (0/20)    & no$^{*}$ & --- \\
+\texttt{rephrased\_2}: \emph{Compare 9.8 and 9.11. Which\ldots}    & 100\% (20/20) & 0\% (0/20)    & no$^{*}$ & --- \\
+\texttt{trailing\_zero}: \emph{\ldots 9.80 or 9.11?}               & 0\% (0/20)$^{\dagger}$ & 100\% (20/20) & no & --- \\
+\texttt{diff\_decimal\_97}: \emph{\ldots 9.7 or 9.11?}             & 0\% (0/20)    & 100\% (20/20) & no       & --- \\
+\texttt{diff\_decimal\_93}: \emph{\ldots 9.3 or 9.11?}             & 100\% (20/20) & 0\% (0/20)    & no$^{*}$ & --- \\
+\bottomrule
+\end{tabular}
+\caption{Llama-3.1-8B-Instruct paraphrase sweep of the 9.8-vs-9.11 prompt.
+``Format bug'' is the Q\&A-fails / Simple-succeeds pattern that admits an $H^{*}$ repair; only the original phrasing exhibits it.
+The post-$H^{*}$ column reports residual bug rate after patching the first 8 even heads at Layer 10 (Wilson 95\% CI for \texttt{original}: $[0.0\%, 3.7\%]$; equivalently, intervention success $[96.3\%, 100\%]$, $n=100$).
+$^{*}$Model is wrong in both formats, so there is no format-conditional bug for $H^{*}$ to fix.
+$^{\dagger}$All 20 generations are classified \texttt{unclear} (model regenerates the question or pivots) rather than \texttt{bug}/\texttt{correct}.
+Baseline $n=20$ per variant; intervention only run on variants where a format bug exists.}
+\label{tab:llama-paraphrase-sweep}
+\end{table}
+
+\paragraph{Generalization to other decimal pairs (Llama-3.1-8B-Instruct, $n_{\text{pairs}}=70$).}
+We additionally tested 70 decimal-comparison pairs of the form ``Which is bigger: $X.Y$ or $X.YZ$?'' (with $X.Y > X.YZ$), spanning two categories: 1-digit-integer / 1-digit-vs-2-digit-decimal pairs (e.g., 1.2 vs 1.10, 1.4 vs 1.39, 2.9 vs 2.15, 5.6 vs 5.12, 6.3 vs 6.11, 7.4 vs 7.13, 8.7 vs 8.12) and 2-digit-integer pairs (10.9 vs 10.11, 11.8 vs 11.12).
+\textbf{Zero of 70 pairs (0/70) reproduce the format-dependent bug pattern} (\texttt{bug\_exists=false} for all 70; \texttt{buggy\_pairs\_found=[]}).
+The pairs on which the Q\&A format \emph{is} wrong (5.6 vs 5.12, 6.3 vs 6.11, 10.9 vs 10.11, all at $20/20=100\%$ Q\&A bug) are also wrong under the Simple format ($0/20=0\%$ Simple-correct), so the failure is consistent across formats rather than format-conditional.
+Combining this with Table~\ref{tab:llama-paraphrase-sweep}, the format-dependent bug that $H^{*}$ repairs is observed on exactly one phrasing of one decimal pair; the generalization score \texttt{(fixable\_pairs / buggy\_pairs)} is the trivial $1/1=1.00$.
+
+\paragraph{Tokenization control: 9.8 vs 9.11 versus 10.9 vs 10.11.}
+The 10.9-vs-10.11 case has the same multi-token decimal-tail structure as 9.8 vs 9.11 — a single-digit fractional suffix versus a two-digit fractional suffix, each tokenized as a single BPE unit:
+\begin{center}
+\small
+\begin{tabular}{lll}
+\toprule
+Value & Tokens & Token IDs \\
+\midrule
+9.8   & \texttt{[``9'', ``.'', ``8'']}   & \texttt{[24,\,13,\,23]} \\
+9.11  & \texttt{[``9'', ``.'', ``11'']}  & \texttt{[24,\,13,\,806]} \\
+10.9  & \texttt{[``10'', ``.'', ``9'']}  & \texttt{[605,\,13,\,24]} \\
+10.11 & \texttt{[``10'', ``.'', ``11'']} & \texttt{[605,\,13,\,806]} \\
+\bottomrule
+\end{tabular}
+\end{center}
+Despite this matched 3-token structure with shared decimal-tail token (\texttt{806} = ``11''), the two pairs behave differently.
+On 10.9 vs 10.11 the model is wrong in \emph{both} formats: Q\&A baseline bug rate $20/20=100\%$ and Simple baseline bug rate $20/20=100\%$, so \texttt{bug\_exists=false} (no format-conditional failure to repair).
+Single-site activation patches from a clean ``Which is bigger: 1.5 or 1.2?'' run into the 10.9-vs-10.11 prompt do not recover the correct answer:
+attention-output patching gives $0/50$ success at every layer $\ell\in\{0,\dots,31\}$ (Wilson 95\% upper bound $7.1\%$);
+MLP-output patching gives $0/50$ at every layer except $\ell=5$, where it reaches $50/50=100\%$ (CI $[92.9\%,100\%]$) — i.e., no attention site, and no MLP site at the layers (8, 10, 15, 20) that succeed for 9.8 vs 9.11, transfers.
+Conclusion: matched tokenization is not sufficient to reproduce the bug or its $H^{*}$ repair; the mechanism we identify is keyed to the specific 9.8-vs-9.11 example, not to the general \texttt{[X, ``.'', short\_digit]} vs \texttt{[X, ``.'', long\_digit]} tokenization motif.

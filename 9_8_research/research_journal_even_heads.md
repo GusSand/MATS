@@ -796,6 +796,13 @@ MLP Knockout at Layer 10: Q&A still buggy (0% correct), Simple still works (100%
 
 **Document**: `reviewer_experiments/exp_R11_paper_edits/EDITS.md`
 
+**Paper-section artifact (2026-05-08)**: `reviewer_experiments/exp_R11_paper_edits/sections/llama_generalization_sweep.tex` — a clean, JSON-regenerated LaTeX block intended to be inlined into §3/§5/§6. Contains:
+1. Per-paraphrase summary table for the 9.8-vs-9.11 sweep (9 variants, baseline + post-$H^{*}$, with Wilson CI for the original): only the original phrasing exhibits the format-conditional bug; post-$H^{*}$ residual = 0/100, CI $[0.0\%, 3.7\%]$.
+2. 70-pair generalization result: 0/70 pairs reproduce the format-dependent bug (`buggy_pairs_found=[]`, `s2_bug_exists=0`); pairs that fail Q\&A (5.6/5.12, 6.3/6.11, 10.9/10.11) also fail the Simple format.
+3. Tokenization control (10.9 vs 10.11 vs 9.8 vs 9.11): matched 3-token decimal-tail structure with shared token 806 = "11", but 10.9-vs-10.11 fails 20/20 in **both** formats. Attention patching = 0/50 at every layer 0–31; MLP patching = 0/50 at every layer except $\ell=5$ (50/50).
+- **Sources**: regenerated directly from `exp_R2_generalization/results_20260313_184514.json` and `exp_R4_decimal_pairs/results_20260313_224520.json` to avoid stale/rounded numbers in the journal.
+- **Discrepancy noted**: journal Exp 9 line lists 10.9-vs-10.11 as having the bug; raw R4 JSON has `bug_exists=false` (both formats fail). The .tex reflects the JSON.
+
 ---
 
 ## Experiment R12: GPT-2 Reconciliation with Hoang's Results
