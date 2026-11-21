@@ -4532,7 +4532,9 @@ for subset before any cell is interpreted. Pre-registered rules and gates:
 docs/experiments/11-21_llama8b_decimal_true_head_patching.md. Design review PASS (round 3).
 
 ### Jobs
-- 24012066 — `run.sbatch`, l40s_public, commit c06fb2c, script sha256 1ce5b0cc…348d — PENDING.
+- 24012066 — `run.sbatch`, l40s_public, commit c06fb2c, script sha256 1ce5b0cc…348d — FAILED after 2 min
+  at model load: shared HF cache has the snapshot but no `refs/main`, so offline lookup by repo id failed.
+  No experiment code ran. Fix: job file pins `R13_MODEL` to snapshot 0e9e39f2….
 
 ### Results (no interpretation)
 None yet.

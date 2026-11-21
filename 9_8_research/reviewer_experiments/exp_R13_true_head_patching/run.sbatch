@@ -17,6 +17,10 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR}"
 export HF_HOME="${SCRATCH}/MATS/hf_cache"
 export HF_HUB_OFFLINE=1            # weights are pre-downloaded via torch-dtn
+# The shared cache has the snapshot but no refs/main, so resolve by snapshot path.
+# Pinning the revision also records exactly which weights were evaluated.
+export R13_MODEL="${HF_HOME}/hub/models--meta-llama--Meta-Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659"
+[ -f "${R13_MODEL}/config.json" ] || { echo "FATAL: model snapshot missing: ${R13_MODEL}"; exit 1; }
 : "${R13_GIT_SHA:?set R13_GIT_SHA to the committed SHA}"
 source "${SCRATCH}/MATS/env/bin/activate"
 nvidia-smi --query-gpu=name,uuid,driver_version --format=csv
