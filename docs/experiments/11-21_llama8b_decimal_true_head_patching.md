@@ -6,7 +6,8 @@
 **Design review:** PASS — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design_v3.md
 **Script:** `9_8_research/reviewer_experiments/exp_R13_true_head_patching/run_experiment.py`
 **Job:** `run.sbatch` (same folder). One job, one GPU, six cells sequentially in one process.
-**Slurm job:** 24012066 (submitted 2026-11-21, commit c06fb2c, `l40s_public`). Log: `/scratch/gs157/MATS/logs/24012066_r13_heads.log`; results `/scratch/gs157/MATS/results/r13_24012066/`.
+**Slurm job:** 24012066 failed at model load (cache had no `refs/main`; no experiment code ran).
+**Slurm job:** 24014365 (commit a577123, `l40s_public`, model pinned to snapshot 0e9e39f2…). Log: `/scratch/gs157/MATS/logs/24014365_r13_heads.log`; results `/scratch/gs157/MATS/results/r13_24014365/`.
 **CPU smoke test:** `exp_R13_true_head_patching/smoke_cpu.log` (random-weight 12-layer Llama, 32 query / 8 KV
 heads; tokenizer `hf-internal-testing`, which gives 19/21 tokens rather than Llama-3's 17/19; full
 config list, no `--limit`, command recorded in the log; checks mechanics only, outcomes mean nothing).
