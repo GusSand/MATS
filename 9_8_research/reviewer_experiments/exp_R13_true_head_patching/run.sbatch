@@ -2,7 +2,6 @@
 #SBATCH --job-name=r13_heads
 #SBATCH --account=torch_pr_173_tandon_advanced
 #SBATCH --partition=l40s_public
-#SBATCH --qos=normal
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=48G
