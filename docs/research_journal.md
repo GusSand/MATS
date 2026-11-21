@@ -4518,3 +4518,21 @@ This is **concrete validation** that the security decision is fundamentally dist
 
 
 <!-- review-gate: entries below need saved verifier reports -->
+
+## 2026-11-21: R13 true per-head patching at Layer 10 (submitted)
+
+### Research question
+Do the Even Heads head-level claims (H\*, even/odd parity, single heads fail, 7→8 threshold,
+matched-spatial control) hold when the patch acts on real attention heads and only on the prompt pass?
+
+### Method
+Llama-3.1-8B-Instruct, fp16, L10, canonical 9.8 vs 9.11 pair. Six cells (hook × scope), 1,307 head
+configurations each, one greedy run per configuration. Old-protocol cell must reproduce R8/R1 subset
+for subset before any cell is interpreted. Pre-registered rules and gates:
+docs/experiments/11-21_llama8b_decimal_true_head_patching.md. Design review PASS (round 3).
+
+### Jobs
+- 24012066 — `run.sbatch`, l40s_public, commit c06fb2c, script sha256 1ce5b0cc…348d — PENDING.
+
+### Results (no interpretation)
+None yet.
