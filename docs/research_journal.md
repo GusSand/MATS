@@ -4516,3 +4516,5 @@ This is **concrete validation** that the security decision is fundamentally dist
 
 ---
 
+
+<!-- review-gate: entries below need saved verifier reports -->
