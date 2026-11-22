@@ -4576,3 +4576,25 @@ hardware. Pre-registered verdicts now apply:
   GPU (`post_wo/prefill` R8 subsets: 120 vs 83 of 1,000). The paper reports them with the GPU named.
 - Verified by a fresh subagent: VERIFIED-WITH-FLAGS, no discrepancies.
   docs/reviews/11-21_llama8b_decimal_true_head_patching_verify_a100.md
+
+## 2026-11-22: R14 true per-head patching in Pythia-160M and Gemma-2B (submitted)
+
+### Research question
+Do the v2 draft's Pythia and Gemma head claims (Pythia even-head parity and its late emergence in training;
+Gemma "parity-independent" repair) hold under true per-head, prompt-only patching? Prompted by the audit
+(docs/reviews/11-22_cross_model_head_scripts_audit.md): every such claim used the post-W_O hook left on
+through generation, and the original donor prompt was itself wrong.
+
+### Method
+Format screen picks a (correct donor, buggy recipient) pair per model by a fixed rule. All 4,095 (Pythia) or
+255 (Gemma) head subsets are patched at the original layer, prompt pass only. The old protocol must reproduce
+the September runs (gate). Parity needs a split-specificity rule that resists single-head and
+late-heads alternatives under noise. Pythia checkpoints 120k and 143k get full subsets. A100.
+Design review: five rounds, PASS. docs/experiments/11-22_pythia_gemma_true_head_patching.md
+
+### Jobs
+- 24092087 — `run.sbatch`, a100_tandon, commit 2504146, script sha256 20819e06… — PENDING.
+
+### Results (no interpretation)
+None yet.
+

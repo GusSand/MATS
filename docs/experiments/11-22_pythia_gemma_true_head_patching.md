@@ -1,6 +1,6 @@
 # R14 — True per-head patching in Pythia-160M and Gemma-2B (9.8 vs 9.11)
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–4)
+**Status:** SUBMITTED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–4)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v2.md
 **Design review:** round 3 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v3.md
@@ -10,6 +10,7 @@
 **Job:** `run.sbatch` (same folder). One job, one GPU, all models sequentially, on **`a100_tandon`**: the
 September 2025 runs name A100-SXM4-80GB, and R13 showed L40S vs A100 flips borderline outcomes (R8
 reproduced 942/1,000 on L40S, 1,000/1,000 on A100).
+**Slurm job:** 24092087 (commit 2504146, `a100_tandon`, script sha256 20819e06…). Log `/scratch/gs157/MATS/logs/24092087_r14_xmodel.log`; results `/scratch/gs157/MATS/results/r14_24092087/`.
 **Decision:** Gus, 2026-11-22: "rerun" (INBOX 2, archived). Audit behind it:
 `docs/reviews/11-22_cross_model_head_scripts_audit.md`.
 
