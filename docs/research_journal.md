@@ -4659,3 +4659,6 @@ None yet.
 
 ### 2026-11-22 — R16 A100 done; L40S resubmitted
 A100 job 24095012 COMPLETED (59 min, ga004): capture=live bitwise, d0 nonzero (max 6.1e-5, all 32 blocks), copy reproduces R13 1307/1307 in both cells. L40S job 24095013 FAILED in 1 s: unmatched quote in `run_l40s.sbatch` (no compute). Fixed in 61dd72b, resubmitted as Slurm job 24104901 (gl044). Results not yet verified.
+
+### 2026-11-22 — R16 L40S done (24104901), verification pending
+L40S job 24104901 ran all 10 cells (1 h 48 min, gl044) and exited 2: inject exactness gate failed. Copy reproduces R13 1307/1307 in both cells, d0 = 0 on L40S, capture=live. Offline check: injected delta exact on 1,462/1,466 nonzero coordinates (L40S buggy0 differs from A100 buggy0 on 2,681 coordinates, so the A100 delta lands on a different fp16 grid). Per the pre-registration, inject labels are not interpreted. Raw numbers: inject moved 6/40 (prefill), 9/60 (all_steps); donorA100 5/40, 4/60; R8 correct prefill copy 83, inject 84, donorA100 86. Fresh verifier running.
