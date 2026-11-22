@@ -1,7 +1,8 @@
 # R16 — Does the layer-10 position-0 write explain the L40S vs A100 gap in R13?
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review round 1)
+**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–2)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design.md
+**Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v2.md
 **Script:** `9_8_research/reviewer_experiments/exp_R16_position0/run_experiment.py`. It imports R13's script by
 path, and R13's sha256 must equal `1ce5b0cc…`, the hash both R13 runs used. R13's hook is untouched.
 **Jobs:** `run_a100.sbatch` (`a100_tandon`, pinned to `ga004`, R13's A100 node), then `run_l40s.sbatch`
@@ -49,14 +50,17 @@ this baseline directly.
   - *keep0* (A100): donor position 0 := the buggy run's own position 0. In prefill, position 0 is then
     written with its own value. In all-steps, decode steps (which R13 fills from donor position 0) get
     buggy0, the exact-arithmetic counterpart of clean0, so bug B stays and only the ULP goes.
-  - *placebo* (both GPUs): donor position 0 := buggy0 moved one ULP at **other** coordinates of the same
-    128-dim blocks as d0's nonzero entries, with the same count and the same signs. It gives the boundary
-    fragility baseline.
+  - *placebo* (both GPUs): built on **this GPU's copy donor** (clean0). It applies the test variant's own
+    per-coordinate steps at **other** coordinates of the same 128-dim blocks: −d0 on A100, mirroring keep0,
+    and +dA on L40S, mirroring inject. Each target coordinate has the same fp16 exponent as its source
+    coordinate, so the step is the same size and exact; every move is recorded. It gives the
+    boundary-fragility baseline. Round 2 caught a first version built on buggy0, which on A100 also removed d0.
   - *inject* (L40S): donor position 0 := L40S buggy0 + the A100's (clean0 − buggy0), computed in fp32 and cast.
     The cast is checked to reproduce the delta exactly.
   - *donorA100* (L40S): the A100's whole clean donor tensor (17 × 4,096). It splits the gap into donor and
     receiver parts.
   - *a100clean0* (L40S, only if L40S buggy0 ≠ A100 buggy0 bitwise): donor position 0 := the A100's clean0.
+    Descriptive, like donorA100.
 - **Exposure.** In `post_wo` a "head" is a 128-dim residual block. A config is *exposed* if its blocks include
   a block where d0 ≠ 0. On L40S the A100's d0 is used. Only exposed configs can receive the position-0
   difference.
@@ -66,35 +70,46 @@ this baseline directly.
 | 1 | A100 (ga004) | copy, keep0, placebo; saves position-0 vectors and the full clean donor |
 | 2 | L40S (gl044) | copy, inject, placebo, donorA100 (+ a100clean0 if needed) |
 
-## Gates (all recorded; any failure makes the job exit 2)
+## Gates (all recorded; any failure makes the job exit 2, and `afterok` then blocks the L40S job)
 
 - **Capture equals live**, bitwise: the captured buggy layer-10 output at position 0 must equal the value seen
   during unpatched `generate()` prefill. The clean prompt is recorded the same way. Without this, keep0 is
   not a no-op.
 - **Premise:** on A100 the position-0 difference must be nonzero. If it is zero, the job records "premise
-  absent on this node" and stops. On L40S, d0 = 0 is recorded as the reverse test's premise.
+  absent on this node", saves the position-0 vectors and stops. On L40S, d0 must be exactly 0; otherwise
+  the L40S copy already carries its own difference and inject is not the reverse test.
 - **Copy reproduces R13:** all 1,307 texts must equal R13's for that GPU. If this fails, the comparisons with
   R13's D are not interpreted. As a fallback, labelled exploratory, D′ is defined from this run's copy against
   the other GPU's R13 classes.
 - **Unexposed identical:** for keep0, inject and placebo, every unexposed config's text must equal copy's.
   This doubles as the implementation check.
-- **Inject exactness** and the node and GPU-string match with R13 are recorded.
+- **Inject exactness:** L40S inject position 0 minus buggy0 must equal the A100 delta exactly (a gate).
+  The node and GPU-string match with R13 are recorded.
 
 ## Pre-registered decision rules
 
 D is the set of configs whose class differs between R13's L40S and A100 runs in that cell: 40 in `prefill`
 (37 of them R8 subsets) and 60 in `all_steps` (58 R8). Rules are computed on **exposed D**.
 
-- **keep0 (A100) and inject (L40S):** r is the fraction of exposed D that takes the other GPU's class.
-  N_new is the number of configs outside D whose class changes relative to this run's copy. Flips outside D
-  are reported in each direction.
-  - No exposed D config → "refuted by construction".
-  - r ≥ 0.8, N_new ≤ 4 and r − r_placebo ≥ 0.5 → "explains the gap".
-  - r ≤ 0.2 → "does not explain the gap", or, if N_new > 4, "perturbs, does not explain".
-  - Otherwise → "explains part of the gap (r = …)".
-- Both keep0 and inject "explain" → "shown from both sides".
-- **donorA100 (descriptive):** r on all of D. High r means the gap comes from the donor's computation;
+- **keep0 (A100) and inject (L40S):** n = |exposed D|; moved = exposed D configs that take the other GPU's
+  class; moved_pl = the same count for the placebo. N_new is the number of configs outside D whose class
+  changes relative to this run's copy. Flips outside D are reported in each direction (under the hypothesis:
+  correct → not correct for keep0, the reverse for inject). Comparisons use integers. The first matching
+  rule, in this order:
+  1. n = 0 → "refuted by construction: no D config is exposed to the position-0 difference".
+  2. n < 10 → "descriptive only".
+  3. moved ≥ 0.8 n:
+     - N_new > 4 → "perturbs broadly";
+     - else 2(moved − moved_pl) < n → "not distinguishable from fragility";
+     - else, if no D config is unexposed or moved ≥ 0.8 |D| → "explains the gap";
+     - else → "explains the exposed part (moved/|D| = …)".
+  4. moved ≤ 0.2 n → "perturbs, does not explain" if N_new > 4, else "does not explain the gap".
+  5. Otherwise → "explains part of the gap (r = moved/n)".
+  `test_decide_placebo.py` asserts every branch and the placebo construction.
+- Both keep0 and inject "explain" → "shown from both sides" (read from the two `run.json` files).
+- **donorA100 and a100clean0 (descriptive, no label):** r on all of D. High r means the gap comes from the donor's computation;
   low r means it comes from the receiving run's arithmetic.
+- If the copy gate fails, the exploratory D′ verdicts use a placebo scored on D′ too.
 - Also reported:
   - for `all_steps`, the R8/R1 reproduction agreement of every variant (A100 copy 1,000/200/60; L40S copy
     942/199/59);
