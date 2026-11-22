@@ -4668,3 +4668,6 @@ Verifier: VERIFIED-WITH-FLAGS (docs/reviews/11-22_llama8b_position0_gpu_gap_veri
 
 ### 2026-11-22 — Gus decisions on INBOX 1 and 2
 Legacy files stay grandfathered; re-review any that v2 cites. R14 Pythia gate upheld: Pythia and Gemma head-level claims (incl. late emergence) dropped from v2. All four models stay in v2, one row each in the cross-model table: Llama (R13 null), Mistral (layer-7 layer repair, no head/subset repair), Pythia (failed reproduction), Gemma (no format-dependent error to repair). Archived to docs/inbox_archive.md; BACKLOG updated.
+
+### 2026-11-22 — v2 draft rewritten from R13–R16
+Rewrote ~/github/phd_thesis/preamble/surgeon_dilemma (abstract, intro, setup/method, Llama, cross-model, discussion, limitations, conclusion, appendix; new four-row table `tables/cross_model_rates.tex`). New subtitle "Re-testing Head-Level Repairs of a Decimal-Comparison Error" (pending Gus). Removed figures 1, 3, 4 (head/Han placement, Mistral H22, intervention map with refuted bars) and the patching-point table (contradicted by R13 all-heads result). Legacy numbers still cited carry \todo markers pending re-review. Builds clean, 15 pages. Not yet committed in phd_thesis (Gus's repo, commit on request).
