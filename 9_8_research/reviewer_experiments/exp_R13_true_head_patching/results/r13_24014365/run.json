@@ -1,0 +1,91 @@
+{
+ "provenance": {
+  "hostname": "gl044.hpc.nyu.edu",
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "transformers": "5.15.1",
+  "slurm_job": "24014365",
+  "git_sha": "a577123",
+  "script_sha256": "1ce5b0cc2e2cdc74c21de37de5340cd00f5b14e27ae13cf6893d2e09f280348d",
+  "model": "/scratch/gs157/MATS/hf_cache/hub/models--meta-llama--Meta-Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659",
+  "layer": 10,
+  "gpu": "NVIDIA L40S, GPU-517f1f2e-49f3-5c36-d5e1-19ecefba2784, 610.43.02"
+ },
+ "started": "2026-11-21T17:55:21.953479",
+ "command": "run_experiment.py --out /scratch/gs157/MATS/results/r13_24014365",
+ "baseline": {
+  "clean": " 9.8 is bigger than 9.11.\nExplanation: 9.8 is bigger",
+  "buggy": " 9.11 is bigger than 9.8.\nQ: Which is bigger: 9"
+ },
+ "phenomenon_gate_ok": true,
+ "head_isolation": {
+  "changed_heads": [
+   5
+  ],
+  "ok": true
+ },
+ "bos_max_abs_diff_clean_vs_buggy": {
+  "pre_wo": 0.0,
+  "post_wo": 0.0
+ },
+ "reproduction_vs_R8_R1": {
+  "even7_": {
+   "n_ref": 500,
+   "heads_matched": 500,
+   "outcome_agree": 464
+  },
+  "even8_": {
+   "n_ref": 500,
+   "heads_matched": 500,
+   "outcome_agree": 478
+  },
+  "rand8_": {
+   "n_ref": 200,
+   "heads_matched": 200,
+   "outcome_agree": 199
+  },
+  "pair": {
+   "n_ref": 60,
+   "heads_matched": 60,
+   "outcome_agree": 59
+  },
+  "oddonly_": {
+   "n_ref": 5,
+   "heads_matched": 5,
+   "outcome_agree": 5
+  }
+ },
+ "reproduction_gate": {
+  "values": {
+   "R8_even7_plus_even8": 942,
+   "R1_rand8": 199,
+   "R1_pairs": 59
+  },
+  "thresholds": {
+   "R8_even7_plus_even8": 950,
+   "R1_rand8": 190,
+   "R1_pairs": 57
+  },
+  "all_heads_matched": true,
+  "reproduction_gate_ok": false,
+  "oddonly_reported_not_gated": {
+   "n_ref": 5,
+   "heads_matched": 5,
+   "outcome_agree": 5
+  }
+ },
+ "cells_done": [
+  "post_wo/all_steps",
+  "pre_wo/prefill",
+  "pre_wo/prefill_right",
+  "post_wo/prefill",
+  "pre_wo/all_steps",
+  "post_wo/decode_only"
+ ],
+ "all_heads_equivalence": {
+  "same_text": true,
+  "same_first_token": true,
+  "same_class": true
+ },
+ "finished": "2026-11-21T19:00:12.826987"
+}

@@ -4535,7 +4535,24 @@ docs/experiments/11-21_llama8b_decimal_true_head_patching.md. Design review PASS
 - 24012066 — `run.sbatch`, l40s_public, commit c06fb2c, script sha256 1ce5b0cc…348d — FAILED after 2 min
   at model load: shared HF cache has the snapshot but no `refs/main`, so offline lookup by repo id failed.
   No experiment code ran. Fix: job file pins `R13_MODEL` to snapshot 0e9e39f2….
-- 24014365 — resubmission, commit a577123, same script — PENDING.
+- 24014365 — resubmission, commit a577123, same script — COMPLETED in 1 h 07 min on one L40S
+  (gl044, GPU-517f1f2e…). Results copied to
+  `9_8_research/reviewer_experiments/exp_R13_true_head_patching/results/r13_24014365/`.
 
 ### Results (no interpretation)
-None yet.
+**The reproduction gate failed, so no cell is interpreted** until Gus decides (INBOX item 2).
+- Gate: the old-protocol cell agreed with R8 on 942 of 1,000 7- and 8-subsets (threshold 950).
+  It agreed with R1 on 199 of 200 random 8-subsets (threshold 190) and 59 of 60 pairs (threshold 57).
+  All 1,260 head sets matched. Every R8 disagreement went from correct in R8 to not correct now:
+  7-subsets 166/500 correct (R8: 202), 8-subsets 275/500 (R8: 297).
+- Every other gate passed: phenomenon, head isolation (only head 5 changed), BOS diff 0.0 for
+  both hooks, identity/determinism/shapes in all six cells, all-heads equivalence (same text).
+- All-heads patch, correct or not: `post_wo/all_steps` correct, `pre_wo/all_steps` correct;
+  `pre_wo/prefill`, `pre_wo/prefill_right`, `post_wo/prefill`, `post_wo/decode_only` not correct.
+- One recorded expectation was wrong. The identity control in both all-steps cells equals the
+  unpatched buggy text; the pre-registration expected it to differ. Writing BOS into all blocks at
+  decode steps is too small to move greedy output here (BOS diff is 0.0).
+- The 58 lost R8 subsets look marginal. In `post_wo/prefill` (same patch, no decode-step writes)
+  the 441 reproduced subsets are correct 83 times; the 58 lost ones 0 times.
+- Verified by a fresh subagent from raw text: VERIFIED-WITH-FLAGS, no discrepancies.
+  docs/reviews/11-21_llama8b_decimal_true_head_patching_verify.md

@@ -1,6 +1,6 @@
 # R13 — True per-head patching at Layer 10 (Llama-3.1-8B-Instruct, 9.8 vs 9.11)
 
-**Status:** PLANNED (pre-registered 2026-11-21, before any compute; amended after design review rounds 1 and 2)
+**Status:** RAN, BLOCKED on reproduction gate (942/1,000 < 950); awaiting INBOX decision 2. Pre-registered 2026-11-21 before compute.
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design_v2.md
 **Design review:** PASS — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design_v3.md
@@ -130,4 +130,25 @@ Requested walltime 4 h, `l40s_public`, account `torch_pr_173_tandon_advanced`.
 
 ## Results
 
-(none yet)
+Job 24014365, commit a577123, script sha256 1ce5b0cc…348d, L40S gl044. Raw outputs:
+`9_8_research/reviewer_experiments/exp_R13_true_head_patching/results/r13_24014365/`.
+Verified from raw text by a fresh subagent (VERIFIED-WITH-FLAGS):
+`docs/reviews/11-21_llama8b_decimal_true_head_patching_verify.md`.
+
+**Reproduction gate failed: 942 of 1,000 R8 subsets agree (threshold 950).** R1 random 8-subsets
+199/200 and pairs 59/60 pass. All 60 disagreements went from correct (reference) to the canonical bug
+text; none went the other way. Per the pre-registration, no cell is interpreted until Gus decides.
+All other gates passed.
+
+Counts of *correct* (raw, not interpreted):
+
+| cell | all | even16 | odd16 | single | even7 | even8 | rand8 | odd-only | pairs E&!O | pairs O |
+|---|---|---|---|---|---|---|---|---|---|---|
+| post_wo/all_steps | 1 | 1 | 0 | 0/32 | 166/500 | 275/500 | 12/200 | 0/5 | 20/30 | 0/30 |
+| pre_wo/prefill | 0 | 0 | 0 | 1/32 | 0/500 | 0/500 | 23/200 | 1/5 | 0/30 | 6/30 |
+| pre_wo/prefill_right | 0 | 0 | 0 | 0/32 | 0/500 | 0/500 | 0/200 | 0/5 | 0/30 | 0/30 |
+| post_wo/prefill | 0 | 1 | 0 | 0/32 | 22/500 | 61/500 | 1/200 | 0/5 | 4/30 | 0/30 |
+| pre_wo/all_steps | 1 | 0 | 1 | 1/32 | 3/500 | 9/500 | 29/200 | 3/5 | 0/30 | 9/30 |
+| post_wo/decode_only | 0 | 0 | 0 | 0/32 | 0/500 | 0/500 | 0/200 | 0/5 | 0/30 | 0/30 |
+
+Deviation from expectation: the all-steps identity control equals the unpatched output (expected to differ).
