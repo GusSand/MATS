@@ -1,6 +1,6 @@
 # R16 — Does the layer-10 position-0 write explain the L40S vs A100 gap in R13?
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–4)
+**Status:** SUBMITTED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–4)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v2.md
 **Design review:** round 3 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v3.md
@@ -12,6 +12,7 @@ path, and R13's sha256 must equal `1ce5b0cc…`, the hash both R13 runs used. R1
 (`l40s_public`, pinned to `gl044`, R13's L40S node) with `--dependency=afterok`. The A100 job exits 2 on any
 gate failure or absent premise. The L40S job also refuses to start unless the A100 `run.json` shows that all
 gates passed and the position-0 difference is nonzero.
+**Slurm jobs:** 24095012 (A100, ga004) and 24095013 (L40S, gl044, afterok:24095012), commit cd272dc, R16 sha256 bd47abab…, R13 sha256 1ce5b0cc…. Logs `/scratch/gs157/MATS/logs/<job>_r16_pos0_<gpu>.log`; results `/scratch/gs157/MATS/results/r16_<gpu>_<job>/`.
 **Decision:** Gus, 2026-11-22 ("we need to run another experiment: the position-0 zeroing experiment").
 
 ## Research question

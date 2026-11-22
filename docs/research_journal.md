@@ -4618,3 +4618,26 @@ Design review: four rounds, PASS. docs/experiments/11-22_mistral7b_true_head_pat
 ### Results (no interpretation)
 None yet.
 
+## 2026-11-22: R16 does the layer-10 position-0 write explain R13's L40S vs A100 gap? (submitted)
+
+### Research question
+R13's old-hook cells differ between GPUs (`post_wo/prefill`: 120 vs 83 of 1,000 R8 subsets; 100 class
+changes across cells, all bug on L40S → correct on A100). At position 0 the clean and buggy activations differ
+by one fp16 ULP on A100 and are identical on L40S. Is that write the cause? Gus's design.
+
+### Method
+R13's script, unchanged; only the donor's position 0 changes:
+- A100 keep0 removes the difference;
+- L40S inject adds the A100's difference;
+- a placebo puts the same steps at other coordinates of the same blocks;
+- L40S donorA100 splits the gap into donor and receiver parts.
+Exposure, placebo and coverage rules are pre-registered. Both jobs are pinned to R13's nodes.
+Design review: five rounds, PASS. docs/experiments/11-22_llama8b_position0_gpu_gap.md
+
+### Jobs
+- 24095012 — `run_a100.sbatch`, ga004, commit cd272dc — PENDING.
+- 24095013 — `run_l40s.sbatch`, gl044, afterok:24095012 — PENDING.
+
+### Results (no interpretation)
+None yet.
+
