@@ -1,8 +1,9 @@
 # R16 — Does the layer-10 position-0 write explain the L40S vs A100 gap in R13?
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–2)
+**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–3)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v2.md
+**Design review:** round 3 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v3.md
 **Script:** `9_8_research/reviewer_experiments/exp_R16_position0/run_experiment.py`. It imports R13's script by
 path, and R13's sha256 must equal `1ce5b0cc…`, the hash both R13 runs used. R13's hook is untouched.
 **Jobs:** `run_a100.sbatch` (`a100_tandon`, pinned to `ga004`, R13's A100 node), then `run_l40s.sbatch`
@@ -52,8 +53,10 @@ this baseline directly.
     buggy0, the exact-arithmetic counterpart of clean0, so bug B stays and only the ULP goes.
   - *placebo* (both GPUs): built on **this GPU's copy donor** (clean0). It applies the test variant's own
     per-coordinate steps at **other** coordinates of the same 128-dim blocks: −d0 on A100, mirroring keep0,
-    and +dA on L40S, mirroring inject. Each target coordinate has the same fp16 exponent as its source
-    coordinate, so the step is the same size and exact; every move is recorded. It gives the
+    and +dA on L40S, mirroring inject. A target coordinate qualifies only if the step lands there exactly
+    and nonzero, i.e. fp16(x + s) − x = s. Every move is recorded. **The placebo is valid only if every
+    source step is placed.** A dense difference, with more than half a block nonzero, can leave sources
+    unplaced; the run then continues with the placebo marked invalid. It gives the
     boundary-fragility baseline. Round 2 caught a first version built on buggy0, which on A100 also removed d0.
   - *inject* (L40S): donor position 0 := L40S buggy0 + the A100's (clean0 − buggy0), computed in fp32 and cast.
     The cast is checked to reproduce the delta exactly.
@@ -100,12 +103,20 @@ D is the set of configs whose class differs between R13's L40S and A100 runs in 
   2. n < 10 → "descriptive only".
   3. moved ≥ 0.8 n:
      - N_new > 4 → "perturbs broadly";
+     - else, placebo invalid → "not distinguishable from fragility (no valid placebo)";
      - else 2(moved − moved_pl) < n → "not distinguishable from fragility";
      - else, if no D config is unexposed or moved ≥ 0.8 |D| → "explains the gap";
      - else → "explains the exposed part (moved/|D| = …)".
   4. moved ≤ 0.2 n → "perturbs, does not explain" if N_new > 4, else "does not explain the gap".
-  5. Otherwise → "explains part of the gap (r = moved/n)".
-  `test_decide_placebo.py` asserts every branch and the placebo construction.
+  5. Otherwise (0.2 n < moved < 0.8 n):
+     - N_new > 4 → "perturbs broadly";
+     - placebo invalid → "not distinguishable from fragility (no valid placebo)";
+     - 2(moved − moved_pl) < n → "not distinguishable from fragility";
+     - else → "explains part of the gap (r = moved/n)".
+  The placebo itself is scored descriptively and gets no label.
+  `test_decide_placebo.py` asserts the branches, including the invalid-placebo and dense-difference cases.
+- **interpreted:** a cell's labels count only if every gate holds: the copy gate, capture equals live,
+  unexposed-identical for keep0, inject and placebo, and, on L40S, d0 = 0 and inject exactness.
 - Both keep0 and inject "explain" → "shown from both sides" (read from the two `run.json` files).
 - **donorA100 and a100clean0 (descriptive, no label):** r on all of D. High r means the gap comes from the donor's computation;
   low r means it comes from the receiving run's arithmetic.

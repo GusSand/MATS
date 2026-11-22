@@ -6,11 +6,13 @@ buggy0 = (torch.randn(1, 4096) * 0.05).half()
 clean0 = buggy0.clone(); c = 1000
 clean0[0, c] = m.ulp_step(buggy0[0, c:c+1], True)[0]
 d0 = clean0.float() - buggy0.float()
-pl, moves = m.make_placebo(clean0, -d0)
+pl, info = m.make_placebo(clean0, -d0)
+moves = info["moves"]
+assert info["valid"]
 diff = (pl.float() - clean0.float()).reshape(-1)
 nzp = torch.nonzero(diff).flatten().tolist()
 assert c not in nzp and len(nzp) == 1 and nzp[0] // 128 == c // 128, nzp
-assert moves[0]["exact"] and moves[0]["same_exponent"] and abs(moves[0]["achieved"] - (-float(d0[0, c]))) == 0, moves
+assert float(diff[nzp[0]]) == -float(d0[0, c]), moves
 print("placebo: copy-relative change at", nzp, "same block, same size, opposite of d0:", moves[0])
 # decide branches on synthetic dicts
 R = lambda c_: {"correct": c_, "output": "x" if c_ else "y"}
@@ -36,3 +38,18 @@ assert m.decide(extra, copy2, other2, D, exposed, placebo_moved=0)["verdict"] ==
 d = m.decide(var, copy, other, D, set(), label=False)
 assert d["verdict"] == "descriptive" and d["r"] == 1.0
 print("decide: all branches as pre-registered")
+# dense d0: 128 nonzero entries in one block cannot all be placed -> invalid placebo, no crash
+dense = clean0.clone(); dense[0, 256:384] = m.ulp_step(buggy0[0, 256:384], True)
+dd = dense.float() - buggy0.float()
+_, info2 = m.make_placebo(dense, -dd)
+assert not info2["valid"] and info2["unplaced"], info2["unplaced"][:3]
+# rule 3 and rule 5 placebo / N_new checks
+assert m.decide(var, copy, other, D, exposed, placebo_moved=0, placebo_valid=False)["verdict"] == "not distinguishable from fragility (no valid placebo)"
+half = {k: R(False) if i < 20 else R(True) for i, k in enumerate(keys)}
+assert m.decide(half, copy, other, D, exposed, placebo_moved=0)["verdict"] == "explains part of the gap (r = 20/40)"
+assert m.decide(half, copy, other, D, exposed, placebo_moved=20)["verdict"] == "not distinguishable from fragility"
+half2 = dict(half); half2.update({f"o{i}": R(False) for i in range(5)})
+assert m.decide(half2, copy2, other2, D, exposed, placebo_moved=0)["verdict"] == "perturbs broadly"
+moved_all_new = dict(var); moved_all_new.update({f"o{i}": R(False) for i in range(5)})
+assert m.decide(moved_all_new, copy2, other2, D, exposed, placebo_moved=0)["verdict"] == "perturbs broadly"
+print("dense placebo, rule-3 invalid placebo, rule-5 placebo and N_new branches: OK")

@@ -6,9 +6,10 @@ Experiment file: docs/experiments/11-22_llama8b_position0_gpu_gap.md
 Design review round 1: docs/reviews/11-22_llama8b_position0_gpu_gap_design.md
 
 Imports R13's script unchanged (sha256 checked); R13's hook is untouched. Variants change only the donor:
-  A100  copy (gate) | keep0: donor[:,0] := buggy0 | placebo: buggy0 moved one ULP at other coordinates of
-        the same blocks, same count and signs as d0
-  L40S  copy (gate) | inject: donor[:,0] := buggy0_L + d0_A | placebo (as above, A100 blocks) |
+  A100  copy (gate) | keep0: donor[:,0] := buggy0 | placebo: clean0_A with keep0's steps (-d0) applied at
+        other coordinates of the same blocks, each landing exactly
+  L40S  copy (gate) | inject: donor[:,0] := buggy0_L + d0_A | placebo: clean0_L with inject's steps (+d0_A)
+        at other coordinates of the same blocks |
         donorA100: the A100's whole clean donor | a100clean0: donor[:,0] := clean0_A (only if buggy0_L != buggy0_A)
 Exit code 2 when a gate fails or the premise is absent, so `afterok` blocks the L40S job.
 """
@@ -69,28 +70,35 @@ def ulp_step(x, up):
 
 
 def make_placebo(base0, step):
-    """base0 (this GPU's copy donor position 0) with the same per-coordinate steps as `step` (the test variant's
-    change: -d0 for keep0 on A100, +dA for inject on L40S) applied at OTHER coordinates of the same blocks.
-    Each target coordinate is chosen to have the same fp16 exponent as the source coordinate, so the step is
-    one ULP of the same size and exactly representable; inexact moves are recorded."""
+    """base0 (this GPU's copy donor position 0) with the test variant's per-coordinate steps (-d0 for keep0 on
+    A100, +dA for inject on L40S) applied at OTHER coordinates of the same blocks. A target qualifies only if
+    the step lands exactly and nonzero there: fp16(x[c2] + s) - x[c2] == s. Sources without a qualifying free
+    target are recorded as unplaced; the placebo is valid only if every move is placed (review round 3)."""
     import torch
     flat_b, flat_s = base0.reshape(-1).clone(), step.reshape(-1)
     nz = [int(i) for i in torch.nonzero(flat_s).flatten()]
-    _, ex = torch.frexp(base0.reshape(-1).float())
-    taken, moves = set(nz), []
+    taken, moves, unplaced = set(nz), [], []
     for c in nz:
         blk, off = divmod(c, BLOCK)
-        cands = [blk * BLOCK + (off + 64 + j) % BLOCK for j in range(BLOCK)]
-        cands = [c2 for c2 in cands if c2 not in taken]
-        same = [c2 for c2 in cands if int(ex[c2]) == int(ex[c])]
-        c2 = (same or cands)[0]
+        s_ = flat_s[c]
+        chosen = None
+        for j in range(BLOCK):
+            c2 = blk * BLOCK + (off + BLOCK // 2 + j) % BLOCK
+            if c2 in taken:
+                continue
+            new = (flat_b[c2].float() + s_).to(flat_b.dtype)
+            got = new.float() - flat_b[c2].float()
+            if got != 0 and got == s_:
+                chosen = (c2, new)
+                break
+        if chosen is None:
+            unplaced.append(c)
+            continue
+        c2, new = chosen
         taken.add(c2)
-        target = flat_b[c2].float() + flat_s[c]
-        new = target.to(flat_b.dtype)
-        moves.append({"src": c, "dst": c2, "step": float(flat_s[c]), "achieved": float(new.float() - flat_b[c2].float()),
-                      "same_exponent": bool(same), "exact": bool(new.float() == target)})
+        moves.append({"src": c, "dst": c2, "step": float(s_)})
         flat_b[c2] = new
-    return flat_b.view_as(base0), moves
+    return flat_b.view_as(base0), {"moves": moves, "unplaced": unplaced, "valid": not unplaced and bool(moves)}
 
 
 def blocks_nonzero(d0):
@@ -100,7 +108,7 @@ def blocks_nonzero(d0):
 MIN_EXPOSED = 10
 
 
-def decide(var, copy, other_ref, D, exposed, placebo_moved=None, label=True):
+def decide(var, copy, other_ref, D, exposed, placebo_moved=None, label=True, placebo_valid=True):
     """Pre-registered rule on exposed D (configs whose blocks include a block where the difference is nonzero).
     placebo_moved: the placebo's `moved` count on the same exposed D. label=False: descriptive (r on all D)."""
     De = [k for k in D if k in exposed] if label else list(D)
@@ -130,6 +138,8 @@ def decide(var, copy, other_ref, D, exposed, placebo_moved=None, label=True):
     elif 5 * moved >= 4 * n:                                   # r >= 0.8, integer arithmetic
         if n_new > 4:
             v = "perturbs broadly"
+        elif not placebo_valid:
+            v = "not distinguishable from fragility (no valid placebo)"
         elif 2 * (moved - pm) < n:                             # r - r_placebo < 0.5
             v = "not distinguishable from fragility"
         elif out["D"] - n == 0 or 5 * moved >= 4 * len(D):
@@ -138,6 +148,12 @@ def decide(var, copy, other_ref, D, exposed, placebo_moved=None, label=True):
             v = f"explains the exposed part (moved/|D| = {moved}/{len(D)})"
     elif 5 * moved <= n:                                       # r <= 0.2
         v = "perturbs, does not explain" if n_new > 4 else "does not explain the gap"
+    elif n_new > 4:
+        v = "perturbs broadly"
+    elif not placebo_valid:
+        v = "not distinguishable from fragility (no valid placebo)"
+    elif 2 * (moved - pm) < n:
+        v = "not distinguishable from fragility"
     else:
         v = f"explains part of the gap (r = {moved}/{n})"
     out["verdict"] = v
@@ -237,7 +253,8 @@ def main():
         k0 = clean.clone()
         k0[:, 0] = buggy[:, 0]
         variants["keep0"] = k0
-        pl0, moves = make_placebo(clean[:, 0], -d0)          # mirrors keep0 (removes d0) at other coordinates
+        dump(run, path)
+        pl0, plinfo = make_placebo(clean[:, 0], -d0)         # mirrors keep0 (removes d0) at other coordinates
     else:
         A = torch.load(a.delta)
         dA = A["delta_fp32"].to(clean.device)
@@ -259,13 +276,14 @@ def main():
             c0 = clean.clone()
             c0[:, 0] = A["clean0"].to(clean.device)
             variants["a100clean0"] = c0
-        pl0, moves = make_placebo(clean[:, 0], dA)           # mirrors inject (adds dA) at other coordinates
+        dump(run, path)
+        pl0, plinfo = make_placebo(clean[:, 0], dA)          # mirrors inject (adds dA) at other coordinates
         torch.save({"clean0": clean[:, 0].cpu(), "buggy0": buggy[:, 0].cpu()}, os.path.join(a.out, "position0_l40s.pt"))
         print(f"[l40s] inject check {run['inject_check']}", flush=True)
     pl = clean.clone()
     pl[:, 0] = pl0
     variants["placebo"] = pl
-    run["placebo_moves"] = moves
+    run["placebo"] = plinfo
     run["exposure_blocks"] = exp_blocks
     exposed = {name for name, heads in cfgs if set(heads) & set(exp_blocks)}
     run["n_exposed_configs"] = len(exposed)
@@ -293,12 +311,13 @@ def main():
         gates_ok.append(gate["ok"])
         D = [k for k in ref_own if k in copy and ref_own[k]["correct"] != ref_other[k]["correct"]]
         Dx = [k for k in copy if copy[k]["correct"] != ref_other[k]["correct"]]   # exploratory fallback
-        cell = {"gate_copy_reproduces_r13": gate,
-                "interpreted": gate["ok"] and live["buggy"]["pos0_equal"]}
+        pre_gates = live["buggy"]["pos0_equal"] and (a.gpu == "a100" or (run["reverse_premise_l40s_d0_zero"]
+                                                                         and run["inject_check"]["exact_delta"]))
+        cell = {"gate_copy_reproduces_r13": gate, "placebo_valid": plinfo["valid"]}
         for Dset, suffix in ((D, ""), (Dx, "_exploratory_Dprime")):
             if suffix and gate["ok"]:
                 continue
-            pr = decide(out["placebo"], copy, ref_other, Dset, exposed)
+            pr = decide(out["placebo"], copy, ref_other, Dset, exposed, label=False)
             cell["placebo" + suffix] = pr
             for vname in variants:
                 if vname in ("copy", "placebo"):
@@ -306,7 +325,7 @@ def main():
                 descriptive = vname in ("donorA100", "a100clean0")
                 cell[vname + suffix] = decide(out[vname], copy, ref_other, Dset, exposed,
                                               placebo_moved=None if descriptive else pr["moved"],
-                                              label=not descriptive)
+                                              label=not descriptive, placebo_valid=plinfo["valid"])
         if scope == "all_steps":
             refs = r13.reference_outcomes(r8, r1)
             cell["r8_r1_reproduction"] = {v: r13.reproduction_gate(r13.reproduction(out[v], refs))["values"]
@@ -316,6 +335,8 @@ def main():
                 u = cell[vname]["unexposed_text_identical"]
                 cell[vname]["gate_unexposed_identical"] = u[0] == u[1]
                 gates_ok.append(u[0] == u[1])
+        cell["interpreted"] = (gate["ok"] and pre_gates and all(cell[v].get("gate_unexposed_identical", True)
+                                                                for v in ("keep0", "inject", "placebo") if v in cell))
         run["cells"][scope] = cell
         print(f"[{a.gpu}/{scope}] gate {gate}", flush=True)
         for vname in variants:
