@@ -1,7 +1,8 @@
 # R14 — True per-head patching in Pythia-160M and Gemma-2B (9.8 vs 9.11)
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review round 1)
+**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1 and 2)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design.md
+**Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v2.md
 **Script:** `9_8_research/reviewer_experiments/exp_R14_cross_model_true_heads/run_experiment.py`
 **Job:** `run.sbatch` (same folder). One job, one GPU, all models sequentially.
 **Decision:** Gus, 2026-11-22: "rerun" (INBOX 2, archived). Audit behind it:
@@ -45,12 +46,16 @@ problems found while designing this:
 - Pythia training checkpoints: step1000, 2000, 4000, 8000, 16000, 32000, 64000, 80000, 100000,
   120000, 143000 (the original list), layer 6.
 - **Classifiers.**
-  - Markdown `*`, `` ` ``, `_` are stripped first. *Answer line* = the first non-empty line naming exactly
-    one of 9.8 / 9.11; scanning stops (no answer line) at a line naming both or starting with `Q:`.
-  - *correct* = a correct phrase (R13's list) and no bug phrase; with no phrase, the answer line is 9.8.
+  - Text preparation: strip Markdown `*`, `` ` ``, `_`; cut the text at the first line starting with `Q:`
+    (a turn the model invents). Numbers have boundaries: `9.8`, `9.80`, `9.800` count as 9.8; `19.8`,
+    `29.11` count as nothing.
+  - *Answer line* = the first non-empty line naming exactly one of 9.8 / 9.11; a line naming both ends
+    the scan with no answer line.
+  - *correct* = a correct phrase (`9.8 is [the] bigger|larger|greater`) and no bug phrase; with no
+    phrase, the answer line is 9.8.
   - *bug* = not correct and a bug phrase; with no phrase, the answer line is 9.11. Else *neither*.
   - Changed from R13 because Pythia answers as `"I think the answer is:\n\n9.11"`, which R13's
-    first-line rule calls *neither* (review round 1, fix 2). `--selftest` asserts 13 cases.
+    first-line rule calls *neither* (review round 1, fix 2). `--selftest` asserts 18 cases.
   - *orig_fixed* = the original `check_bug_fixed` verbatim, used **only** for the reproduction gate.
   - *td_fixed* = the training-dynamics script's classifier verbatim, used only to reproduce that run.
 - **Phenomenon screen (stage 1).** Each model generates on six fixed formats, in this order:
@@ -73,19 +78,25 @@ problems found while designing this:
 
   Gemma-IT has no `orig` cell. Right alignment pairs the last `min(T_donor, T_recipient) − 1` positions
   and never patches position 0 (BOS for Gemma; the first token, the attention sink, for Pythia).
-  Each cell records its aligned token pairs and *n_effective*: patched pairs whose activations can
-  differ (a pair at the same absolute position with identical token prefixes is a causal no-op).
-  **A cell with n_effective = 0 is vacuous: not run, not reported as a replication.**
+  Left alignment patches position 0 too (for Pythia, the first token). Aligned token pairs and
+  *n_effective* (patched pairs whose activations can differ; a pair at the same absolute position with
+  identical token prefixes is a causal no-op) are recorded per run for each alignment, and per checkpoint
+  for right alignment. **A left-aligned cell with n_effective = 0 is vacuous: not run, not reported as a
+  replication.** Right alignment cannot reach 0 unless the prompts are identical or one token long.
   **Fallback layer:** if the all-heads patch is not correct at the original layer but the layer sweep finds
   layers where it is, the primary cell is repeated at the first such layer, reported as secondary.
 - **Pythia training dynamics:** per checkpoint (revision `stepN`; the original used `main` for 143000,
   both commits recorded): the six-format screen; old protocol F1 → F2 with even/odd at layer 6 scored by
   *td_fixed* (reproduces the original JSON, reported); identity/determinism/shape gates; then, on the
-  `main` screen pair, true-head `pre_wo/prefill_right` with all/even/odd/singles. **A checkpoint is
-  interpretable only if, at that checkpoint, the donor is *correct* and the recipient *bug*;** otherwise
-  "no phenomenon at this checkpoint". At step120000 and step143000 (the two the late-training claim rests
-  on) all 4,095 subsets run, so the full parity rule applies there. step143000's configs must match the
-  `main` run's outputs (same weights), a free consistency check.
+  `main` screen pair, true-head `pre_wo/prefill_right` with all/even/odd/singles, **run only if, at that
+  checkpoint, the donor is *correct* and the recipient *bug* (`phenomenon_present`) and the gates pass.**
+  Otherwise the checkpoint is "no phenomenon" or "gate failed: not interpreted" (printed); a gate failure
+  does not stop the other checkpoints. At step120000 and step143000 (the two the late-training claim rests
+  on) all 4,095 subsets run under the same condition, so the full parity rule applies there. These two run
+  first; each checkpoint is wrapped so an error is recorded and the next one runs.
+  **Consistency check:** step143000's outputs are compared with the `main` run's (all 4,095 when both are
+  complete). A mismatch means weights or numerics differ: the 143k verdict is reported but not interpreted
+  until an INBOX decision. A skipped check is recorded as null with its reason.
 
 ## Gates
 
@@ -115,15 +126,30 @@ problems found while designing this:
   D = #correct subsets inside A − #correct inside B. The even/odd split must have D > 0 (even side),
   |D| strictly greater than the contiguous split {0–5}|{6–11}, and rank in the top 5% of |D| with ties
   counted against it. (a)–(c) alone pass when one even head carries the repair (review round 1, fix 1).
-  (a)–(c) pass and (d) fails → "even-only subsets repair, but the effect is carried by specific heads,
-  not by parity." Minimal sufficient sets (correct subsets with no correct proper subset) are reported.
+  Verdict wording (`parity_verdict`), given repair:
+  - all four hold → "parity holds", qualified "with heads X necessary" when the necessary heads (the
+    intersection of all minimal sufficient sets) are non-empty and are not the full even set;
+  - (a)–(c) fail → "parity not supported";
+  - (a)–(c) hold, (d) fails, and |D(even/odd)| ≤ 3 → "inconclusive: parity evidence rests on 3 or fewer
+    subsets" (a true "all six even needed" effect has D = 1, so a few stray outputs sink (d));
+  - (a)–(c) hold, (d) fails, and some split strictly beats even/odd, or a minimal set contains an odd head,
+    or the necessary heads are a non-empty proper part of the even set → "even-only subsets repair, but the
+    effect is carried by specific heads, not by parity";
+  - otherwise → "inconclusive: the even/odd split ties with other splits".
+  Minimal sufficient sets, necessary heads and the top 5 splits are reported.
   Pre-compute history: a ≥ 0.20 even-majority vs odd-majority gap was dropped (a pure "all six even heads"
   effect scores 0.04 on it); `--selftest` asserts the rule on seven synthetic truths, including head 8
   alone (fails), {6, 8, 10} needed (fails), all six even needed (holds), any two even (holds).
 - **Gemma parity-independence holds:** even-4 and odd-4 both correct. The split rank (d) over Gemma's 35
-  bipartitions is reported as descriptive.
-- **Pythia late-training claim** ("parity appears only in the final 15%"): holds only if parity holds at
-  step143000 and does not at step120000, both interpretable. Earlier checkpoints are descriptive.
+  bipartitions is reported as descriptive (top 5% of 35 means a unique maximum).
+- **Pythia late-training claim** ("parity appears only in the final 15%"), computed by
+  `late_training_verdict`:
+  - step143000 has no phenomenon / gate failure / error → "untestable".
+  - parity fails at step143000 → "not supported".
+  - Given parity at step143000, step120000: (i) no correct/bug pair → "untestable"; (ii) pair present,
+    all-heads patch does not repair → "repair itself appears late; parity emergence not separable";
+    (iii) repair present, parity fails → "supported"; (iv) parity holds → "refuted".
+  Earlier checkpoints are descriptive.
 - **Descriptive only:** three-way class counts by size, the even-majority vs odd-majority rate gap, single heads, count of correct subsets by size, layer sweep, per-checkpoint counts.
 
 ## Compute estimate
@@ -133,6 +159,11 @@ Pythia: up to 3 × 4,095 generations (right, left, fallback) at ~0.1 s, plus che
 Total ≈ 0.7 GPU-h; walltime 3 h on `l40s_public`.
 
 ## Limitations known before the run
+
+- Rules (a) and (b) each rest on one output (all-even, all-odd). In simulation a noisy parity effect passes
+  (d) far more often than (a). Size-wise class counts are reported next to them.
+- If the screen pair is F3 → F1 (Pythia's fp32 CPU smoke gave this), the result concerns F1, not the
+  `Q:/A:` phrasing the paper names, and the left cell is vacuous. Said in the write-up if it happens.
 
 - One prompt pair per model, chosen by the mechanical rule above; positive results are in-sample.
 - Different prompt formats have different token counts, so alignment pairs non-corresponding tokens

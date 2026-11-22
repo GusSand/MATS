@@ -24,7 +24,7 @@ OUT="${SCRATCH}/MATS/results/r14_${SLURM_JOB_ID}"
 mkdir -p "${OUT}"
 # A model whose gate fails exits non-zero; record it and continue with the next model.
 for m in pythia160m gemma2b gemma2b_it; do
-  python run_experiment.py --model "$m" --out "${OUT}/$m" || echo "MODEL_EXIT_NONZERO $m"
+  python -I run_experiment.py --model "$m" --out "${OUT}/$m" || echo "MODEL_EXIT_NONZERO $m"
 done
-python run_experiment.py --model pythia160m --dynamics --main-run "${OUT}/pythia160m/run.json" \
+python -I run_experiment.py --model pythia160m --dynamics --main-run "${OUT}/pythia160m" \
   --out "${OUT}/pythia160m_dynamics" || echo "MODEL_EXIT_NONZERO dynamics"

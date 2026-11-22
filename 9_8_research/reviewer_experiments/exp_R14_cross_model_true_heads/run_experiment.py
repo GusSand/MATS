@@ -77,16 +77,22 @@ TD_REF = {"step1000": (0, 0, 0), "step2000": (0, 0, 0), "step4000": (0, 0, 0), "
 
 # ---------------------------------------------------------------- classifiers
 
-CORRECT_PATTERNS = ["9.8 is bigger", "9.8 is larger", "9.8 is greater",
-                    "9.8 is the bigger", "9.8 is the larger"]
-BUG_PATTERNS = ["9.11 is bigger", "9.11 is larger", "9.11 is greater",
-                "9.11 is the bigger", "9.11 is the larger"]
-RE98 = re.compile(r"(?<![\d.])9\.8(?!\d)")
+# phrases: R13's list (+ "the greater"), with number boundaries; 9.80, 9.800 count as 9.8
+_CMP = r"\s+is\s+(?:the\s+)?(?:bigger|larger|greater)"
+RE_CORRECT_PHRASE = re.compile(r"(?<![\d.])9\.80*(?!\d)" + _CMP)
+RE_BUG_PHRASE = re.compile(r"(?<![\d.])9\.11(?!\d)" + _CMP)
+RE98 = re.compile(r"(?<![\d.])9\.80*(?!\d)")
 RE911 = re.compile(r"(?<![\d.])9\.11(?!\d)")
 
 
 def _clean(text):
-    return re.sub(r"[*`_]", "", text)
+    """Strip Markdown, then cut at the first line starting with 'Q:' (a turn the model invents)."""
+    out = []
+    for line in re.sub(r"[*`_]", "", text).split("\n"):
+        if line.strip().startswith("Q:"):
+            break
+        out.append(line)
+    return "\n".join(out)
 
 
 def answer_line(text):
@@ -96,8 +102,6 @@ def answer_line(text):
         s = line.strip()
         if not s:
             continue
-        if s.startswith("Q:"):
-            return None
         a, b = bool(RE98.search(s)), bool(RE911.search(s))
         if a and b:
             return None
@@ -111,7 +115,7 @@ def answer_line(text):
 def is_correct(text):
     """R14 'correct': a correct phrase and no bug phrase; else, with no phrase, the answer line is 9.8."""
     lo = _clean(text).lower()
-    c, b = any(p in lo for p in CORRECT_PATTERNS), any(p in lo for p in BUG_PATTERNS)
+    c, b = bool(RE_CORRECT_PHRASE.search(lo)), bool(RE_BUG_PHRASE.search(lo))
     if c or b:
         return c and not b
     return answer_line(text) == "9.8"
@@ -122,9 +126,9 @@ def is_bug(text):
     if is_correct(text):
         return False
     lo = _clean(text).lower()
-    if any(p in lo for p in BUG_PATTERNS):
+    if RE_BUG_PHRASE.search(lo):
         return True
-    if any(p in lo for p in CORRECT_PATTERNS):
+    if RE_CORRECT_PHRASE.search(lo):
         return False
     return answer_line(text) == "9.11"
 
@@ -220,10 +224,12 @@ def summarize(done, n):
     Ds = [abs(D(a)) for a in splits]
     d_par_signed = D(em)
     d_par = abs(d_par_signed)
-    d_con = abs(D(contig if contig & 1 else full ^ contig))
+    d_con = abs(D(contig))
     rank_frac = sum(x >= d_par for x in Ds) / len(Ds)
+    top = sorted(zip(Ds, splits), key=lambda t: -t[0])[:5]
     s["bipartition"] = {"n_splits": len(Ds), "D_even_minus_odd": d_par_signed, "D_contiguous": d_con,
-                        "max_D": max(Ds), "frac_splits_D_ge_parity": rank_frac}
+                        "max_D": max(Ds), "frac_splits_D_ge_parity": rank_frac,
+                        "top5": [[dv, [h for h in range(n) if a >> h & 1]] for dv, a in top]}
     # minimal sufficient sets
     cset = set(cm)
     minimal = []
@@ -237,6 +243,7 @@ def summarize(done, n):
         if ok:
             minimal.append([h for h in range(n) if m >> h & 1])
     s["minimal_sufficient_sets"] = sorted(minimal, key=lambda x: (len(x), x))
+    s["necessary_heads"] = sorted(set.intersection(*map(set, minimal))) if minimal else []
     s["n_correct"], s["n_configs"] = len(cm), len(done)
     return s
 
@@ -254,11 +261,37 @@ def rules(s, family):
                                            "parity_c_even_only_gt_odd_only", "parity_d_split_specific"))
     if family == "gemma":
         r["gemma_parity_independent"] = bool(s["all_even"]) and bool(s["all_odd"])
-    r["interpretable"] = r["repair"]
+    r["verdict"] = parity_verdict(s, r)
     return r
 
 
+def parity_verdict(s, r):
+    """Pre-registered wording for the parity outcome (review rounds 1-2)."""
+    b, nec = s["bipartition"], s["necessary_heads"]
+    even_set = {h for h in range(int(max(s["class_by_size"], key=int))) if h % 2 == 0}
+    if not r["repair"]:
+        return "repair fails at this layer; head rules not interpreted"
+    if r["parity_holds"]:
+        return "parity holds" + (f", with heads {nec} necessary" if nec and set(nec) != even_set else "")
+    abc = r["parity_a_all_even"] and r["parity_b_all_odd_not"] and r["parity_c_even_only_gt_odd_only"]
+    if not abc:
+        return "parity not supported"
+    minimal_even_only = all(set(m) <= even_set for m in s["minimal_sufficient_sets"])
+    if abs(b["D_even_minus_odd"]) <= 3:
+        return "inconclusive: parity evidence rests on 3 or fewer subsets"
+    if b["max_D"] > abs(b["D_even_minus_odd"]) or not minimal_even_only or (nec and set(nec) != even_set):
+        return "even-only subsets repair, but the effect is carried by specific heads, not by parity"
+    return "inconclusive: the even/odd split ties with other splits"
+
+
 # ---------------------------------------------------------------- model code (imports torch lazily)
+
+def dump(obj, path):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(obj, f, indent=1)
+    os.replace(tmp, path)
+
 
 def sha256(path):
     with open(path, "rb") as f:
@@ -463,7 +496,7 @@ def run_subsets(p, saved, recip, L, align, tag, path, limit=None):
         done[key(heads)] = {"heads": heads, "correct": is_correct(text), "bug": is_bug(text), "output": text}
         if (i + 1) % 500 == 0:
             print(f"[{tag}] {i+1}/{len(subs)}  {time.time()-t0:.0f}s", flush=True)
-            json.dump({"tag": tag, "partial": True, "configs": done}, open(path, "w"))
+            dump({"tag": tag, "partial": True, "configs": done}, path)
     return done
 
 
@@ -518,8 +551,8 @@ def subset_cell(p, run, out_dir, tag, dp, rp, L, align, family, limit, save):
     done = run_subsets(p, saved, rp, L, align, tag, path, limit)
     summ = summarize(done, p.n_heads) if not limit else None
     rl = rules(summ, family) if summ else None
-    json.dump({"tag": tag, "layer": L, "align": align, "gates": g, "summary": summ, "rules": rl,
-               "configs": done}, open(path, "w"), indent=1)
+    dump({"tag": tag, "layer": L, "align": align, "gates": g, "summary": summ, "rules": rl,
+          "configs": done}, path)
     run[tag] = {"layer": L, "align": align, "gates": g, "summary": summ, "rules": rl}
     print(f"[{tag}] rules: {json.dumps(rl)}", flush=True)
     if summ:
@@ -540,7 +573,7 @@ def main_model(a, out_dir):
     path = os.path.join(out_dir, "run.json")
 
     def save():
-        json.dump(run, open(path, "w"), indent=1)
+        dump(run, path)
 
     fm = formats_for(p, k)
     sc, donor, recip = screen(p, fm)
@@ -610,66 +643,120 @@ def main_model(a, out_dir):
     save()
 
 
+def late_training_verdict(c143, c120):
+    """Pre-registered (review round 2, fix 2). c143/c120: checkpoint records."""
+    def ok(c):
+        return c and c.get("phenomenon_present") and c.get("gates", {}).get("ok") and c.get("rules")
+    if not ok(c143):
+        return "untestable: no interpretable full-subset run at step143000"
+    if not c143["rules"]["parity_holds"]:
+        return "not supported: parity does not hold at step143000"
+    if not c120 or not c120.get("phenomenon_present"):
+        return "untestable: no correct/bug pair at step120000"
+    if not ok(c120):
+        return "untestable: step120000 gates failed"
+    if not c120["rules"]["repair"]:
+        return "repair itself appears late; parity emergence not separable"
+    if c120["rules"]["parity_holds"]:
+        return "refuted: parity already holds at step120000"
+    return "supported: parity holds at step143000, not at step120000"
+
+
 def dynamics(a, out_dir):
-    """Pythia checkpoints: screen; old protocol even/odd (td_fixed); true heads on the main pair."""
+    """Pythia checkpoints: screen; old protocol even/odd (td_fixed); true heads on the main pair.
+    The two checkpoints the late-training claim rests on run first; each checkpoint is isolated."""
     import torch
     L = MODELS["pythia160m"]["layer"]
     main_run = json.load(open(os.path.join(a.main_run, "run.json")))
     pr = main_run["pair"]
     main_pair = (pr["donor"], pr["recipient"])
     main_right = os.path.join(a.main_run, "results_pre_wo__prefill_right.json")
-    main_cfgs = json.load(open(main_right))["configs"] if os.path.exists(main_right) else {}
+    main_cfgs = {}
+    if os.path.exists(main_right):
+        mr = json.load(open(main_right))
+        if mr.get("summary"):
+            main_cfgs = mr["configs"]
     out = {"main_pair": main_pair, "main_commit": main_run["provenance"]["commit"], "checkpoints": {}}
     path = os.path.join(out_dir, "dynamics.json")
-    cks = CHECKPOINTS[-2:] if a.limit else CHECKPOINTS
+    order = FULL_SUBSET_CHECKPOINTS[::-1] + [c for c in CHECKPOINTS if c not in FULL_SUBSET_CHECKPOINTS]
+    cks = order[:2] if a.limit else order
     for ck in cks:
-        p = Patcher(a.repo or MODELS["pythia160m"]["repo"], revision=ck, dtype="float16")
-        if "provenance" not in out:
-            out["provenance"] = provenance(p, {"mode": "dynamics"})
-        n = p.n_heads
-        even, odd = list(range(0, n, 2)), list(range(1, n, 2))
-        sc, donor, recip = screen(p, FORMATS)
-        r = {"commit": p.commit, "screen": {x: v["class"] for x, v in sc.items()},
-             "screen_outputs": {x: v["output"] for x, v in sc.items()}, "own_pair": [donor, recip]}
-        base = p.generate(ORIG_RECIP)
-        sv = p.capture(ORIG_DONOR, "post_wo", L)
-        old = {nm: p.generate(ORIG_RECIP, sv, h, "post_wo", "all_steps", L, "left")
-               for nm, h in (("even", even), ("odd", odd))}
-        r["old_protocol"] = {"baseline": td_fixed(base), "even": td_fixed(old["even"]),
-                             "odd": td_fixed(old["odd"]), "outputs": {"baseline": base, **old},
-                             "ref": TD_REF[ck]}
-        r["old_protocol"]["agrees_with_ref"] = [int(r["old_protocol"][x]) for x in ("baseline", "even", "odd")] \
-            == list(TD_REF[ck])
-        if main_pair[0] and main_pair[1]:
-            dp, rp = dict(FORMATS)[main_pair[0]], dict(FORMATS)[main_pair[1]]
-            dcls, rcls = classify(p.generate(dp)), classify(p.generate(rp))
-            r["main_pair_baseline"] = {"donor": dcls, "recipient": rcls}
-            r["interpretable"] = dcls == "correct" and rcls == "bug"
-            g, saved = prefill_gates(p, dp, rp, L, "right")
-            r["gates"] = g
-            if r["interpretable"] and g["ok"]:
-                cfg = {"all": list(range(n)), "even": even, "odd": odd, **{f"single_{h}": [h] for h in range(n)}}
-                r["true_heads"] = {}
-                for nm, h in cfg.items():
-                    t = p.generate(rp, saved, h, "pre_wo", "prefill", L, "right")
-                    r["true_heads"][nm] = {"heads": h, "correct": is_correct(t), "output": t}
-                if ck == "step143000" and main_cfgs:
-                    r["matches_main_run"] = all(main_cfgs[key(v["heads"])]["output"] == v["output"]
-                                                for v in r["true_heads"].values() if key(v["heads"]) in main_cfgs)
-                if ck in FULL_SUBSET_CHECKPOINTS:
-                    done = run_subsets(p, saved, rp, L, "right", f"dyn {ck}",
-                                       os.path.join(out_dir, f"subsets_{ck}.json"), a.limit)
-                    summ = summarize(done, n) if not a.limit else None
-                    json.dump({"checkpoint": ck, "summary": summ, "configs": done},
-                              open(os.path.join(out_dir, f"subsets_{ck}.json"), "w"), indent=1)
-                    r["summary"], r["rules"] = summ, (rules(summ, "pythia") if summ else None)
+        try:
+            r = dynamics_checkpoint(a, out, ck, L, main_pair, main_cfgs, out_dir)
+        except Exception as e:  # one bad checkpoint must not take the others with it
+            r = {"error": f"{type(e).__name__}: {e}"}
+            print(f"[dyn {ck}] ERROR {r['error']}", flush=True)
         out["checkpoints"][ck] = r
-        print(f"[dyn {ck}] screen {r['screen']} old {[r['old_protocol'][x] for x in ('baseline','even','odd')]} "
-              f"ref {TD_REF[ck]} interpretable={r.get('interpretable')} rules={r.get('rules')}", flush=True)
-        json.dump(out, open(path, "w"), indent=1)
-        del p
+        out["late_training_verdict"] = late_training_verdict(out["checkpoints"].get("step143000"),
+                                                             out["checkpoints"].get("step120000"))
+        dump(out, path)
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+    print(f"[dyn] late-training verdict: {out['late_training_verdict']}", flush=True)
+
+
+def dynamics_checkpoint(a, out, ck, L, main_pair, main_cfgs, out_dir):
+    p = Patcher(a.repo or MODELS["pythia160m"]["repo"], revision=ck, dtype="float16")
+    if "provenance" not in out:
+        out["provenance"] = provenance(p, {"mode": "dynamics"})
+    n = p.n_heads
+    even, odd = list(range(0, n, 2)), list(range(1, n, 2))
+    sc, donor, recip = screen(p, FORMATS)
+    r = {"commit": p.commit, "screen": {x: v["class"] for x, v in sc.items()},
+         "screen_outputs": {x: v["output"] for x, v in sc.items()}, "own_pair": [donor, recip]}
+    base = p.generate(ORIG_RECIP)
+    sv = p.capture(ORIG_DONOR, "post_wo", L)
+    old = {nm: p.generate(ORIG_RECIP, sv, h, "post_wo", "all_steps", L, "left")
+           for nm, h in (("even", even), ("odd", odd))}
+    r["old_protocol"] = {"baseline": td_fixed(base), "even": td_fixed(old["even"]),
+                         "odd": td_fixed(old["odd"]), "outputs": {"baseline": base, **old}, "ref": TD_REF[ck]}
+    r["old_protocol"]["agrees_with_ref"] = [int(r["old_protocol"][x]) for x in ("baseline", "even", "odd")] \
+        == list(TD_REF[ck])
+    r["matches_main_run"], r["matches_main_run_reason"] = None, "not step143000"
+    if main_pair[0] and main_pair[1]:
+        dp, rp = dict(FORMATS)[main_pair[0]], dict(FORMATS)[main_pair[1]]
+        r["alignment_right"] = alignment_info(p, dp, rp, "right")
+        dcls, rcls = classify(p.generate(dp)), classify(p.generate(rp))
+        r["main_pair_baseline"] = {"donor": dcls, "recipient": rcls}
+        r["phenomenon_present"] = dcls == "correct" and rcls == "bug"
+        g, saved = prefill_gates(p, dp, rp, L, "right")
+        r["gates"] = g
+        if not g["ok"]:
+            print(f"[dyn {ck}] GATE FAILED: checkpoint not interpreted", flush=True)
+        if r["phenomenon_present"] and g["ok"]:
+            cfg = {"all": list(range(n)), "even": even, "odd": odd, **{f"single_{h}": [h] for h in range(n)}}
+            r["true_heads"] = {}
+            for nm, h in cfg.items():
+                t = p.generate(rp, saved, h, "pre_wo", "prefill", L, "right")
+                r["true_heads"][nm] = {"heads": h, "correct": is_correct(t), "output": t}
+            done = None
+            if ck in FULL_SUBSET_CHECKPOINTS:
+                sp = os.path.join(out_dir, f"subsets_{ck}.json")
+                done = run_subsets(p, saved, rp, L, "right", f"dyn {ck}", sp, a.limit)
+                summ = summarize(done, n) if not a.limit else None
+                dump({"checkpoint": ck, "summary": summ, "configs": done}, sp)
+                r["summary"], r["rules"] = summ, (rules(summ, "pythia") if summ else None)
+            if ck == "step143000":
+                if not main_cfgs:
+                    r["matches_main_run_reason"] = "main run has no complete right-aligned results"
+                else:
+                    cmp = done if (done and r.get("summary")) else \
+                        {key(v["heads"]): v for v in r["true_heads"].values()}
+                    common = [k_ for k_ in cmp if k_ in main_cfgs]
+                    r["matches_main_run"] = bool(common) and all(cmp[k_]["output"] == main_cfgs[k_]["output"]
+                                                                  for k_ in common)
+                    r["matches_main_run_reason"] = f"compared {len(common)} configs"
+                    if not r["matches_main_run"]:
+                        print(f"[dyn {ck}] MISMATCH with main run: 143k verdict not interpreted (pre-registered)",
+                              flush=True)
+        elif not r["phenomenon_present"]:
+            r["matches_main_run_reason"] = "no phenomenon at this checkpoint"
+    print(f"[dyn {ck}] commit {p.commit} screen {r['screen']} "
+          f"old {[r['old_protocol'][x] for x in ('baseline','even','odd')]} ref {TD_REF[ck]} "
+          f"phenomenon={r.get('phenomenon_present')} gates={r.get('gates', {}).get('ok')} "
+          f"verdict={(r.get('rules') or {}).get('verdict')} matches_main={r['matches_main_run']}", flush=True)
+    del p
+    return r
 
 
 # ---------------------------------------------------------------- self-test
@@ -681,7 +768,10 @@ def selftest():
              ("\n9.11\nIs -1/2 at most -1.1", "bug"), ("The answer is:\n\nThe answer is:", "neither"),
              ("9.8\n\nQ: Which is bigger: 9.8 or 9.1", "correct"), ("Q: Which is bigger: 9.8 or 9.11?\n9.11", "neither"),
              ("**9.11** is bigger than 9.8", "bug"), ("**9.8** is bigger than **9.11**.", "correct"),
-             ("Comparing 9.8 and 9.11:\n9.8 wins", "neither"), ("\n-0.8\nWhat is 9.80?", "neither")]
+             ("Comparing 9.8 and 9.11:\n9.8 wins", "neither"), ("\n-0.8\nWhat is 7.80?", "neither"),
+             ("9.80 is bigger than 9.11", "correct"), ("The answer is 9.80.", "correct"),
+             (" 9.8\n\nQ: Which is bigger: 9.11 or 9.12?\nA: 9.11 is bigger", "correct"),
+             ("19.8 is bigger than 9.11", "bug"), ("29.11 is bigger than 3", "neither")]
     for t, want in cases:
         got = classify(t)
         assert got == want, (t, got, want)
@@ -696,8 +786,12 @@ def selftest():
     E = set(range(0, 12, 2))
     s, r = verdict(12, lambda h: E <= set(h), "pythia")          # needs all six even heads
     assert r["parity_holds"], s["bipartition"]
+    assert r["verdict"] == "parity holds", r["verdict"]
     s, r = verdict(12, lambda h: 8 in h, "pythia")                # head 8 alone
     assert not r["parity_holds"] and r["parity_c_even_only_gt_odd_only"], s["bipartition"]
+    assert r["verdict"].startswith("even-only subsets repair, but"), r["verdict"]
+    s, r = verdict(12, lambda h: 8 in h and any(x % 2 == 0 and x != 8 for x in h), "pythia")
+    assert r["verdict"] == "parity holds, with heads [8] necessary", r["verdict"]
     s, r = verdict(12, lambda h: {6, 8, 10} <= set(h), "pythia")  # late even heads
     assert not r["parity_holds"], s["bipartition"]
     assert s["minimal_sufficient_sets"] == [[6, 8, 10]]
@@ -709,7 +803,17 @@ def selftest():
     assert r["gemma_parity_independent"] and not r["parity_holds"]
     s, r = verdict(8, lambda h: False, "gemma")
     assert not r["repair"] and not r["gemma_parity_independent"]
-    print("selftest OK: classifier (%d cases), summarize, rules (7 synthetic truths)" % len(cases))
+    ck = lambda pres, rep, par: {"phenomenon_present": pres, "gates": {"ok": True},
+                                 "rules": {"repair": rep, "parity_holds": par}}
+    lt = late_training_verdict
+    assert lt(ck(True, True, True), ck(True, True, False)).startswith("supported")
+    assert lt(ck(True, True, True), ck(True, True, True)).startswith("refuted")
+    assert lt(ck(True, True, True), ck(True, False, False)).startswith("repair itself appears late")
+    assert lt(ck(True, True, True), {"phenomenon_present": False}).startswith("untestable")
+    assert lt(ck(True, True, False), ck(True, True, False)).startswith("not supported")
+    assert lt({"error": "x"}, None).startswith("untestable")
+    print("selftest OK: classifier (%d cases), summarize, rules (7 synthetic truths), "
+          "late-training verdict (6 cases)" % len(cases))
 
 
 def main():
@@ -733,10 +837,10 @@ def main():
         sys.exit("--force-pair/--skip-orig/--repo are for smoke tests (require --limit)")
     if not os.environ.get("R14_GIT_SHA"):
         sys.exit("FATAL: set R14_GIT_SHA to the committed SHA of this script")
+    if a.dynamics and (a.model != "pythia160m" or not a.main_run or not os.path.isdir(a.main_run)):
+        sys.exit("--dynamics needs --model pythia160m and --main-run <directory of the main run>")
     os.makedirs(a.out, exist_ok=False)
     if a.dynamics:
-        if a.model != "pythia160m" or not a.main_run:
-            sys.exit("--dynamics needs --model pythia160m and --main-run")
         dynamics(a, a.out)
     else:
         main_model(a, a.out)
