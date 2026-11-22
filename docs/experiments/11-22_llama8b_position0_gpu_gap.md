@@ -5,6 +5,7 @@
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v2.md
 **Design review:** round 3 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v3.md
 **Design review:** round 4 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v4.md
+**Design review:** PASS (round 5) — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v5.md
 **Script:** `9_8_research/reviewer_experiments/exp_R16_position0/run_experiment.py`. It imports R13's script by
 path, and R13's sha256 must equal `1ce5b0cc…`, the hash both R13 runs used. R13's hook is untouched.
 **Jobs:** `run_a100.sbatch` (`a100_tandon`, pinned to `ga004`, R13's A100 node), then `run_l40s.sbatch`
@@ -57,7 +58,8 @@ this baseline directly.
     and +dA on L40S, mirroring inject. A target coordinate qualifies only if the step lands there exactly
     and nonzero, i.e. fp16(x + s) − x = s. Every move is recorded. A source is unplaceable when its step is
     finer than the fp16 grid of every free target in its block; this happens to small-magnitude sources
-    even when the difference is sparse. **The placebo is valid if the unplaced steps carry at most 1% of the
+    even when the difference is sparse; a difference with about half of each block nonzero exceeds the
+    tolerance. **The placebo is valid if the unplaced steps carry at most 1% of the
     total |step|.** The unplaced count and fraction are recorded. An invalid placebo is not a gate: it only
     blocks positive labels. It gives the
     boundary-fragility baseline. Round 2 caught a first version built on buggy0, which on A100 also removed d0.
@@ -141,6 +143,9 @@ split across two GPUs. Walltime 3 h each. Pinning to the R13 nodes may lengthen 
 - The donor-side channel described above (the clean run's BOS keys and values reaching positions 1–16) is not
   removed by keep0. donorA100 bounds it from the L40S side.
 - One node per GPU type, pinned to R13's nodes.
+- Known label inconsistency, left as is: in rule 3 (r ≥ 0.8) the placebo margin is 2(moved − moved_pl) < n,
+  while rule 5 uses 2·moved_pl ≥ moved. For 1–3 values of moved_pl per moved, a stronger effect can get the
+  weaker label (review round 5, note 1). The raw moved and moved_pl counts are always reported.
 
 ## Results
 
