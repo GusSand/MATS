@@ -4519,7 +4519,7 @@ This is **concrete validation** that the security decision is fundamentally dist
 
 <!-- review-gate: entries below need saved verifier reports -->
 
-## 2026-11-21: R13 true per-head patching at Layer 10 (submitted)
+## 2026-11-21: R13 true per-head patching at Layer 10
 
 ### Research question
 Do the Even Heads head-level claims (H\*, even/odd parity, single heads fail, 7→8 threshold,
@@ -4556,3 +4556,14 @@ docs/experiments/11-21_llama8b_decimal_true_head_patching.md. Design review PASS
   the 441 reproduced subsets are correct 83 times; the 58 lost ones 0 times.
 - Verified by a fresh subagent from raw text: VERIFIED-WITH-FLAGS, no discrepancies.
   docs/reviews/11-21_llama8b_decimal_true_head_patching_verify.md
+
+### Decision (2026-11-22)
+Gus waived the reproduction gate. The misses were one-directional, on marginal subsets, on different
+hardware. Pre-registered verdicts now apply:
+- Primary (`pre_wo/prefill_right`): Layer-10 repair fails under true-head prompt-only patching with right
+  alignment. 0 of 1,307 configurations correct.
+- Secondary (`pre_wo/prefill`): Layer-10 repair fails with left alignment too. All-heads and even-16 not correct.
+- `post_wo/decode_only`: BOS injection alone does not produce the repair.
+- Consequence for the paper: H\*, parity and the 7→8 threshold are not head-level results. They appear only
+  when post-W_O blocks are patched and the hook keeps writing at decode steps.
+

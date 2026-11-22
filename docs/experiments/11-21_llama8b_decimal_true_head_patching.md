@@ -1,6 +1,6 @@
 # R13 — True per-head patching at Layer 10 (Llama-3.1-8B-Instruct, 9.8 vs 9.11)
 
-**Status:** RAN, BLOCKED on reproduction gate (942/1,000 < 950); awaiting INBOX decision 2. Pre-registered 2026-11-21 before compute.
+**Status:** DONE. Reproduction gate (942/1,000 < 950) waived by Gus 2026-11-22 (docs/decisions.md). Pre-registered 2026-11-21 before compute.
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design_v2.md
 **Design review:** PASS — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design_v3.md
@@ -152,3 +152,21 @@ Counts of *correct* (raw, not interpreted):
 | post_wo/decode_only | 0 | 0 | 0 | 0/32 | 0/500 | 0/500 | 0/200 | 0/5 | 0/30 | 0/30 |
 
 Deviation from expectation: the all-steps identity control equals the unpatched output (expected to differ).
+
+**Gate waiver (Gus, 2026-11-22).** All 60 misses went from correct to bug, none the other way. The 58 lost
+R8 subsets are correct 0 times in `post_wo/prefill`, against 83 of 441 for the rest. R8's code is the same
+protocol, and the GPU and library versions differ from March, when hardware was not recorded. The verdicts
+below rest on configurations far from any borderline subset.
+
+### Verdicts (pre-registered wording)
+
+- `pre_wo/prefill_right` (primary): **Layer-10 repair fails under true-head prompt-only patching with right
+  alignment.** H\* rules reported, not interpreted: (a) even-16 not correct; (b) odd-16 not correct;
+  (c) 0/30 pairs, odd correct 0/30; (d) 0/500 − 0/200 = 0.00.
+- `pre_wo/prefill` (secondary): **Layer-10 repair fails under true-head prompt-only patching with left
+  alignment.** H\* not interpreted: (a) fail; (b) pass; (c) 0/30, odd correct 6/30; (d) 0/500 − 23/200 = −0.115.
+- `post_wo/decode_only`: **BOS injection alone does not produce the repair** (all-heads, even-16, odd-16 not
+  correct; 0 of 1,000 R8 subsets).
+- Descriptive: single heads 0/32 (right), 1/32 (left). Old-protocol transition: only +5 odd heads stay correct.
+  `post_wo/prefill` (bug A kept, no decode writes): even-16 correct, all blocks not, R8 subsets 83/1,000.
+  `pre_wo/all_steps` (bug B kept): all heads and odd-16 correct, even-16 not.

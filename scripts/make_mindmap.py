@@ -30,8 +30,17 @@ ROOT_SUB = "Even Heads (arXiv:2508.19414) and its v2, Locating Is Not Repairing"
 # Only VERIFIED results become leaves. Keep branch labels under ~38 characters
 # or they collide with the leaf column.
 BRANCHES = [
-    ("Is the Layer-10 repair carried by attention heads?", "open", [
-        "OPEN — not started",
+    ("Do L10 heads carry the repair?", "answered", [
+        "NO — true-head prompt patch of all 32 heads fails (R13)",
+        "prefill_right (primary): 0 of 1,307 configs correct",
+        "prefill left-aligned: all 0, even-16 0, rand8 23/200",
+        "old protocol re-run: 942/1,000 R8 agree (gate waived)",
+    ]),
+    ("What made the old head results?", "partial", [
+        "post-W_O block patch + decode-step writes, jointly",
+        "post_wo prompt-only: even-16 correct, all blocks not",
+        "decode-step BOS writes alone: 0 of 1,307 correct",
+        "pre_wo all-steps: all 32 correct, even-16 not",
     ]),
 ]
 
