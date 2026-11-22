@@ -3,9 +3,10 @@
 #SBATCH --account=torch_pr_173_tandon_advanced
 #SBATCH --partition=l40s_public
 #SBATCH --gres=gpu:1
+#SBATCH --nodelist=gl044
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=48G
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 #SBATCH --output=/scratch/%u/MATS/logs/%j_r16_pos0_l40s.log
 
 # Experiment file: docs/experiments/11-22_llama8b_position0_gpu_gap.md
