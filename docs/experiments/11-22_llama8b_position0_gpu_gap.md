@@ -1,6 +1,7 @@
 # R16 — Does the layer-10 position-0 write explain the L40S vs A100 gap in R13?
 
-**Status:** SUBMITTED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–4)
+**Status:** DONE (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–4)
+**Verification:** VERIFIED-WITH-FLAGS — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_verify.md
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v2.md
 **Design review:** round 3 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_llama8b_position0_gpu_gap_design_v3.md
@@ -150,4 +151,31 @@ split across two GPUs. Walltime 3 h each. Pinning to the R13 nodes may lengthen 
 
 ## Results
 
-(none yet)
+Jobs 24095012 (A100, ga004, 59 min) and 24104901 (L40S, gl044, 1 h 48 min). All numbers recomputed by the verifier from per-config JSON; every logged value matched.
+
+**Gates.** Capture equals live (bitwise) on both GPUs. Copy reproduces R13 1,307/1,307 in both cells on both GPUs. A100 d0 nonzero (1,466 coordinates, max 6.1e-5, all 32 blocks); L40S d0 = 0. **Inject exactness failed**: the injected delta is exact on 1,462 of 1,466 coordinates (error 9.6e-6 vs total step 9.6e-3), because L40S buggy0 differs from A100 buggy0 on 2,681 coordinates, so the A100 step does not land exactly on the L40S fp16 grid at 4 coordinates. Per the pre-registration the inject labels are therefore **not interpreted** and are reported as raw counts only. The unexposed-identical gate is vacuous (every config is exposed). **The placebo is invalid on both GPUs** (518 of 1,466 steps unplaced, 15% of step mass > 1%): its counts are raw only.
+
+| GPU / cell / variant | moved / n (D) | N_new (→corr / →not) | R8 correct: variant / own copy / other GPU |
+|---|---|---|---|
+| A100 prefill keep0 | 6/40 | 5 (5/0) | **119** / 120 / 83 |
+| A100 prefill placebo (invalid) | 10/40 | 8 (8/0) | 118 / 120 / 83 |
+| A100 all_steps keep0 | 10/60 | 7 (7/0) | 497 / 499 / 441 |
+| A100 all_steps placebo (invalid) | 12/60 | 8 (8/0) | 496 / 499 / 441 |
+| L40S prefill inject (not interpreted) | 6/40 | 3 (0/3) | 84 / 83 / 120 |
+| L40S prefill placebo (invalid) | 5/40 | 2 (0/2) | 86 / 83 / 120 |
+| L40S prefill donorA100 | 5/40 | 2 (0/2) | 86 / 83 / 120 |
+| L40S prefill a100clean0 | 4/40 | 4 (0/4) | 83 / 83 / 120 |
+| L40S all_steps inject (not interpreted) | 9/60 | 3 (0/3) | 448 / 441 / 499 |
+| L40S all_steps placebo (invalid) | 8/60 | 6 (0/6) | 445 / 441 / 499 |
+| L40S all_steps donorA100 | 4/60 | 6 (0/6) | 441 / 441 / 499 |
+| L40S all_steps a100clean0 | 5/60 | 6 (0/6) | 442 / 441 / 499 |
+
+**Pre-registered verdicts.**
+- keep0, prefill (interpreted): rule 4, N_new = 5 > 4 → **"perturbs, does not explain"**.
+- keep0, all_steps (interpreted): rule 4, N_new = 7 > 4 → **"perturbs, does not explain"**.
+- inject, both cells: rule 4 → "does not explain the gap", **not interpreted** (inject gate failed).
+- "Shown from both sides": does not apply.
+
+**Reading.** Removing the layer-10 position-0 difference on A100 leaves the R8 count at 119 (vs 120), not near 83: the position-0 write does not explain the GPU gap. The "perturbs" half rests on N_new just above 4, and the flips outside D go in the opposite direction from the hypothesis (keep0: 5 and 7 flips to correct). Descriptively, the placebo (invalid) moves about as many D configs as keep0, consistent with boundary fragility, but this is not a formal result. donorA100 and a100clean0 (descriptive) move 4–5 D configs and leave the L40S R8 count at 83–86 / 441–442: giving the L40S run the A100's whole donor does not reproduce the A100 result, so the gap arises in the receiving run's own arithmetic, not in the donor.
+
+**Note.** The R16 A100 job ran on a different A100 card on ga004 than R13 (`GPU-d7fd4247…` vs `GPU-e4ae6c00…`); copy still reproduced R13 exactly. The L40S card matches R13.

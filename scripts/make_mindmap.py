@@ -54,6 +54,12 @@ BRANCHES = [
         "decode-step BOS writes alone: 0 of 1,307 correct",
         "pre_wo all-steps: all 32 correct, even-16 not",
     ]),
+    ("Does position 0 explain the GPU gap?", "answered", [
+        "NO: A100 keep0 gives 119 of 120 R8, not 83",
+        "A100 donor on L40S: 86 of 83, gap is receiver-side",
+        "inject gate failed (4 of 1,466 coords): raw only",
+        "placebo invalid on both GPUs: fragility not tested",
+    ]),
 ]
 
 STATUS = {
