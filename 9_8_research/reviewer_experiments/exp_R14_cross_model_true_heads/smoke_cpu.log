@@ -1,8 +1,8 @@
-# CPU smoke test (excerpt: lines starting with '[' plus errors), 2026-11-22T15:39:02Z, commit d330a52, script sha256 04aa7ead23f847ed…
+# CPU smoke test (excerpt: lines starting with '[' plus errors), 2026-11-22T15:48:56Z, commit d51b0ed, script sha256 20819e0620464ec3…
 # Mechanics only; outcomes mean nothing (CPU fp32; tiny Gemma has random weights). Argument forms as in run.sbatch.
 # tiny Gemma: 18 layers, 8 query / 1 KV heads, head_dim 16, hidden 32 (hidden != heads*head_dim on purpose); Llama test tokenizer + toy chat template
-# command: R14_GIT_SHA=d330a52 python -I run_experiment.py --model pythia160m --out ${OUT}/pythia160m --limit 3
-selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (9 cases)
+# command: R14_GIT_SHA=d51b0ed python -I run_experiment.py --model pythia160m --out ${OUT}/pythia160m --limit 3
+selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (11 cases)
 [pythia160m] screen F1 (12 tok) bug: '\n9.11\nIs -1/2 at most -1/2?\nTrue\n'
 [pythia160m] screen F2 (17 tok) neither: '\n\nThe answer is:\n\nThe answer is:\n\nThe answer is:\n\n'
 [pythia160m] screen F3 (15 tok) correct: " 9.8\nLet's say you have a number of numbers in your range. You want to"
@@ -22,8 +22,8 @@ selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,
 [pre_wo__prefill_right__L0] gates: identity=True determinism=True shapes=True
 [pre_wo__prefill_right__L0] rules: null
 # main run provenance.commit: 50f5173d932e8e61f858120bcb800b97af589f46
-# command: R14_GIT_SHA=d330a52 python -I run_experiment.py --model gemma2b --out ${OUT}/gemma2b --repo <scratch>/tinygemma --limit 3 --force-pair F1,F2
-selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (9 cases)
+# command: R14_GIT_SHA=d51b0ed python -I run_experiment.py --model gemma2b --out ${OUT}/gemma2b --repo <scratch>/tinygemma --limit 3 --force-pair F1,F2
+selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (11 cases)
 [gemma2b] screen F1 (16 tok) neither: '????????????????????'
 [gemma2b] screen F2 (21 tok) neither: 'ląląląląląląląląląląląląląląląląląląląlą'
 [gemma2b] screen F3 (19 tok) neither: '::::::::::::::::::::'
@@ -40,8 +40,8 @@ selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,
 [pre_wo__prefill_right] rules: null
 [pre_wo__prefill] gates: identity=True determinism=True shapes=True
 [pre_wo__prefill] rules: null
-# command: R14_GIT_SHA=d330a52 python -I run_experiment.py --model gemma2b_it --out ${OUT}/gemma2b_it --repo <scratch>/tinygemma --limit 3 --force-pair F1,F7
-selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (9 cases)
+# command: R14_GIT_SHA=d51b0ed python -I run_experiment.py --model gemma2b_it --out ${OUT}/gemma2b_it --repo <scratch>/tinygemma --limit 3 --force-pair F1,F7
+selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (11 cases)
 [gemma2b_it] screen F1 (16 tok) neither: '????????????????????'
 [gemma2b_it] screen F2 (21 tok) neither: 'ląląląląląląląląląląląląląląląląląląląlą'
 [gemma2b_it] screen F3 (19 tok) neither: '::::::::::::::::::::'
@@ -58,8 +58,8 @@ selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,
 [pre_wo__prefill_right] rules: null
 [pre_wo__prefill] gates: identity=True determinism=True shapes=True
 [pre_wo__prefill] rules: null
-# command: R14_GIT_SHA=d330a52 python -I run_experiment.py --model pythia160m --dynamics --main-run ${OUT}/pythia160m --out ${OUT}/pythia160m_dynamics --limit 3
-selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (9 cases)
+# command: R14_GIT_SHA=d51b0ed python -I run_experiment.py --model pythia160m --dynamics --main-run ${OUT}/pythia160m --out ${OUT}/pythia160m_dynamics --limit 3
+selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (11 cases)
 [dyn step143000] commit b56d9bee36300031aeea723b73c4d62ac7fa71a2 screen {'F1': 'bug', 'F2': 'neither', 'F3': 'correct', 'F4': 'neither', 'F5': 'neither', 'F6': 'neither'} old [False, False, False] ref (0, 1, 0) phenomenon=True gates=True verdict=None matches_main=None (main run has no complete right-aligned results)
 [dyn step120000] commit 3df7d2c5532755f7022704e07dea87f35eeaf0e1 screen {'F1': 'correct', 'F2': 'bug', 'F3': 'correct', 'F4': 'neither', 'F5': 'neither', 'F6': 'neither'} old [False, False, False] ref (0, 0, 0) phenomenon=False gates=True verdict=None matches_main=None (not step143000)
 [dyn] late-training verdict: untestable: no interpretable full-subset run at step143000
