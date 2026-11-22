@@ -4567,3 +4567,6 @@ hardware. Pre-registered verdicts now apply:
 - Consequence for the paper: H\*, parity and the 7→8 threshold are not head-level results. They appear only
   when post-W_O blocks are patched and the hook keeps writing at decode steps.
 
+### A100 replication (2026-11-22)
+- 24084222 — same script and job file, `--partition=a100_tandon`, commit 10e89d6 — PENDING.
+  How to read it was fixed before submitting (experiment file, "Hardware replication").

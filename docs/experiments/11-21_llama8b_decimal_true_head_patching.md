@@ -167,6 +167,7 @@ Reading, fixed now:
 - Reproduction gate ≥ 950 on A100: supports the hardware explanation for the L40S shortfall.
 - Still < 950: says nothing new about the cause, since March's torch/transformers versions are unknown too.
   The waiver stands either way.
+- **Slurm job:** 24084222 (commit 10e89d6, `a100_tandon`). Results `/scratch/gs157/MATS/results/r13_24084222/`.
 - Verdicts: if any pre-registered verdict differs between L40S and A100, report both and treat that
   verdict as hardware-sensitive. Otherwise report it as replicated on two GPU types.
 
