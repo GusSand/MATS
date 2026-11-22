@@ -1,8 +1,9 @@
 # R15 — Testing the Mistral-7B head claims with true per-head, prompt-only patching
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–2)
+**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–3)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v2.md
+**Design review:** round 3 FIXES NEEDED (1 small) — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v3.md
 **Script:** `9_8_research/reviewer_experiments/exp_R15_mistral_true_heads/run_experiment.py` (imports R14's
 patching code; the job refuses to start unless R14's and R15's sha256 equal `R14_EXPECTED_SHA256` and
 `R15_EXPECTED_SHA256`, computed at submit time from the committed files). `decide()` has its own synthetic
@@ -56,7 +57,7 @@ Claims under test (draft wording, abridged):
 - **Descriptive screen:** comparative, qa and simple wordings inside the chat template (separates template
   from wording). The chat-template token ids from the string path and from `tokenize=True` are recorded. No pair → stop: "no format-dependent bug in chat on our formats; M1–M6 have nothing to
   repair". M7's screen still runs.
-- Every output, including M7's, records `hit_max_new` and `says_less`. `decide()` runs before M7 too
+- Every classified output, including M7's, records `hit_max_new` and `says_less`. `decide()` runs before M7 too
   (`decisions_before_M7`), so a crash in M7 leaves M1–M6 decided.
 - **Δ** = teacher-forced log P(` 9.8`) − log P(` 9.11`) as the reply's first words, with the same prompt-only
   patch (continuation positions unpatched). Mistral tokenizes ` 9.8` as `▁ 9 . 8`, so Δ compares `8`
@@ -79,16 +80,16 @@ Claims under test (draft wording, abridged):
 - `selftest` (R14) passes; head isolation (head 1 at layer 2); identity (own activations at all heads,
   layers {2, 10, 11, 13, 17}, equals unpatched), determinism (×3) and hook shapes (prompt pass only) for the
   five-layer config. Any failure → stop.
-- Sanity: the all-heads, all-32-layers transplant must be *correct* (it replaces every attention output on
-  the overlapping positions). Fail → report, and treat single-layer nulls with caution.
+- Sanity: the all-heads, all-32-layers transplant is expected to be *correct* (it replaces every attention
+  output on the overlapping positions). Not a stop; it decides whether M1a's null is interpretable (see M1a).
 
 ## Pre-registered decision rules (computed by `decide()`)
 
 Generation reading: success = *correct*. Δ reading (only when testable): success = Δ > 0.
 - **S holds:** chat *bug*, comparative *bug*, qa and simple not *bug*, and at least one of them *correct*.
 - **M1a** ("no single layer fully repairs", generation): no layer's all-heads patch is *correct*.
-  Read only if the all-layers sanity transplant is *correct*; otherwise "uninterpretable" (a null from an
-  ineffective patch says nothing).
+  A *correct* layer refutes M1a regardless. Only the null needs the all-layers sanity transplant to be
+  *correct*; otherwise the null is "uninterpretable" (a null from an ineffective patch says nothing).
   **M1b** ("five layers fix individually", Δ): at least 4 of {2, 10, 11, 13, 17} have Δ > 0 **and** at least
   4 of them are among the 8 layers with the largest Δ. Δ > 0 at the five without that → "non-specific".
 - **M2 at ℓ ∈ {2, 17}**, generation and Δ readings: (a) the even-only k = 16 set succeeds; (b) no odd-only
@@ -97,7 +98,7 @@ Generation reading: success = *correct*. Δ reading (only when testable): succes
   subsets containing H22 (k ≤ 12) beat the without-H22 subsets at Fisher p < 0.05, or H22 alone succeeds at ℓ.
   Verdict, first match: (a)(b)(c) → "parity holds"; (a)(b) and H22's role shown → "even-only repair carried
   by H22"; (a)(b) → "even-only k = 16 repairs; H22's role not shown"; else "not supported". Every rate is
-  reported split by H22 ∈ S. "≈10 even heads for > 50%" is read from the **without-H22** rates (k = 4, 8, 12;
+  reported; every even-only rate is also split by H22 ∈ S. "≈10 even heads for > 50%" is read from the **without-H22** rates (k = 4, 8, 12;
   k = 16 cannot be tested without H22).
 - **M3** (generation): at both ℓ = 2 and 17, H22 is *correct* and no other single head is.
   **M3b** (Δ): H22 has the largest Σ_ℓ (Δ_patched − Δ_unpatched) over the 32 × 32 single-head sweep; the

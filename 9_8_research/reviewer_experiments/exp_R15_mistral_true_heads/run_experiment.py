@@ -283,8 +283,9 @@ def decide(run, res):
     ls = res["layer_sweep"]
     d["M1_correct_layers"] = [int(L) for L, v in ls.items() if corr(v)]
     d["M1_delta_pos_layers"] = [int(L) for L, v in ls.items() if pos(v)]
-    d["M1a_no_layer_repairs_gen"] = (not d["M1_correct_layers"]) if d["sanity_correct"] else \
-        "uninterpretable: the all-layers sanity transplant does not repair"
+    d["M1a_no_layer_repairs_gen"] = (False if d["M1_correct_layers"] else True if d["sanity_correct"] else
+                                     "uninterpretable: no layer repairs and the all-layers sanity transplant "
+                                     "does not repair either")
     if dt:
         by_delta = sorted(ls, key=lambda L: -(ls[L]["delta"] if ls[L]["delta"] is not None else -1e9))
         top8 = [int(L) for L in by_delta[:8]]
@@ -402,6 +403,22 @@ def decide_selftest():
         return decide(run, res)
 
     h22 = world(lambda kd, k, hs: H22 in hs, lambda L, h: h == H22)
+    # M1a: a correct layer refutes it even when the sanity transplant fails; only the null is uninterpretable
+    run0 = {"screen": {"chat": R("bug"), "comparative": R("bug"), "qa": R("correct"), "simple": R("correct")}}
+    def m1a(sanity, layer2):
+        res0 = {"all_layers_all_heads": R(sanity), "layer_sweep": {str(L): R("correct" if (L == 2 and layer2)
+                else "bug") for L in range(32)}, "single_heads": {}, "parity": [],
+                "head_five_layers": {str(H22): R("bug")}, "head_all_layers": {str(H22): R("bug")},
+                "five_layer_all_heads": R("bug"), "random_5layer": [R("correct")] * 3, "reverse": {"five": R("bug")}}
+        return decide(run0, res0)
+    assert m1a("neither", True)["M1a_no_layer_repairs_gen"] is False
+    assert str(m1a("neither", False)["M1a_no_layer_repairs_gen"]).startswith("uninterpretable")
+    assert m1a("correct", False)["M1a_no_layer_repairs_gen"] is True
+    assert m1a("neither", False)["M5_specific"] is False
+    # no-pair path still decides M7 when data exist
+    g7 = decide(run0, {"generalization": [{"formats": {"chat": R("bug"), "simple": R("correct")},
+                                           "five_layer_repair": R("correct")}]})
+    assert g7["M7_repair_transfers"] is True and g7["M7_report_as"] == "1 of 1 eligible pairs repaired"
     assert h22["M2_L2_gen"]["verdict"] == "even-only repair carried by H22", h22["M2_L2_gen"]
     first_noh22 = [hs for kd, k, hs in subs if kd == "even_noH22"][0]
     one = world(lambda kd, k, hs: H22 in hs or hs == first_noh22, lambda L, h: h == H22)
@@ -413,6 +430,11 @@ def decide_selftest():
     assert h22["M3_gen"] and h22["sanity_correct"] and h22["M1a_no_layer_repairs_gen"] is True
     assert h22["M5_specific"] and h22["M6"] and h22["M7"] == "not run"
     assert world(lambda *a: False, base=0.5)["M1b_four_of_five_delta"] == "untestable"
+    five_noh = [hs for kd, k, hs in subs if kd == "even_noH22"][:5]
+    b5 = world(lambda kd, k, hs: (kd == "even" and k == 16) or hs in five_noh)
+    assert b5["M2_L2_gen"]["verdict"] == "parity holds" and b5["M2_L2_gen"]["c_noH22_vs_odd"][0] == 5
+    b4 = world(lambda kd, k, hs: (kd == "even" and k == 16) or hs in five_noh[:4])
+    assert b4["M2_L2_gen"]["verdict"] == "even-only k = 16 repairs; H22's role not shown"
 
 
 # ---------------------------------------------------------------- run
@@ -548,7 +570,10 @@ def main():
               f"reverse_five={res['reverse']['five']['class']}", flush=True)
         save()
 
-    run["decisions_before_M7"] = decide(run, res)
+    try:
+        run["decisions_before_M7"] = decide(run, res)
+    except Exception as e:   # never let analysis block M7's data collection
+        run["decisions_before_M7"] = {"error": repr(e)}
     save()
 
     # M7 generalization
