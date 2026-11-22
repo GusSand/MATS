@@ -1,16 +1,19 @@
-# CPU smoke, 2026-11-22T15:37:09Z, random tiny Mistral (18 layers, 32 q / 8 kv heads, head_dim 4, hidden 64), Llama test tokenizer + toy [INST] template; mechanics only
-# command: R15_GIT_SHA=smoke python -I run_experiment.py --repo <scratch>/tinymistral --limit --force-pair simple,chat --out <tmp>
-selftest OK: classifier (18 cases), summarize, rules (7 synthetic truths), late-training verdict (6 cases)
-[screen] chat (23 tok) neither delta=11.118171691894531: 'Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo'
-[screen] comparative (18 tok) neither delta=11.078861236572266: 'że że że że że że że że żeUNCTION upp że że żeUNCTION upp upp że że że że że że żeUNCTION upp upp upp upp upp upp upp upp upp upp upp upp upp upp upp'
-[screen] qa (21 tok) neither delta=11.07455825805664: 'kon Museo kon Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo'
-[screen] simple (19 tok) neither delta=11.177104949951172: 'שUNCTION Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museokh Museokh Museokh Museokh Museokh Museo'
+# CPU smoke (excerpt: '[' lines, selftest timing, errors), 2026-11-22T15:47:42Z; random tiny Mistral (18 layers, 32 q / 8 kv heads, head_dim 4), Llama test tokenizer + toy [INST] template; mechanics only
+# R15 sha256 6f60de9be6b9d778…, R14 sha256 04aa7ead23f847ed…
+# run 1, no-pair path: R15_GIT_SHA=smoke python -I run_experiment.py --repo <scratch>/tinymistral --limit --out <tmp>/a
+selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (9 cases)
+r14 selftest 5.2s
+[pair] None -> None
+[decisions] {'S': False, 'note': 'no pair: M1-M6 not run'}
+# run 2, forced pair: ... --limit --force-pair simple,chat --out <tmp>/b
+selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (9 cases)
+r14 selftest 5.3s
 [pair] simple -> chat
 [gate] head isolation {'head': 1, 'changed_heads': [1], 'ok': True}
 [gate] identity=True determinism=True shapes=True
 [sanity] all layers all heads: neither
-[M1] correct layers: []
-[M3] layer 2 done, 0s; correct heads: []
-[M3] layer 17 done, 0s; correct heads: []
-[M4-M6] five=neither h22_five=neither h22_all=neither reverse_five=neither
-[M7] bug counts {'chat': 0, 'comparative': 0, 'qa': 0, 'simple': 0} of 3; eligible 0, repaired 0
+[M1] correct layers: []; delta>0 layers: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17']
+[M3] layer 2, 0s; correct heads: []
+[M3] layer 17, 1s; correct heads: []
+[M4-M6] five=neither random5=['neither', 'neither', 'neither'] h22_five=neither reverse_five=neither
+[decisions] {'S': False, 'delta_testable': False, 'delta_baseline_chat': 11.118171691894531, 'M1_correct_layers': [], 'M1_delta_pos_layers': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], 'M1a_no_layer_repairs_gen': True, 'M1b_four_of_five_delta': 'untestable', 'M2_L2_gen': {'a_even16': False, 'b_no_odd': True, 'c_noH22_gt_odd': False, 'verdict': 'not supported', 'rates': {'even_k

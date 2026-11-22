@@ -1,8 +1,10 @@
 # R15 — Testing the Mistral-7B head claims with true per-head, prompt-only patching
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute)
+**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review round 1)
+**Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design.md
 **Script:** `9_8_research/reviewer_experiments/exp_R15_mistral_true_heads/run_experiment.py` (imports R14's
-patching code; both sha256 recorded)
+patching code; the job refuses to start unless R14's sha256 equals `R14_EXPECTED_SHA256`, computed at submit
+time from the committed file). All decision rules are computed in the script (`decide`) into `run.json`.
 **Job:** `run.sbatch` (same folder), `a100_tandon`.
 **Decision:** Gus, 2026-11-22: "the nam result can we run that ourselves after downloading the model?"
 
@@ -33,8 +35,10 @@ Claims under test (draft wording, abridged):
 
 ## Setup
 
-- `mistralai/Mistral-7B-Instruct-v0.2` (snapshot 63a8b081…), bf16 (native), A100 (`a100_tandon`),
-  greedy, **40** new tokens (the instruct model often answers in a full sentence). 32 layers, 32 query heads,
+- `mistralai/Mistral-7B-Instruct-v0.2`, loaded **by snapshot 63a8b081…** (the job refuses another), bf16
+  (native), A100 (`a100_tandon`), greedy, **64** new tokens (the instruct model often reasons before
+  answering); every output records `hit_max_new` and `says_less` ("is less/smaller/lower", which the
+  classifier counts as *neither*). 32 layers, 32 query heads,
   8 KV heads (GQA groups 4g..4g+3), head_dim 128, `o_proj` without bias.
 - Patching: R14's `Patcher` (true heads = `o_proj` input via forward-pre-hook; prompt pass only; right
   alignment, position 0 never patched). Multi-layer configs register one pre-hook per layer, each with its
@@ -44,18 +48,25 @@ Claims under test (draft wording, abridged):
   *comparative* = `Compare 9.8 and 9.11. Which is larger?`; *qa* = `Q: Which is bigger: 9.8 or 9.11?\nA:`;
   *simple* = `Which is bigger: 9.8 or 9.11?\nAnswer:`.
 - **Pair rule:** recipient = chat if *bug* (the draft's target format); donor = simple if *correct*, else qa
-  if *correct*. No pair → stop: "no format-dependent bug in chat on our formats; M1–M6 have nothing to
+  if *correct*. Aligned token pairs are recorded. simple (20 tokens) → chat (23) right-aligned is exactly
+  token-aligned on the question; a qa donor is one position off throughout and is reported as
+  "off-by-one aligned".
+- **Descriptive screen:** comparative, qa and simple wordings inside the chat template (separates template
+  from wording). The chat-template token ids from the string path and from `tokenize=True` are recorded. No pair → stop: "no format-dependent bug in chat on our formats; M1–M6 have nothing to
   repair". M7's screen still runs.
-- **Secondary metric Δ** (continuous, descriptive): teacher-forced log P(` 9.8`) − log P(` 9.11`) as the
-  first words of the reply, with the same prompt-only patch. Reported next to every generation outcome.
+- **Δ** = teacher-forced log P(` 9.8`) − log P(` 9.11`) as the reply's first words, with the same prompt-only
+  patch (continuation positions unpatched). Mistral tokenizes ` 9.8` as `▁ 9 . 8`, so Δ compares `8`
+  against `1 1` after `▁9.`. **Δ readings are testable only if chat's unpatched Δ ≤ 0** (the draft has
+  −1.19); otherwise every Δ "fix" is vacuous and those readings are "untestable". Δ is None when the
+  continuation does not extend the prompt's tokens; the not-None rate is reported.
 
 | Cell | Configs | Tests |
 |---|---|---|
 | screen | 4 formats, unpatched | S |
 | layer sweep | all 32 heads at each layer (32) | M1 |
 | single heads | each head at each layer (1,024) | M3 |
-| parity | layers 2 and 17 × {even-only, odd-only, mixed} × k ∈ {4, 8, 12, 16} × up to 20 distinct seeded subsets (fewer when fewer exist: one even-only and one odd-only set at k = 16) | M2 |
-| multi-layer | all heads at {2, 10, 11, 13, 17}; H22 at {2, 10, 11, 13, 17}; H22 at all 32 layers | M4, M5 |
+| parity | layers 2 and 17 × {even-only, odd-only, mixed (both parities present)} × k ∈ {4, 8, 12, 16} × up to 20 distinct seeded subsets (one even-only and one odd-only set at k = 16), plus even-only subsets **without H22** at k = 4, 8, 12 (20 each): 262 per layer | M2 |
+| multi-layer | all heads at {2, 10, 11, 13, 17}; 10 seeded random 5-layer sets (all heads); **each head h** at {2, 10, 11, 13, 17} and at all 32 layers (64) | M4, M5 |
 | reverse | chat activations into the simple prompt (all heads): each of the five layers, and all five together | M6 |
 | generalization | 100 seeded X.D vs X.DD pairs (shorter larger, X ∈ 1..9) × 4 formats; on each pair with chat *bug* and simple *correct*, the five-layer transplant | M7 |
 
@@ -69,18 +80,24 @@ Claims under test (draft wording, abridged):
 
 ## Pre-registered decision rules (all on generation outcomes)
 
-- **S holds:** chat *bug*, comparative *bug*, qa not *bug*, simple not *bug*.
-- **M1:** reported as the set of layers whose all-heads patch is *correct*. "Five layers fix individually"
-  holds if at least 4 of {2, 10, 11, 13, 17} are *correct*; "no single layer fully repairs" holds if none is.
-  (Under generation these exclude each other; the draft may have meant Δ. Both are reported with Δ.)
-- **M2 holds at layer ℓ** if (a) the even-only k = 16 set is *correct*, (b) no odd-only subset at any k is
-  *correct*, and (c) more even-only than odd-only subsets are *correct* (equal numbers tested per k).
-  "≈10 even heads for > 50%": reported as the even-only correct rate at each k.
-- **M3 holds** if at both ℓ = 2 and 17, H22 is *correct* and no other single head is.
-- **M4 holds** if H22 at {2, 10, 11, 13, 17} or H22 at all 32 layers is *correct* (the draft's 7 layers are
-  not named).
-- **M5 holds** if the five-layer all-heads transplant is *correct*.
-- **M6 holds** if M5 holds and the five-layer reverse transplant leaves simple not *bug*.
+Generation reading: success = *correct*. Δ reading (only when testable): success = Δ > 0.
+- **S holds:** chat *bug*, comparative *bug*, qa and simple not *bug*, and at least one of them *correct*.
+- **M1a** ("no single layer fully repairs", generation): no layer's all-heads patch is *correct*.
+  **M1b** ("five layers fix individually", Δ): at least 4 of {2, 10, 11, 13, 17} have Δ > 0.
+- **M2 at ℓ ∈ {2, 17}**, generation and Δ readings: (a) the even-only k = 16 set succeeds; (b) no odd-only
+  subset succeeds; (c) **even-only subsets without H22 succeed more often than odd-only subsets** (60 vs 60,
+  k = 4, 8, 12). Verdict: all three → "parity holds"; (a) and (b) only → "even-only repair carried by H22";
+  else "not supported". (H22 is even, so without (c) H22 alone would pass M2; review fix 1.) Every rate is
+  reported split by H22 ∈ S; "≈10 even heads for > 50%" is read from the even-only rate by k.
+- **M3** (generation): at both ℓ = 2 and 17, H22 is *correct* and no other single head is.
+  **M3b** (Δ): H22 has the largest Σ_ℓ (Δ_patched − Δ_unpatched) over the 32 × 32 single-head sweep; the
+  draft's top five (H22, H29, H31, H10, H21) are ranked too.
+- **M4** (generation): H22 at {2, 10, 11, 13, 17} or at all 32 layers is *correct* (the draft's 7 layers are
+  not named). **"H22 special"**: M4 holds and at most 4 of the 32 heads succeed in each of the two configs.
+- **M5** (generation): the five-layer all-heads transplant is *correct*; the 10 random 5-layer sets are
+  reported as the count-matched control.
+- **M6**: M5 holds and the five-layer reverse transplant leaves simple *correct* (not merely "not bug";
+  *neither* is reported separately), with its Δ.
 - **M7:** error counts per format reported against the draft's (2, 19, 0, 0)/100; "repair transfers" holds
   if the five-layer transplant is *correct* on every eligible pair (and there is at least one).
 - **Descriptive only:** Δ for every config; per-head counts across layers; GQA-group breakdown of correct
@@ -88,13 +105,17 @@ Claims under test (draft wording, abridged):
 
 ## Compute estimate
 
-≈ 32 + 1,024 + ~470 + 3 + 6 + 400 + ≤100 ≈ 2,050 generations × ~1.2 s (40 tokens, 7B, A100) ≈ 0.7 h, plus Δ
-forward passes (cheap). Walltime 3 h.
+≈ 7 screen + 6 gates + 1 sanity + 32 + 1,024 + 524 + 1 + 10 + 64 + 6 + 400 + ≤100 ≈ 2,180 generations ×
+~2 s (64 tokens, 7B, A100) ≈ 1.2 h, plus 2 Δ forward passes per patched config (cheap). Walltime 5 h.
 
 ## Limitations known before the run
 
 - Prompts, Δ definition and the "7 layers" are not the draft's; a mismatch with the draft can come from
   these alone. The write-up says "tested", not "reproduced".
+- The draft describes an "attention pattern" / "z-pattern" transplant. This run patches z (the `o_proj`
+  input). A softmax-pattern transplant across prompts of different lengths is a different intervention.
+- GQA groups 4g..4g+3 each hold two even and two odd heads, so parity cannot be a disguised KV-group effect;
+  it is the within-group slot {0, 2} vs {1, 3}.
 - One canonical pair for M1–M6.
 - The draft's "n = 20 per condition" and "n = 1000 per format" were repeats of greedy runs or unknown
   sampling; here every configuration runs once and n counts distinct subsets or pairs.
