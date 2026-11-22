@@ -4665,3 +4665,6 @@ L40S job 24104901 ran all 10 cells (1 h 48 min, gl044) and exited 2: inject exac
 
 ### 2026-11-22 — R16 verified: position 0 does not explain the GPU gap
 Verifier: VERIFIED-WITH-FLAGS (docs/reviews/11-22_llama8b_position0_gpu_gap_verify.md); all numbers recomputed and matched. keep0 (A100) verdict "perturbs, does not explain" in both cells: R8 prefill 119 vs copy 120 vs L40S 83. Inject labels not interpreted (gate failed on 4/1,466 coordinates). Placebo invalid on both GPUs (15% of step mass unplaced), so the boundary-fragility comparison is raw only. donorA100 on L40S leaves R8 at 86 (descriptive): the gap comes from the receiving run's arithmetic. Different A100 card than R13 on ga004; copy still exact.
+
+### 2026-11-22 — Gus decisions on INBOX 1 and 2
+Legacy files stay grandfathered; re-review any that v2 cites. R14 Pythia gate upheld: Pythia and Gemma head-level claims (incl. late emergence) dropped from v2. All four models stay in v2, one row each in the cross-model table: Llama (R13 null), Mistral (layer-7 layer repair, no head/subset repair), Pythia (failed reproduction), Gemma (no format-dependent error to repair). Archived to docs/inbox_archive.md; BACKLOG updated.
