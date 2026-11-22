@@ -4,6 +4,7 @@
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v2.md
 **Design review:** round 3 FIXES NEEDED (1 small) — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v3.md
+**Design review:** PASS (round 4) — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v4.md
 **Script:** `9_8_research/reviewer_experiments/exp_R15_mistral_true_heads/run_experiment.py` (imports R14's
 patching code; the job refuses to start unless R14's and R15's sha256 equal `R14_EXPECTED_SHA256` and
 `R15_EXPECTED_SHA256`, computed at submit time from the committed files). `decide()` has its own synthetic
@@ -40,7 +41,7 @@ Claims under test (draft wording, abridged):
 
 - `mistralai/Mistral-7B-Instruct-v0.2`, loaded **by snapshot 63a8b081…** (the job refuses another), bf16
   (native), A100 (`a100_tandon`), greedy, **64** new tokens (the instruct model often reasons before
-  answering); every output records `hit_max_new` and `says_less` ("is less/smaller/lower", which the
+  answering); every classified output records `hit_max_new` and `says_less` ("is less/smaller/lower", which the
   classifier counts as *neither*). 32 layers, 32 query heads,
   8 KV heads (GQA groups 4g..4g+3), head_dim 128, `o_proj` without bias.
 - Patching: R14's `Patcher` (true heads = `o_proj` input via forward-pre-hook; prompt pass only; right
@@ -98,7 +99,7 @@ Generation reading: success = *correct*. Δ reading (only when testable): succes
   subsets containing H22 (k ≤ 12) beat the without-H22 subsets at Fisher p < 0.05, or H22 alone succeeds at ℓ.
   Verdict, first match: (a)(b)(c) → "parity holds"; (a)(b) and H22's role shown → "even-only repair carried
   by H22"; (a)(b) → "even-only k = 16 repairs; H22's role not shown"; else "not supported". Every rate is
-  reported; every even-only rate is also split by H22 ∈ S. "≈10 even heads for > 50%" is read from the **without-H22** rates (k = 4, 8, 12;
+  reported; even-only rates are also split by H22 ∈ S (pooled over k; per-k splits are computable from the saved heads). "≈10 even heads for > 50%" is read from the **without-H22** rates (k = 4, 8, 12;
   k = 16 cannot be tested without H22).
 - **M3** (generation): at both ℓ = 2 and 17, H22 is *correct* and no other single head is.
   **M3b** (Δ): H22 has the largest Σ_ℓ (Δ_patched − Δ_unpatched) over the 32 × 32 single-head sweep; the
