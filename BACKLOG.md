@@ -12,7 +12,6 @@ Claude's queue. Top = next. Add, reorder, and close freely.
       left on during generate: negative-result map (diff-of-means 17 conditions, SAE swap, concept-neuron
       ablation incl. Pythia −65pp, steering vectors, full-layer transplant); paraphrase sweep (R2) and
       70 decimal pairs (R4); GPT-2 logit evaluation (R12); appendix SAE/neuron/ACDC sections
-- [ ] v2 draft fixes found in R13 design review: `02_study.tex` l.58 says hooks use nnsight (scripts
-      use HF hooks); l.152 says "+70.0pp on every pair" (R1: 21/30 pairs at +100pp, 9 at 0)
+- [x] v2 nnsight / +70pp fixes: both passages removed in the rewrite
 - [ ] Build docs/reports/ (index, RQ page, R13 evidence page) and get it fact-checked
 - [ ] Rebuild arXiv tarball and draft the reply to the reader (Even Heads part)
