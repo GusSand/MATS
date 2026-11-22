@@ -23,5 +23,5 @@ export R13_MODEL="${HF_HOME}/hub/models--meta-llama--Meta-Llama-3.1-8B-Instruct/
 : "${R16_GIT_SHA:?set R16_GIT_SHA}"
 source "${SCRATCH}/MATS/env/bin/activate"
 nvidia-smi --query-gpu=name,uuid,driver_version --format=csv
-: "${R16_DELTA:?set R16_DELTA to the A100 job's position0.pt}"
+: "${R16_DELTA:?set R16_DELTA to the A100 position0.pt}"
 python -I run_experiment.py --gpu l40s --delta "${R16_DELTA}" --out "${SCRATCH}/MATS/results/r16_l40s_${SLURM_JOB_ID}"
