@@ -1,6 +1,6 @@
 # R14 — True per-head patching in Pythia-160M and Gemma-2B (9.8 vs 9.11)
 
-**Status:** SUBMITTED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–4)
+**Status:** RAN; Pythia BLOCKED on reproduction gate (7/10), INBOX 2 (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–4)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v2.md
 **Design review:** round 3 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v3.md
@@ -197,4 +197,35 @@ Total ≈ 0.7 GPU-h; walltime 3 h on `a100_tandon`.
 
 ## Results
 
-(none yet)
+Job 24092087 (A100 ga014, commit 2504146, script sha256 20819e06…), raw outputs in
+`results/r14_24092087/`. Verified from raw text by a fresh subagent: VERIFIED-WITH-FLAGS, with no
+arithmetic discrepancies (docs/reviews/11-22_pythia_gemma_true_head_patching_verify.md).
+
+**Pythia-160M: reproduction gate failed (7/10; 7/9 distinct configs). Not interpreted until INBOX 2.**
+- September's `all_even` and `second_half_even` repairs (L6) do not reproduce under the old protocol. Both
+  now answer 9.11. The base model's screen outputs do reproduce, so the patched runs diverge.
+- Raw outcomes, not interpreted:
+  - pair F3 → F2 (the canonical `Q:/A:` recipient);
+  - the L6 all-heads true-head patch is not correct in either alignment;
+  - the fallback L0 cell repairs with all heads; all-odd is correct and all-even is not; even-only 29 vs
+    odd-only 48; no necessary heads.
+- Verifier flag: the L0 "correct" outputs, and the L0/L2 layer-sweep hits, are multiple-choice listings
+  (" 9.8\nB: 9.11\nC: 9.8…"). The answer-line rule does not cut invented A:/B: turns. Under strict scoring
+  the fallback would not have been triggered.
+- Dynamics:
+  - phenomenon present at 80k–143k;
+  - step143000 equals the main run on all 4,095 outputs;
+  - late-training verdict: "untestable: all-heads patch does not repair at step143000";
+  - the old-protocol reproduction of the training run is 9/11, and both misses are the two late checkpoints
+    (120k, 143k) the draft's claim rests on.
+
+**Gemma-2B (base): no phenomenon.** No format answers correctly (F2, F3 and F6 bug; the others give no
+answer), so the corrected cells were not run (pre-registered). The reproduction gate passes 15/15, so the
+draft's "parity-independent" result reproduces, but it came from a donor that gives no answer, under bugs A
+and B.
+
+**Gemma-2B-IT: no phenomenon, once a classifier mislabel is corrected.** It answers 9.8 on F1–F4, F6 and F7.
+Its one "bug", F5 "Sure, here's the difference between 9.11 and 9.99", makes no comparison claim. The
+mechanical rule took it as the recipient, and the resulting cells (0/255 correct at L8 in both alignments, no
+layer repairs) patch toward a non-bug. They are not reported as a failed repair.
+

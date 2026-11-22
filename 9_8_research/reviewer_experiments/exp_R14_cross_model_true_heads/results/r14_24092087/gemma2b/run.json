@@ -1,0 +1,381 @@
+{
+ "provenance": {
+  "hostname": "ga014.hpc.nyu.edu",
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "transformers": "5.15.1",
+  "slurm_job": "24092087",
+  "git_sha": "2504146",
+  "script_sha256": "20819e0620464ec3b97407a897c71c48f23e26a672646c4b2e09bed92bc20fc2",
+  "repo": "google/gemma-2b",
+  "revision": "main",
+  "commit": "9cf48e52b224239de00d483ec8eb84fb8d0f3a3a",
+  "attn_implementation": "sdpa",
+  "n_heads": 8,
+  "head_dim": 256,
+  "n_layers": 18,
+  "tokenizer_adds_bos": true,
+  "dtype": "torch.float16",
+  "command": "run_experiment.py --model gemma2b --out /scratch/gs157/MATS/results/r14_24092087/gemma2b",
+  "model_key": "gemma2b",
+  "gpu": "NVIDIA A100-SXM4-80GB, GPU-c4dfba88-5a6c-d39f-b76e-ce70fc1b60db, 610.43.02"
+ },
+ "started": "2026-11-22T11:24:50.969456",
+ "screen": {
+  "F1": {
+   "prompt": "Which is bigger: 9.8 or 9.11?",
+   "output": "\n\nAnswer:\n\nStep 1/2\nFirst, we need to compare the whole numbers.",
+   "class": "neither",
+   "orig_fixed": false,
+   "td_fixed": false,
+   "n_tokens": 16
+  },
+  "F2": {
+   "prompt": "Q: Which is bigger: 9.8 or 9.11?\nA:",
+   "output": " 9.11\n\nQ: Which is bigger: 1.2 or 1.",
+   "class": "bug",
+   "orig_fixed": false,
+   "td_fixed": false,
+   "n_tokens": 21
+  },
+  "F3": {
+   "prompt": "Which is bigger: 9.8 or 9.11?\nAnswer:",
+   "output": " 9.11\n\nWhich is bigger: 9.8 or 9.11",
+   "class": "bug",
+   "orig_fixed": true,
+   "td_fixed": false,
+   "n_tokens": 19
+  },
+  "F4": {
+   "prompt": "Compare 9.8 and 9.11. Which is larger?",
+   "output": "\n\nStep 1\n1 of 2\n\nCompare the two numbers.\n\n$\\begin{align",
+   "class": "neither",
+   "orig_fixed": false,
+   "td_fixed": false,
+   "n_tokens": 17
+  },
+  "F5": {
+   "prompt": "9.8 vs 9.11 - which is greater?",
+   "output": "\n\nAnswer:\n\nStep 1/2\nFirst, we need to compare the two numbers.",
+   "class": "neither",
+   "orig_fixed": false,
+   "td_fixed": false,
+   "n_tokens": 15
+  },
+  "F6": {
+   "prompt": "Between 9.8 and 9.11, which is greater?",
+   "output": "\n\nStep 1\n1 of 2\n\nThe greater number is 9.11.",
+   "class": "bug",
+   "orig_fixed": false,
+   "td_fixed": false,
+   "n_tokens": 17
+  }
+ },
+ "pair": {
+  "donor": null,
+  "recipient": "F2"
+ },
+ "orig_cell": {
+  "all_even_4": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 8,
+   "output": " 9.8\n\nQ: Which is bigger: 10.1 or 9.",
+   "orig_fixed": true,
+   "class": "correct",
+   "ref": true
+  },
+  "all_odd_4": {
+   "heads": [
+    1,
+    3,
+    5,
+    7
+   ],
+   "layer": 8,
+   "output": " 9.8\n\nQ: Which is bigger: 9.8 or 9.1",
+   "orig_fixed": true,
+   "class": "correct",
+   "ref": true
+  },
+  "even_2": {
+   "heads": [
+    0,
+    2
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 10.1 or 1",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "even_3": {
+   "heads": [
+    0,
+    2,
+    4
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 10.2 or 1",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "mixed_4": {
+   "heads": [
+    0,
+    1,
+    4,
+    5
+   ],
+   "layer": 8,
+   "output": " 9.8\n\nQ: Which is bigger: 9.8 or 9.1",
+   "orig_fixed": true,
+   "class": "correct",
+   "ref": true
+  },
+  "sweep_L8": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 8,
+   "output": " 9.8\n\nQ: Which is bigger: 10.1 or 9.",
+   "orig_fixed": true,
+   "class": "correct",
+   "ref": true
+  },
+  "sweep_L9": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 9,
+   "output": " 9.11\n\nQ: What is the value of the 10th term in",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "sweep_L10": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 10,
+   "output": " 9.8\n\nQ: Which is bigger: 9.8 or 9.1",
+   "orig_fixed": true,
+   "class": "correct",
+   "ref": true
+  },
+  "sweep_L11": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 11,
+   "output": " 9.11\n\nQ: Which is bigger: 10.1 or 1",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "sweep_L12": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 12,
+   "output": " 9.11\n\nQ: Which is bigger: 1.2 or 1.",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "sweep_L13": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 13,
+   "output": " 9.11\n\nQ: Which is bigger: 1.2 or 1.",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "sweep_L14": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 14,
+   "output": " 9.11\n\nQ: What is the difference between 9.11 and ",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "sweep_L15": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 15,
+   "output": " 9.11\n\nQ: Which is bigger: 1.2 or 1.",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "sweep_L16": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 16,
+   "output": " 9.11\n\nQ: Which is bigger: 1.2 or 1.",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "sweep_L17": {
+   "heads": [
+    0,
+    2,
+    4,
+    6
+   ],
+   "layer": 17,
+   "output": " 9.11\n\nQ: Which is bigger: 12.3456",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": false
+  },
+  "x_all": {
+   "heads": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "layer": 8,
+   "output": " 9.8\n\nQ: Which is bigger: 9.8 or 9.1",
+   "orig_fixed": true,
+   "class": "correct",
+   "ref": null
+  },
+  "x_single_0": {
+   "heads": [
+    0
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 10.2 or 1",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": null
+  },
+  "x_single_1": {
+   "heads": [
+    1
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 9.8 or 9.",
+   "orig_fixed": true,
+   "class": "bug",
+   "ref": null
+  },
+  "x_single_2": {
+   "heads": [
+    2
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 1.2 or 1.",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": null
+  },
+  "x_single_3": {
+   "heads": [
+    3
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 9.8 or 9.",
+   "orig_fixed": true,
+   "class": "bug",
+   "ref": null
+  },
+  "x_single_4": {
+   "heads": [
+    4
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 1.2 or 1.",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": null
+  },
+  "x_single_5": {
+   "heads": [
+    5
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 9.8 or 9.",
+   "orig_fixed": true,
+   "class": "bug",
+   "ref": null
+  },
+  "x_single_6": {
+   "heads": [
+    6
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 1.2 or 1.",
+   "orig_fixed": false,
+   "class": "bug",
+   "ref": null
+  },
+  "x_single_7": {
+   "heads": [
+    7
+   ],
+   "layer": 8,
+   "output": " 9.11\n\nQ: Which is bigger: 9.8 or 9.",
+   "orig_fixed": true,
+   "class": "bug",
+   "ref": null
+  }
+ },
+ "reproduction_gate": {
+  "n_ref": 15,
+  "agree": 15,
+  "disagree": [],
+  "must": {
+   "all_even_4": true,
+   "all_odd_4": true
+  },
+  "ok": true
+ },
+ "verdict_input": "no_phenomenon",
+ "finished": "2026-11-22T11:25:02.669727"
+}

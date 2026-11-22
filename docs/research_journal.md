@@ -4593,10 +4593,18 @@ late-heads alternatives under noise. Pythia checkpoints 120k and 143k get full s
 Design review: five rounds, PASS. docs/experiments/11-22_pythia_gemma_true_head_patching.md
 
 ### Jobs
-- 24092087 — `run.sbatch`, a100_tandon, commit 2504146, script sha256 20819e06… — PENDING.
+- 24092087 — `run.sbatch`, a100_tandon, commit 2504146, script sha256 20819e06… — COMPLETED in 56 min (ga014).
 
 ### Results (no interpretation)
-None yet.
+- Verified by a fresh subagent: VERIFIED-WITH-FLAGS, with no arithmetic discrepancies.
+  docs/reviews/11-22_pythia_gemma_true_head_patching_verify.md
+- Pythia reproduction gate fails, 7/10, so Pythia is not interpreted (INBOX 2). The L6 true-head all-heads
+  patch does not repair. The fallback L0 cell repairs, but via ambiguous listing outputs.
+  step143000 = main run (4,095/4,095). Late-training verdict "untestable". The old-protocol dynamics replay is
+  9/11, missing at 120k and 143k.
+- Gemma-2B base: no format answers correctly, so no phenomenon. The reproduction gate passes 15/15.
+- Gemma-2B-IT: answers 9.8 on 6 of 7 formats. The seventh is a classifier mislabel ("the difference between
+  9.11 and 9.99"), so no phenomenon.
 
 ## 2026-11-22: R15 Mistral-7B head claims, tested with true per-head patching (submitted)
 
