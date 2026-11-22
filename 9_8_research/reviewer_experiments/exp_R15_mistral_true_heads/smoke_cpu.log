@@ -1,0 +1,16 @@
+# CPU smoke, 2026-11-22T15:37:09Z, random tiny Mistral (18 layers, 32 q / 8 kv heads, head_dim 4, hidden 64), Llama test tokenizer + toy [INST] template; mechanics only
+# command: R15_GIT_SHA=smoke python -I run_experiment.py --repo <scratch>/tinymistral --limit --force-pair simple,chat --out <tmp>
+selftest OK: classifier (18 cases), summarize, rules (7 synthetic truths), late-training verdict (6 cases)
+[screen] chat (23 tok) neither delta=11.118171691894531: 'Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo'
+[screen] comparative (18 tok) neither delta=11.078861236572266: 'że że że że że że że że żeUNCTION upp że że żeUNCTION upp upp że że że że że że żeUNCTION upp upp upp upp upp upp upp upp upp upp upp upp upp upp upp'
+[screen] qa (21 tok) neither delta=11.07455825805664: 'kon Museo kon Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo'
+[screen] simple (19 tok) neither delta=11.177104949951172: 'שUNCTION Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museo Museokh Museokh Museokh Museokh Museokh Museo'
+[pair] simple -> chat
+[gate] head isolation {'head': 1, 'changed_heads': [1], 'ok': True}
+[gate] identity=True determinism=True shapes=True
+[sanity] all layers all heads: neither
+[M1] correct layers: []
+[M3] layer 2 done, 0s; correct heads: []
+[M3] layer 17 done, 0s; correct heads: []
+[M4-M6] five=neither h22_five=neither h22_all=neither reverse_five=neither
+[M7] bug counts {'chat': 0, 'comparative': 0, 'qa': 0, 'simple': 0} of 3; eligible 0, repaired 0
