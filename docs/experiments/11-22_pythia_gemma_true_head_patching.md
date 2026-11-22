@@ -1,10 +1,13 @@
 # R14 — True per-head patching in Pythia-160M and Gemma-2B (9.8 vs 9.11)
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1 and 2)
+**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–3)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v2.md
+**Design review:** round 3 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v3.md
 **Script:** `9_8_research/reviewer_experiments/exp_R14_cross_model_true_heads/run_experiment.py`
-**Job:** `run.sbatch` (same folder). One job, one GPU, all models sequentially.
+**Job:** `run.sbatch` (same folder). One job, one GPU, all models sequentially, on **`a100_tandon`**: the
+September 2025 runs name A100-SXM4-80GB, and R13 showed L40S vs A100 flips borderline outcomes (R8
+reproduced 942/1,000 on L40S, 1,000/1,000 on A100).
 **Decision:** Gus, 2026-11-22: "rerun" (INBOX 2, archived). Audit behind it:
 `docs/reviews/11-22_cross_model_head_scripts_audit.md`.
 
@@ -124,31 +127,41 @@ problems found while designing this:
   (c) more even-only subsets correct than odd-only subsets (63 each);
   (d) **split specificity:** for each of the 462 balanced bipartitions (A, B) of the 12 heads,
   D = #correct subsets inside A − #correct inside B. The even/odd split must have D > 0 (even side),
-  |D| strictly greater than the contiguous split {0–5}|{6–11}, and rank in the top 5% of |D| with ties
-  counted against it. (a)–(c) alone pass when one even head carries the repair (review round 1, fix 1).
-  Verdict wording (`parity_verdict`), given repair:
-  - all four hold → "parity holds", qualified "with heads X necessary" when the necessary heads (the
-    intersection of all minimal sufficient sets) are non-empty and are not the full even set;
-  - (a)–(c) fail → "parity not supported";
-  - (a)–(c) hold, (d) fails, and |D(even/odd)| ≤ 3 → "inconclusive: parity evidence rests on 3 or fewer
-    subsets" (a true "all six even needed" effect has D = 1, so a few stray outputs sink (d));
-  - (a)–(c) hold, (d) fails, and some split strictly beats even/odd, or a minimal set contains an odd head,
-    or the necessary heads are a non-empty proper part of the even set → "even-only subsets repair, but the
-    effect is carried by specific heads, not by parity";
-  - otherwise → "inconclusive: the even/odd split ties with other splits".
+  |D| strictly greater than the contiguous split {0–5}|{6–11}, rank in the top 5% of |D| with ties
+  counted against it, **and no split may have a larger |D|** (round 3: without this clause, output noise
+  let the "late even heads {6, 8, 10}" alternative pass 7–15 times in 40). (a)–(c) alone pass when one even head carries the repair (review round 1, fix 1).
+  Verdict wording (`parity_verdict`): **the first matching rule, in this order**:
+  1. all-heads patch not correct → "repair fails at this layer; head rules not interpreted";
+  2. all four hold → "parity holds", qualified "with heads X necessary" when the necessary heads (the
+     intersection of all minimal sufficient sets) are non-empty and are not the full even set;
+  3. any of (a)–(c) fails → "parity not supported";
+  4. |D(even/odd)| ≤ 3 → "inconclusive: parity evidence rests on 3 or fewer subsets" (a true "all six even
+     needed" effect has D = 1, so a few stray outputs sink (d));
+  5. the necessary heads are a non-empty proper part of the even set → "even-only subsets repair, but the
+     effect is carried by specific heads (X), not by parity";
+  6. otherwise → "even-only subsets repair, but parity is not uniquely the most specific split (top split
+     …)", a descriptive statement with no mechanism claim (round 3: output noise made a stronger wording
+     fire on true parity).
+  For Gemma this wording is stored only as a descriptive field; Gemma's rule is the one below.
   Minimal sufficient sets, necessary heads and the top 5 splits are reported.
   Pre-compute history: a ≥ 0.20 even-majority vs odd-majority gap was dropped (a pure "all six even heads"
-  effect scores 0.04 on it); `--selftest` asserts the rule on seven synthetic truths, including head 8
-  alone (fails), {6, 8, 10} needed (fails), all six even needed (holds), any two even (holds).
+  effect scores 0.04 on it). `--selftest` asserts the rule on eight synthetic truths, including head 8
+  alone (fails), {6, 8, 10} needed (fails), all six even needed (holds), any two even (holds), and a
+  seeded noise test: with 1% of outputs flipped, {6, 8, 10} may pass in at most 2 of 40 seeds (observed 1)
+  and "≥ 3 even heads" must pass in at least 36 of 40 (observed 40).
 - **Gemma parity-independence holds:** even-4 and odd-4 both correct. The split rank (d) over Gemma's 35
   bipartitions is reported as descriptive (top 5% of 35 means a unique maximum).
 - **Pythia late-training claim** ("parity appears only in the final 15%"), computed by
   `late_training_verdict`:
   - step143000 has no phenomenon / gate failure / error → "untestable".
   - parity fails at step143000 → "not supported".
-  - Given parity at step143000, step120000: (i) no correct/bug pair → "untestable"; (ii) pair present,
-    all-heads patch does not repair → "repair itself appears late; parity emergence not separable";
-    (iii) repair present, parity fails → "supported"; (iv) parity holds → "refuted".
+  - Given parity at step143000, step120000: error → "untestable"; no correct/bug pair → "untestable";
+    gates failed → "untestable"; pair present but the all-heads patch does not repair → "repair itself
+    appears late; parity emergence not separable"; repair present, parity fails → "supported"; parity
+    holds → "refuted".
+  - If step143000's outputs differ from the main run, every verdict carries "(not interpreted:
+    step143000 differs from the main run; INBOX)". The six screen outputs are also compared with the main
+    run's, always, as `screen_matches_main_run`.
   Earlier checkpoints are descriptive.
 - **Descriptive only:** three-way class counts by size, the even-majority vs odd-majority rate gap, single heads, count of correct subsets by size, layer sweep, per-checkpoint counts.
 
@@ -156,10 +169,12 @@ problems found while designing this:
 
 Pythia: up to 3 × 4,095 generations (right, left, fallback) at ~0.1 s, plus checkpoints (11 × ~40, and
 2 × 4,095 at step120000/143000). Gemma: 2 models × (3 × 255 + ~40 + 18) at ~0.3 s.
-Total ≈ 0.7 GPU-h; walltime 3 h on `l40s_public`.
+Total ≈ 0.7 GPU-h; walltime 3 h on `a100_tandon`.
 
 ## Limitations known before the run
 
+- Rule (d)'s "no split scores higher" clause costs power under heavy per-subset noise (graded parity
+  70/10/40 passed 1 of 23 repairing seeds in the round-3 simulation). Such a result lands in verdict 6.
 - Rules (a) and (b) each rest on one output (all-even, all-odd). In simulation a noisy parity effect passes
   (d) far more often than (a). Size-wise class counts are reported next to them.
 - If the screen pair is F3 → F1 (Pythia's fp32 CPU smoke gave this), the result concerns F1, not the

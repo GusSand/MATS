@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=r14_xmodel
 #SBATCH --account=torch_pr_173_tandon_advanced
-#SBATCH --partition=l40s_public
+#SBATCH --partition=a100_tandon
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G

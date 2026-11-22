@@ -256,17 +256,20 @@ def rules(s, family):
     r["parity_b_all_odd_not"] = not s["all_odd"]
     r["parity_c_even_only_gt_odd_only"] = s["even_only_correct"] > s["odd_only_correct"]
     r["parity_d_split_specific"] = (b["D_even_minus_odd"] > 0 and abs(b["D_even_minus_odd"]) > b["D_contiguous"]
-                                    and b["frac_splits_D_ge_parity"] <= 0.05)
+                                    and b["frac_splits_D_ge_parity"] <= 0.05
+                                    and b["max_D"] == abs(b["D_even_minus_odd"]))   # no split scores higher
     r["parity_holds"] = all(r[k] for k in ("parity_a_all_even", "parity_b_all_odd_not",
                                            "parity_c_even_only_gt_odd_only", "parity_d_split_specific"))
     if family == "gemma":
         r["gemma_parity_independent"] = bool(s["all_even"]) and bool(s["all_odd"])
-    r["verdict"] = parity_verdict(s, r)
+        r["pythia_style_parity_descriptive"] = parity_verdict(s, r)   # Gemma's rule is the one above
+    else:
+        r["verdict"] = parity_verdict(s, r)
     return r
 
 
 def parity_verdict(s, r):
-    """Pre-registered wording for the parity outcome (review rounds 1-2)."""
+    """Pre-registered wording for the parity outcome. First matching branch, in this order."""
     b, nec = s["bipartition"], s["necessary_heads"]
     even_set = {h for h in range(int(max(s["class_by_size"], key=int))) if h % 2 == 0}
     if not r["repair"]:
@@ -276,12 +279,13 @@ def parity_verdict(s, r):
     abc = r["parity_a_all_even"] and r["parity_b_all_odd_not"] and r["parity_c_even_only_gt_odd_only"]
     if not abc:
         return "parity not supported"
-    minimal_even_only = all(set(m) <= even_set for m in s["minimal_sufficient_sets"])
     if abs(b["D_even_minus_odd"]) <= 3:
         return "inconclusive: parity evidence rests on 3 or fewer subsets"
-    if b["max_D"] > abs(b["D_even_minus_odd"]) or not minimal_even_only or (nec and set(nec) != even_set):
-        return "even-only subsets repair, but the effect is carried by specific heads, not by parity"
-    return "inconclusive: the even/odd split ties with other splits"
+    if nec and set(nec) < even_set:
+        return f"even-only subsets repair, but the effect is carried by specific heads ({nec}), not by parity"
+    top = b["top5"][0]
+    return (f"even-only subsets repair, but parity is not uniquely the most specific split "
+            f"(top split {top[1]} with |D| = {top[0]} vs even/odd {abs(b['D_even_minus_odd'])})")
 
 
 # ---------------------------------------------------------------- model code (imports torch lazily)
@@ -549,6 +553,7 @@ def subset_cell(p, run, out_dir, tag, dp, rp, L, align, family, limit, save):
         sys.exit(f"FATAL: [{tag}] gate failed (pre-registered stop)")
     path = os.path.join(out_dir, f"results_{tag}.json")
     done = run_subsets(p, saved, rp, L, align, tag, path, limit)
+    dump({"tag": tag, "partial": False, "configs": done}, path)   # outputs safe before any analysis
     summ = summarize(done, p.n_heads) if not limit else None
     rl = rules(summ, family) if summ else None
     dump({"tag": tag, "layer": L, "align": align, "gates": g, "summary": summ, "rules": rl,
@@ -649,17 +654,21 @@ def late_training_verdict(c143, c120):
         return c and c.get("phenomenon_present") and c.get("gates", {}).get("ok") and c.get("rules")
     if not ok(c143):
         return "untestable: no interpretable full-subset run at step143000"
+    caveat = " (not interpreted: step143000 differs from the main run; INBOX)" \
+        if c143.get("matches_main_run") is False else ""
     if not c143["rules"]["parity_holds"]:
-        return "not supported: parity does not hold at step143000"
-    if not c120 or not c120.get("phenomenon_present"):
-        return "untestable: no correct/bug pair at step120000"
+        return "not supported: parity does not hold at step143000" + caveat
+    if not c120 or "error" in c120:
+        return "untestable: step120000 errored or did not run" + caveat
+    if not c120.get("phenomenon_present"):
+        return "untestable: no correct/bug pair at step120000" + caveat
     if not ok(c120):
-        return "untestable: step120000 gates failed"
+        return "untestable: step120000 gates failed" + caveat
     if not c120["rules"]["repair"]:
-        return "repair itself appears late; parity emergence not separable"
+        return "repair itself appears late; parity emergence not separable" + caveat
     if c120["rules"]["parity_holds"]:
-        return "refuted: parity already holds at step120000"
-    return "supported: parity holds at step143000, not at step120000"
+        return "refuted: parity already holds at step120000" + caveat
+    return "supported: parity holds at step143000, not at step120000" + caveat
 
 
 def dynamics(a, out_dir):
@@ -667,26 +676,34 @@ def dynamics(a, out_dir):
     The two checkpoints the late-training claim rests on run first; each checkpoint is isolated."""
     import torch
     L = MODELS["pythia160m"]["layer"]
-    main_run = json.load(open(os.path.join(a.main_run, "run.json")))
-    pr = main_run["pair"]
-    main_pair = (pr["donor"], pr["recipient"])
+    try:
+        with open(os.path.join(a.main_run, "run.json")) as f:
+            main_run = json.load(f)
+        pr = main_run["pair"]
+        main_pair = (pr["donor"], pr["recipient"])
+    except Exception as e:   # main run died early: still run screens and the old-protocol reproduction
+        print(f"[dyn] main run unreadable ({e}); true-head runs skipped", flush=True)
+        main_run, main_pair = {"provenance": {"commit": None}}, (None, None)
     main_right = os.path.join(a.main_run, "results_pre_wo__prefill_right.json")
     main_cfgs = {}
     if os.path.exists(main_right):
-        mr = json.load(open(main_right))
+        with open(main_right) as f:
+            mr = json.load(f)
         if mr.get("summary"):
             main_cfgs = mr["configs"]
     out = {"main_pair": main_pair, "main_commit": main_run["provenance"]["commit"], "checkpoints": {}}
+    main_screen = {k_: v["output"] for k_, v in main_run.get("screen", {}).items()}
     path = os.path.join(out_dir, "dynamics.json")
     order = FULL_SUBSET_CHECKPOINTS[::-1] + [c for c in CHECKPOINTS if c not in FULL_SUBSET_CHECKPOINTS]
     cks = order[:2] if a.limit else order
     for ck in cks:
+        r = {}
+        out["checkpoints"][ck] = r   # filled in place, so a crash keeps whatever was recorded
         try:
-            r = dynamics_checkpoint(a, out, ck, L, main_pair, main_cfgs, out_dir)
+            dynamics_checkpoint(a, out, r, ck, L, main_pair, main_cfgs, main_screen, out_dir)
         except Exception as e:  # one bad checkpoint must not take the others with it
-            r = {"error": f"{type(e).__name__}: {e}"}
+            r["error"] = f"{type(e).__name__}: {e}"
             print(f"[dyn {ck}] ERROR {r['error']}", flush=True)
-        out["checkpoints"][ck] = r
         out["late_training_verdict"] = late_training_verdict(out["checkpoints"].get("step143000"),
                                                              out["checkpoints"].get("step120000"))
         dump(out, path)
@@ -695,15 +712,19 @@ def dynamics(a, out_dir):
     print(f"[dyn] late-training verdict: {out['late_training_verdict']}", flush=True)
 
 
-def dynamics_checkpoint(a, out, ck, L, main_pair, main_cfgs, out_dir):
+def dynamics_checkpoint(a, out, r, ck, L, main_pair, main_cfgs, main_screen, out_dir):
     p = Patcher(a.repo or MODELS["pythia160m"]["repo"], revision=ck, dtype="float16")
     if "provenance" not in out:
         out["provenance"] = provenance(p, {"mode": "dynamics"})
     n = p.n_heads
     even, odd = list(range(0, n, 2)), list(range(1, n, 2))
+    r["matches_main_run"], r["matches_main_run_reason"] = None, \
+        ("not step143000" if ck != "step143000" else "not reached")
     sc, donor, recip = screen(p, FORMATS)
-    r = {"commit": p.commit, "screen": {x: v["class"] for x, v in sc.items()},
-         "screen_outputs": {x: v["output"] for x, v in sc.items()}, "own_pair": [donor, recip]}
+    r.update({"commit": p.commit, "screen": {x: v["class"] for x, v in sc.items()},
+              "screen_outputs": {x: v["output"] for x, v in sc.items()}, "own_pair": [donor, recip]})
+    if ck == "step143000":   # always available, even with no phenomenon
+        r["screen_matches_main_run"] = (main_screen == r["screen_outputs"]) if main_screen else None
     base = p.generate(ORIG_RECIP)
     sv = p.capture(ORIG_DONOR, "post_wo", L)
     old = {nm: p.generate(ORIG_RECIP, sv, h, "post_wo", "all_steps", L, "left")
@@ -712,8 +733,11 @@ def dynamics_checkpoint(a, out, ck, L, main_pair, main_cfgs, out_dir):
                          "odd": td_fixed(old["odd"]), "outputs": {"baseline": base, **old}, "ref": TD_REF[ck]}
     r["old_protocol"]["agrees_with_ref"] = [int(r["old_protocol"][x]) for x in ("baseline", "even", "odd")] \
         == list(TD_REF[ck])
-    r["matches_main_run"], r["matches_main_run_reason"] = None, "not step143000"
-    if main_pair[0] and main_pair[1]:
+    is143 = ck == "step143000"
+    if not (main_pair[0] and main_pair[1]):
+        if is143:
+            r["matches_main_run_reason"] = "main run has no pair"
+    else:
         dp, rp = dict(FORMATS)[main_pair[0]], dict(FORMATS)[main_pair[1]]
         r["alignment_right"] = alignment_info(p, dp, rp, "right")
         dcls, rcls = classify(p.generate(dp)), classify(p.generate(rp))
@@ -723,6 +747,8 @@ def dynamics_checkpoint(a, out, ck, L, main_pair, main_cfgs, out_dir):
         r["gates"] = g
         if not g["ok"]:
             print(f"[dyn {ck}] GATE FAILED: checkpoint not interpreted", flush=True)
+            if is143:
+                r["matches_main_run_reason"] = "gates failed"
         if r["phenomenon_present"] and g["ok"]:
             cfg = {"all": list(range(n)), "even": even, "odd": odd, **{f"single_{h}": [h] for h in range(n)}}
             r["true_heads"] = {}
@@ -733,6 +759,7 @@ def dynamics_checkpoint(a, out, ck, L, main_pair, main_cfgs, out_dir):
             if ck in FULL_SUBSET_CHECKPOINTS:
                 sp = os.path.join(out_dir, f"subsets_{ck}.json")
                 done = run_subsets(p, saved, rp, L, "right", f"dyn {ck}", sp, a.limit)
+                dump({"checkpoint": ck, "partial": False, "configs": done}, sp)
                 summ = summarize(done, n) if not a.limit else None
                 dump({"checkpoint": ck, "summary": summ, "configs": done}, sp)
                 r["summary"], r["rules"] = summ, (rules(summ, "pythia") if summ else None)
@@ -749,14 +776,14 @@ def dynamics_checkpoint(a, out, ck, L, main_pair, main_cfgs, out_dir):
                     if not r["matches_main_run"]:
                         print(f"[dyn {ck}] MISMATCH with main run: 143k verdict not interpreted (pre-registered)",
                               flush=True)
-        elif not r["phenomenon_present"]:
+        elif not r["phenomenon_present"] and is143:
             r["matches_main_run_reason"] = "no phenomenon at this checkpoint"
     print(f"[dyn {ck}] commit {p.commit} screen {r['screen']} "
           f"old {[r['old_protocol'][x] for x in ('baseline','even','odd')]} ref {TD_REF[ck]} "
           f"phenomenon={r.get('phenomenon_present')} gates={r.get('gates', {}).get('ok')} "
-          f"verdict={(r.get('rules') or {}).get('verdict')} matches_main={r['matches_main_run']}", flush=True)
+          f"verdict={(r.get('rules') or {}).get('verdict')} matches_main={r['matches_main_run']} "
+          f"({r['matches_main_run_reason']})", flush=True)
     del p
-    return r
 
 
 # ---------------------------------------------------------------- self-test
@@ -783,26 +810,52 @@ def selftest():
         s = summarize(synth(n, f), n)
         return s, rules(s, fam)
 
+    truths = 0
     E = set(range(0, 12, 2))
+    truths += 1
     s, r = verdict(12, lambda h: E <= set(h), "pythia")          # needs all six even heads
     assert r["parity_holds"], s["bipartition"]
     assert r["verdict"] == "parity holds", r["verdict"]
+    truths += 1
     s, r = verdict(12, lambda h: 8 in h, "pythia")                # head 8 alone
     assert not r["parity_holds"] and r["parity_c_even_only_gt_odd_only"], s["bipartition"]
-    assert r["verdict"].startswith("even-only subsets repair, but"), r["verdict"]
+    assert r["verdict"].startswith("even-only subsets repair, but the effect is carried by specific heads"), r["verdict"]
+    truths += 1
     s, r = verdict(12, lambda h: 8 in h and any(x % 2 == 0 and x != 8 for x in h), "pythia")
     assert r["verdict"] == "parity holds, with heads [8] necessary", r["verdict"]
+    truths += 1
     s, r = verdict(12, lambda h: {6, 8, 10} <= set(h), "pythia")  # late even heads
     assert not r["parity_holds"], s["bipartition"]
     assert s["minimal_sufficient_sets"] == [[6, 8, 10]]
+    truths += 1
     s, r = verdict(12, lambda h: sum(x % 2 == 0 for x in h) >= 2, "pythia")  # any two even heads
     assert r["parity_holds"], s["bipartition"]
+    truths += 1
     s, r = verdict(12, lambda h: len(h) >= 4, "pythia")           # count only
     assert not r["parity_holds"] and r["repair"]
+    truths += 1
     s, r = verdict(8, lambda h: len(h) >= 4, "gemma")
     assert r["gemma_parity_independent"] and not r["parity_holds"]
+    truths += 1
     s, r = verdict(8, lambda h: False, "gemma")
     assert not r["repair"] and not r["gemma_parity_independent"]
+    # seeded output noise (review round 3): flip each outcome with prob 0.01, 40 seeds
+    import random
+
+    def noisy_passes(f, p_flip=0.01, seeds=40):
+        hits = 0
+        for seed in range(seeds):
+            rnd = random.Random(seed)
+            d = {}
+            for h in all_subsets(12):
+                c = f(h) != (rnd.random() < p_flip)
+                d[key(h)] = {"heads": h, "correct": c, "bug": not c}
+            hits += rules(summarize(d, 12), "pythia")["parity_holds"]
+        return hits
+    late = noisy_passes(lambda h: {6, 8, 10} <= set(h))
+    true_par = noisy_passes(lambda h: sum(x % 2 == 0 for x in h) >= 3)
+    assert late <= 2, ("late-even-heads false 'parity holds'", late)
+    assert true_par >= 36, ("true parity power", true_par)
     ck = lambda pres, rep, par: {"phenomenon_present": pres, "gates": {"ok": True},
                                  "rules": {"repair": rep, "parity_holds": par}}
     lt = late_training_verdict
@@ -812,8 +865,16 @@ def selftest():
     assert lt(ck(True, True, True), {"phenomenon_present": False}).startswith("untestable")
     assert lt(ck(True, True, False), ck(True, True, False)).startswith("not supported")
     assert lt({"error": "x"}, None).startswith("untestable")
-    print("selftest OK: classifier (%d cases), summarize, rules (7 synthetic truths), "
-          "late-training verdict (6 cases)" % len(cases))
+    mm = ck(True, True, True)
+    mm["matches_main_run"] = False
+    assert lt(mm, ck(True, True, False)).endswith("(not interpreted: step143000 differs from the main run; INBOX)")
+    assert lt(ck(True, True, True), {"error": "boom"}).startswith("untestable: step120000 errored")
+    g = ck(True, True, False)
+    g["gates"]["ok"] = False
+    assert lt(ck(True, True, True), g).startswith("untestable: step120000 gates failed")
+    print("selftest OK: classifier (%d cases), rules on %d synthetic truths, noise test "
+          "({6,8,10}: %d/40 false passes; >=3 even: %d/40), late-training verdict (9 cases)"
+          % (len(cases), truths, late, true_par))
 
 
 def main():
