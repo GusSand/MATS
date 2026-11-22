@@ -4656,3 +4656,6 @@ Design review: five rounds, PASS. docs/experiments/11-22_llama8b_position0_gpu_g
 ### Results (no interpretation)
 None yet.
 
+
+### 2026-11-22 — R16 A100 done; L40S resubmitted
+A100 job 24095012 COMPLETED (59 min, ga004): capture=live bitwise, d0 nonzero (max 6.1e-5, all 32 blocks), copy reproduces R13 1307/1307 in both cells. L40S job 24095013 FAILED in 1 s: unmatched quote in `run_l40s.sbatch` (no compute). Fixed in 61dd72b, resubmitted as Slurm job 24104901 (gl044). Results not yet verified.

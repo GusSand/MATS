@@ -12,7 +12,7 @@ path, and R13's sha256 must equal `1ce5b0cc…`, the hash both R13 runs used. R1
 (`l40s_public`, pinned to `gl044`, R13's L40S node) with `--dependency=afterok`. The A100 job exits 2 on any
 gate failure or absent premise. The L40S job also refuses to start unless the A100 `run.json` shows that all
 gates passed and the position-0 difference is nonzero.
-**Slurm jobs:** 24095012 (A100, ga004) and 24095013 (L40S, gl044, afterok:24095012), commit cd272dc, R16 sha256 bd47abab…, R13 sha256 1ce5b0cc…. Logs `/scratch/gs157/MATS/logs/<job>_r16_pos0_<gpu>.log`; results `/scratch/gs157/MATS/results/r16_<gpu>_<job>/`.
+**Slurm jobs:** 24095012 (A100, ga004) and 24095013 (L40S, gl044, afterok:24095012), commit cd272dc, R16 sha256 bd47abab…, R13 sha256 1ce5b0cc…. Logs `/scratch/gs157/MATS/logs/<job>_r16_pos0_<gpu>.log`; results `/scratch/gs157/MATS/results/r16_<gpu>_<job>/`. 24095013 failed at bash parse (an apostrophe in `run_l40s.sbatch` line 26, no compute ran); fixed in 61dd72b and resubmitted as **24104901** (gl044, no dependency; the A100 job had completed with all gates passing).
 **Decision:** Gus, 2026-11-22 ("we need to run another experiment: the position-0 zeroing experiment").
 
 ## Research question
