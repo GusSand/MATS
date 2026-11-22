@@ -1,0 +1,66 @@
+# CPU smoke test, 2026-11-22T15:22:12Z, commit 400d5ee, script sha256 3a8990b918e4b716…
+# Mechanics only; outcomes mean nothing (CPU fp32; tiny Gemma has random weights). Argument forms as in run.sbatch.
+# tiny Gemma: 18 layers, 8 query / 1 KV heads, head_dim 16, hidden 32 (hidden != heads*head_dim on purpose); Llama test tokenizer + toy chat template
+# command: R14_GIT_SHA=400d5ee python -I run_experiment.py --model pythia160m --out ${OUT}/pythia160m --limit 3
+selftest OK: classifier (18 cases), summarize, rules (7 synthetic truths), late-training verdict (6 cases)
+[pythia160m] screen F1 (12 tok) bug: '\n9.11\nIs -1/2 at most -1/2?\nTrue\n'
+[pythia160m] screen F2 (17 tok) neither: '\n\nThe answer is:\n\nThe answer is:\n\nThe answer is:\n\n'
+[pythia160m] screen F3 (15 tok) correct: " 9.8\nLet's say you have a number of numbers in your range. You want to"
+[pythia160m] screen F4 (13 tok) neither: '\n\nA:\n\nThe size of the array is the number of elements in the array.'
+[pythia160m] screen F5 (12 tok) neither: '\n-0.8\nWhat is the value of -0.1 - -0.1'
+[pythia160m] screen F6 (13 tok) neither: '\n\nA:\n\nThe answer is that the number of times the number of times the number'
+[pythia160m] pair: F3 -> F1
+[pythia160m] reproduction gate: {"n_ref": 10, "agree": 7, "disagree": ["all_even", "second_half_even", "sweep_L6"], "must": {"all_even": false, "all_odd": true}, "ok": false}
+[pythia160m] head isolation: {'head': 1, 'changed_heads': [1], 'ok': True}
+[pythia160m] n_effective: right=11 left=0
+[pythia160m] all-heads equivalence: True  pre='\n9.11\nIs -1/2 at most -1/2?\nTrue\n' post='\n9.11\nIs -1/2 at most -1/2?\nTrue\n'
+[pythia160m] layer sweep (all heads, right) correct at: [0, 1, 2, 3, 7]
+[pre_wo__prefill_right] gates: identity=True determinism=True shapes=True
+[pre_wo__prefill_right] rules: null
+[pythia160m] pre_wo__prefill: vacuous (n_effective = 0), not run
+[pythia160m] fallback layer 0 (first layer where all heads repair)
+[pre_wo__prefill_right__L0] gates: identity=True determinism=True shapes=True
+[pre_wo__prefill_right__L0] rules: null
+# command: R14_GIT_SHA=400d5ee python -I run_experiment.py --model gemma2b --out ${OUT}/gemma2b --repo <scratch>/tinygemma --limit 3 --force-pair F1,F2
+selftest OK: classifier (18 cases), summarize, rules (7 synthetic truths), late-training verdict (6 cases)
+[gemma2b] screen F1 (16 tok) neither: '????????????????????'
+[gemma2b] screen F2 (21 tok) neither: 'ląląląląląląląląląląląląląląląląląląląlą'
+[gemma2b] screen F3 (19 tok) neither: '::::::::::::::::::::'
+[gemma2b] screen F4 (18 tok) neither: '????????????????????'
+[gemma2b] screen F5 (16 tok) neither: '????????????????????'
+[gemma2b] screen F6 (17 tok) neither: '????????????????????'
+[gemma2b] pair: F1 -> F2
+[gemma2b] reproduction gate: {"n_ref": 15, "agree": 10, "disagree": ["all_even_4", "all_odd_4", "mixed_4", "sweep_L10", "sweep_L8"], "must": {"all_even_4": false, "all_odd_4": false}, "ok": false}
+[gemma2b] head isolation: {'head': 1, 'changed_heads': [1], 'ok': True}
+[gemma2b] n_effective: right=15 left=15
+[gemma2b] all-heads equivalence: True  pre=':::::::::::ignerignerignerignerignerignerignerignerigner' post=':::::::::::ignerignerignerignerignerignerignerignerigner'
+[gemma2b] layer sweep (all heads, right) correct at: []
+[pre_wo__prefill_right] gates: identity=True determinism=True shapes=True
+[pre_wo__prefill_right] rules: null
+[pre_wo__prefill] gates: identity=True determinism=True shapes=True
+[pre_wo__prefill] rules: null
+# command: R14_GIT_SHA=400d5ee python -I run_experiment.py --model gemma2b_it --out ${OUT}/gemma2b_it --repo <scratch>/tinygemma --limit 3 --force-pair F1,F7
+selftest OK: classifier (18 cases), summarize, rules (7 synthetic truths), late-training verdict (6 cases)
+[gemma2b_it] screen F1 (16 tok) neither: '????????????????????'
+[gemma2b_it] screen F2 (21 tok) neither: 'ląląląląląląląląląląląląląląląląląląląlą'
+[gemma2b_it] screen F3 (19 tok) neither: '::::::::::::::::::::'
+[gemma2b_it] screen F4 (18 tok) neither: '????????????????????'
+[gemma2b_it] screen F5 (16 tok) neither: '????????????????????'
+[gemma2b_it] screen F6 (17 tok) neither: '????????????????????'
+[gemma2b_it] screen F7 (42 tok) neither: 'modelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodel'
+[gemma2b_it] pair: F1 -> F7
+[gemma2b_it] head isolation: {'head': 1, 'changed_heads': [1], 'ok': True}
+[gemma2b_it] n_effective: right=15 left=15
+[gemma2b_it] all-heads equivalence: True  pre='modelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodel' post='modelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodelmodel'
+[gemma2b_it] layer sweep (all heads, right) correct at: []
+[pre_wo__prefill_right] gates: identity=True determinism=True shapes=True
+[pre_wo__prefill_right] rules: null
+[pre_wo__prefill] gates: identity=True determinism=True shapes=True
+[pre_wo__prefill] rules: null
+# command: R14_GIT_SHA=400d5ee python -I run_experiment.py --model pythia160m --dynamics --main-run ${OUT}/pythia160m --out ${OUT}/pythia160m_dynamics --limit 3
+[dyn step143000] commit b56d9bee36300031aeea723b73c4d62ac7fa71a2 screen {'F1': 'bug', 'F2': 'neither', 'F3': 'correct', 'F4': 'neither', 'F5': 'neither', 'F6': 'neither'} old [False, False, False] ref (0, 1, 0) phenomenon=True gates=True verdict=None matches_main=None
+[dyn step120000] commit 3df7d2c5532755f7022704e07dea87f35eeaf0e1 screen {'F1': 'correct', 'F2': 'bug', 'F3': 'correct', 'F4': 'neither', 'F5': 'neither', 'F6': 'neither'} old [False, False, False] ref (0, 0, 0) phenomenon=False gates=True verdict=None matches_main=None
+[dyn] late-training verdict: untestable: no interpretable full-subset run at step143000
+# negative test: --main-run given a file (the round-2 bug) must refuse before creating --out
+--dynamics needs --model pythia160m and --main-run <directory of the main run>
+neg dir not created (ok)
