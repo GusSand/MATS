@@ -1,10 +1,12 @@
 # R15 — Testing the Mistral-7B head claims with true per-head, prompt-only patching
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review round 1)
+**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–2)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design.md
+**Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v2.md
 **Script:** `9_8_research/reviewer_experiments/exp_R15_mistral_true_heads/run_experiment.py` (imports R14's
-patching code; the job refuses to start unless R14's sha256 equals `R14_EXPECTED_SHA256`, computed at submit
-time from the committed file). All decision rules are computed in the script (`decide`) into `run.json`.
+patching code; the job refuses to start unless R14's and R15's sha256 equal `R14_EXPECTED_SHA256` and
+`R15_EXPECTED_SHA256`, computed at submit time from the committed files). `decide()` has its own synthetic
+selftest, run at every start. All decision rules are computed in the script (`decide`) into `run.json`.
 **Job:** `run.sbatch` (same folder), `a100_tandon`.
 **Decision:** Gus, 2026-11-22: "the nam result can we run that ourselves after downloading the model?"
 
@@ -54,11 +56,13 @@ Claims under test (draft wording, abridged):
 - **Descriptive screen:** comparative, qa and simple wordings inside the chat template (separates template
   from wording). The chat-template token ids from the string path and from `tokenize=True` are recorded. No pair → stop: "no format-dependent bug in chat on our formats; M1–M6 have nothing to
   repair". M7's screen still runs.
+- Every output, including M7's, records `hit_max_new` and `says_less`. `decide()` runs before M7 too
+  (`decisions_before_M7`), so a crash in M7 leaves M1–M6 decided.
 - **Δ** = teacher-forced log P(` 9.8`) − log P(` 9.11`) as the reply's first words, with the same prompt-only
   patch (continuation positions unpatched). Mistral tokenizes ` 9.8` as `▁ 9 . 8`, so Δ compares `8`
   against `1 1` after `▁9.`. **Δ readings are testable only if chat's unpatched Δ ≤ 0** (the draft has
   −1.19); otherwise every Δ "fix" is vacuous and those readings are "untestable". Δ is None when the
-  continuation does not extend the prompt's tokens; the not-None rate is reported.
+  continuation does not extend the prompt's tokens (all-or-none per prompt, so visible in the screen's Δ).
 
 | Cell | Configs | Tests |
 |---|---|---|
@@ -78,34 +82,42 @@ Claims under test (draft wording, abridged):
 - Sanity: the all-heads, all-32-layers transplant must be *correct* (it replaces every attention output on
   the overlapping positions). Fail → report, and treat single-layer nulls with caution.
 
-## Pre-registered decision rules (all on generation outcomes)
+## Pre-registered decision rules (computed by `decide()`)
 
 Generation reading: success = *correct*. Δ reading (only when testable): success = Δ > 0.
 - **S holds:** chat *bug*, comparative *bug*, qa and simple not *bug*, and at least one of them *correct*.
 - **M1a** ("no single layer fully repairs", generation): no layer's all-heads patch is *correct*.
-  **M1b** ("five layers fix individually", Δ): at least 4 of {2, 10, 11, 13, 17} have Δ > 0.
+  Read only if the all-layers sanity transplant is *correct*; otherwise "uninterpretable" (a null from an
+  ineffective patch says nothing).
+  **M1b** ("five layers fix individually", Δ): at least 4 of {2, 10, 11, 13, 17} have Δ > 0 **and** at least
+  4 of them are among the 8 layers with the largest Δ. Δ > 0 at the five without that → "non-specific".
 - **M2 at ℓ ∈ {2, 17}**, generation and Δ readings: (a) the even-only k = 16 set succeeds; (b) no odd-only
-  subset succeeds; (c) **even-only subsets without H22 succeed more often than odd-only subsets** (60 vs 60,
-  k = 4, 8, 12). Verdict: all three → "parity holds"; (a) and (b) only → "even-only repair carried by H22";
-  else "not supported". (H22 is even, so without (c) H22 alone would pass M2; review fix 1.) Every rate is
-  reported split by H22 ∈ S; "≈10 even heads for > 50%" is read from the even-only rate by k.
+  subset succeeds; (c) **even-only subsets without H22 succeed more often than odd-only subsets**, one-sided
+  Fisher exact p < 0.05 (60 vs 60, k = 4, 8, 12; about 5/60 vs 0/60 is needed). H22's role is shown if even
+  subsets containing H22 (k ≤ 12) beat the without-H22 subsets at Fisher p < 0.05, or H22 alone succeeds at ℓ.
+  Verdict, first match: (a)(b)(c) → "parity holds"; (a)(b) and H22's role shown → "even-only repair carried
+  by H22"; (a)(b) → "even-only k = 16 repairs; H22's role not shown"; else "not supported". Every rate is
+  reported split by H22 ∈ S. "≈10 even heads for > 50%" is read from the **without-H22** rates (k = 4, 8, 12;
+  k = 16 cannot be tested without H22).
 - **M3** (generation): at both ℓ = 2 and 17, H22 is *correct* and no other single head is.
   **M3b** (Δ): H22 has the largest Σ_ℓ (Δ_patched − Δ_unpatched) over the 32 × 32 single-head sweep; the
   draft's top five (H22, H29, H31, H10, H21) are ranked too.
 - **M4** (generation): H22 at {2, 10, 11, 13, 17} or at all 32 layers is *correct* (the draft's 7 layers are
-  not named). **"H22 special"**: M4 holds and at most 4 of the 32 heads succeed in each of the two configs.
-- **M5** (generation): the five-layer all-heads transplant is *correct*; the 10 random 5-layer sets are
-  reported as the count-matched control.
+  not named). **"H22 special"**: M4 holds and, in each config where H22 is *correct*, at most 4 of the 32
+  heads are. H22's result is reported per config.
+- **M5** (generation): the five-layer all-heads transplant is *correct*. **"M5 specific"**: M5 holds and at
+  most 2 of the 10 random 5-layer sets are *correct* (boring hypothesis 2).
 - **M6**: M5 holds and the five-layer reverse transplant leaves simple *correct* (not merely "not bug";
   *neither* is reported separately), with its Δ.
 - **M7:** error counts per format reported against the draft's (2, 19, 0, 0)/100; "repair transfers" holds
-  if the five-layer transplant is *correct* on every eligible pair (and there is at least one).
+  if the five-layer transplant is *correct* on every eligible pair (and there is at least one), always
+  reported as "k of n eligible pairs". M7 is decided on the no-pair path too.
 - **Descriptive only:** Δ for every config; per-head counts across layers; GQA-group breakdown of correct
   single heads; mixed-subset rates.
 
 ## Compute estimate
 
-≈ 7 screen + 6 gates + 1 sanity + 32 + 1,024 + 524 + 1 + 10 + 64 + 6 + 400 + ≤100 ≈ 2,180 generations ×
+≈ 7 screen + 5 gates + 1 sanity + 32 + 1,024 + 524 + 1 + 10 + 64 + 6 + 400 + ≤100 ≈ 2,180 generations ×
 ~2 s (64 tokens, 7B, A100) ≈ 1.2 h, plus 2 Δ forward passes per patched config (cheap). Walltime 5 h.
 
 ## Limitations known before the run

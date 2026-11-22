@@ -242,6 +242,26 @@ class Multi:
 
 # ---------------------------------------------------------------- pre-registered rules
 
+def fisher_greater(a, n1, b, n2):
+    """One-sided Fisher exact p for rate a/n1 > b/n2 (hypergeometric upper tail)."""
+    from math import comb
+    k, N = a + b, n1 + n2
+    tot = comb(N, k)
+    return sum(comb(n1, x) * comb(n2, k - x) for x in range(a, min(k, n1) + 1)) / tot
+
+
+def m7_decisions(res):
+    g = res.get("generalization") or []
+    if not g:
+        return {"M7": "not run"}
+    el = [r for r in g if "five_layer_repair" in r]
+    rep = sum(r["five_layer_repair"]["class"] == "correct" for r in el)
+    return {"M7_bug_counts": {k: sum(r["formats"][k]["class"] == "bug" for r in g) for k in g[0]["formats"]},
+            "M7_n_pairs": len(g), "M7_eligible": len(el), "M7_repaired": rep,
+            "M7_repair_transfers": bool(el) and rep == len(el),
+            "M7_report_as": f"{rep} of {len(el)} eligible pairs repaired"}
+
+
 def decide(run, res):
     """All pre-registered rules (experiment file, 'Decision rules'). Pure function of run/res."""
     d = {}
@@ -249,6 +269,7 @@ def decide(run, res):
     d["S"] = (sc["chat"]["class"] == "bug" and sc["comparative"]["class"] == "bug"
               and sc["qa"]["class"] != "bug" and sc["simple"]["class"] != "bug"
               and "correct" in (sc["qa"]["class"], sc["simple"]["class"]))
+    d.update(m7_decisions(res))
     if "layer_sweep" not in res:
         d["note"] = "no pair: M1-M6 not run"
         return d
@@ -258,12 +279,27 @@ def decide(run, res):
     d["delta_baseline_chat"] = base
     pos = lambda v: v.get("delta") is not None and v["delta"] > 0
     corr = lambda v: v["class"] == "correct"
+    d["sanity_correct"] = corr(res["all_layers_all_heads"])
     ls = res["layer_sweep"]
     d["M1_correct_layers"] = [int(L) for L, v in ls.items() if corr(v)]
     d["M1_delta_pos_layers"] = [int(L) for L, v in ls.items() if pos(v)]
-    d["M1a_no_layer_repairs_gen"] = not d["M1_correct_layers"]
-    d["M1b_four_of_five_delta"] = (sum(pos(ls[str(L)]) for L in FIVE) >= 4) if dt else "untestable"
+    d["M1a_no_layer_repairs_gen"] = (not d["M1_correct_layers"]) if d["sanity_correct"] else \
+        "uninterpretable: the all-layers sanity transplant does not repair"
+    if dt:
+        by_delta = sorted(ls, key=lambda L: -(ls[L]["delta"] if ls[L]["delta"] is not None else -1e9))
+        top8 = [int(L) for L in by_delta[:8]]
+        others_pos = sum(pos(ls[L]) for L in ls if int(L) not in FIVE)
+        four = sum(pos(ls[str(L)]) for L in FIVE) >= 4
+        spec = sum(L in top8 for L in FIVE) >= 4
+        d["M1b_detail"] = {"five_with_delta_pos": sum(pos(ls[str(L)]) for L in FIVE), "top8_layers": top8,
+                           "five_in_top8": sum(L in top8 for L in FIVE), "other_layers_delta_pos": others_pos}
+        d["M1b_four_of_five_delta"] = ("holds" if (four and spec) else
+                                       "non-specific: Δ > 0 at the five but they are not the top layers"
+                                       if four else "not supported")
+    else:
+        d["M1b_four_of_five_delta"] = "untestable"
     par = res["parity"]
+    sh = res["single_heads"]
     for L in PARITY_LAYERS:
         rows = [x for x in par if x["layer"] == L]
         for reading, ok in (("gen", corr), ("delta", pos)):
@@ -274,11 +310,24 @@ def decide(run, res):
             odd = [x for x in rows if x["kind"] == "odd"]
             e_no = [x for x in rows if x["kind"] == "even_noH22"]
             odd_ks = [x for x in odd if x["k"] in KS[:3]]
+            w22 = [x for x in rows if x["kind"] == "even" and x["k"] in KS[:3] and H22 in x["heads"]]
             a = bool(e16) and ok(e16[0])
             b = not any(ok(x) for x in odd)
-            c = sum(ok(x) for x in e_no) > sum(ok(x) for x in odd_ks)
-            verdict = ("parity holds" if (a and b and c) else
-                       "even-only repair carried by H22" if (a and b) else "not supported")
+            n_no, n_odd = sum(ok(x) for x in e_no), sum(ok(x) for x in odd_ks)
+            p_c = fisher_greater(n_no, len(e_no), n_odd, len(odd_ks)) if e_no and odd_ks else 1.0
+            c = p_c < 0.05
+            n_w = sum(ok(x) for x in w22)
+            p_h22 = fisher_greater(n_w, len(w22), n_no, len(e_no)) if w22 and e_no else 1.0
+            h22_single = ok(sh.get(f"L{L}_H{H22}", {"class": "", "delta": None}))
+            h22_role = p_h22 < 0.05 or h22_single
+            if a and b and c:
+                verdict = "parity holds"
+            elif a and b and h22_role:
+                verdict = "even-only repair carried by H22"
+            elif a and b:
+                verdict = "even-only k = 16 repairs; H22's role not shown"
+            else:
+                verdict = "not supported"
             rates = {}
             for kind in ("even", "odd", "mixed", "even_noH22"):
                 for k in KS:
@@ -289,9 +338,13 @@ def decide(run, res):
             without = [x for x in rows if x["kind"] == "even" and H22 not in x["heads"]]
             rates["even_with_H22"] = [sum(ok(x) for x in withh), len(withh)]
             rates["even_without_H22"] = [sum(ok(x) for x in without), len(without)]
-            d[f"M2_L{L}_{reading}"] = {"a_even16": a, "b_no_odd": b, "c_noH22_gt_odd": c,
-                                        "verdict": verdict, "rates": rates}
-    sh = res["single_heads"]
+            d[f"M2_L{L}_{reading}"] = {"a_even16": a, "b_no_odd": b, "c_noH22_vs_odd": [n_no, len(e_no), n_odd,
+                                        len(odd_ks)], "c_fisher_p": p_c, "c": c,
+                                        "h22_with_vs_noH22": [n_w, len(w22), n_no, len(e_no)],
+                                        "h22_fisher_p": p_h22, "h22_single_head_success": h22_single,
+                                        "verdict": verdict, "rates": rates,
+                                        "ten_even_heads_curve_noH22": {f"k{k}": rates.get(f"even_noH22_k{k}")
+                                                                       for k in KS[:3]}}
     corr_at = {L: [v["head"] for v in sh.values() if v["layer"] == L and corr(v)] for L in PARITY_LAYERS}
     d["M3_correct_single_heads"] = {str(L): corr_at[L] for L in PARITY_LAYERS}
     d["M3_gen"] = all(corr_at[L] == [H22] for L in PARITY_LAYERS)
@@ -306,23 +359,60 @@ def decide(run, res):
         d["draft_top5_ranks"] = {str(h): (rank.index(h) + 1 if h in rank else None) for h in DRAFT_TOP5}
     else:
         d["M3b_H22_largest_summed_delta"] = "untestable"
+    special = []
     for cfg in ("five", "all"):
         ctrl = res[f"head_{cfg}_layers"]
         d[f"M4_{cfg}_correct_heads"] = [int(h) for h, v in ctrl.items() if corr(v)]
-    d["M4"] = corr(res["head_five_layers"][str(H22)]) or corr(res["head_all_layers"][str(H22)])
-    d["M4_H22_special"] = d["M4"] and all(len(d[f"M4_{c}_correct_heads"]) <= 4 for c in ("five", "all"))
+        d[f"M4_H22_{cfg}_correct"] = corr(ctrl[str(H22)])
+        if d[f"M4_H22_{cfg}_correct"]:
+            special.append(len(d[f"M4_{cfg}_correct_heads"]) <= 4)
+    d["M4"] = d["M4_H22_five_correct"] or d["M4_H22_all_correct"]
+    d["M4_H22_special"] = d["M4"] and all(special)
     d["M5"] = corr(res["five_layer_all_heads"])
-    d["M5_random_5layer_correct"] = [sum(corr(v) for v in res["random_5layer"]), len(res["random_5layer"])]
+    nr = sum(corr(v) for v in res["random_5layer"])
+    d["M5_random_5layer_correct"] = [nr, len(res["random_5layer"])]
+    d["M5_specific"] = d["M5"] and nr <= 2
     rv = res["reverse"]["five"]
     d["M6"] = d["M5"] and corr(rv)
     d["M6_reverse_class"] = rv["class"]
-    if "generalization" in res:
-        g = res["generalization"]
-        d["M7_bug_counts"] = {k: sum(r["formats"][k]["class"] == "bug" for r in g) for k in g[0]["formats"]}
-        el = [r for r in g if "five_layer_repair" in r]
-        d["M7_eligible"], d["M7_repaired"] = len(el), sum(r["five_layer_repair"]["class"] == "correct" for r in el)
-        d["M7_repair_transfers"] = bool(el) and d["M7_repaired"] == len(el)
     return d
+
+
+def decide_selftest():
+    """Synthetic worlds for decide() (review rounds 1-2). No model needed."""
+    assert abs(fisher_greater(1, 60, 0, 60) - 0.5) < 1e-9
+    assert fisher_greater(5, 60, 0, 60) < 0.05 < fisher_greater(3, 60, 0, 60)
+    subs = parity_subsets()
+    R = lambda c, dl=-1.0: {"class": c, "delta": dl, "output": ""}
+
+    def world(par_ok, single_ok=lambda L, h: False, base=-1.0):
+        run = {"screen": {"chat": R("bug", base), "comparative": R("bug"), "qa": R("correct"),
+                          "simple": R("correct")}}
+        res = {"all_layers_all_heads": R("correct", 1.0),
+               "layer_sweep": {str(L): R("bug", -1.0) for L in range(32)},
+               "single_heads": {f"L{L}_H{h}": {"layer": L, "head": h, **R("correct" if single_ok(L, h) else "bug")}
+                                for L in range(32) for h in range(32)},
+               "parity": [{"layer": L, "kind": kd, "k": k, "heads": hs,
+                           **R("correct" if par_ok(kd, k, hs) else "bug")}
+                          for L in PARITY_LAYERS for kd, k, hs in subs],
+               "head_five_layers": {str(h): R("bug") for h in range(32)},
+               "head_all_layers": {str(h): R("bug") for h in range(32)},
+               "five_layer_all_heads": R("correct"), "random_5layer": [R("bug")] * 10,
+               "reverse": {"five": R("correct")}}
+        return decide(run, res)
+
+    h22 = world(lambda kd, k, hs: H22 in hs, lambda L, h: h == H22)
+    assert h22["M2_L2_gen"]["verdict"] == "even-only repair carried by H22", h22["M2_L2_gen"]
+    first_noh22 = [hs for kd, k, hs in subs if kd == "even_noH22"][0]
+    one = world(lambda kd, k, hs: H22 in hs or hs == first_noh22, lambda L, h: h == H22)
+    assert one["M2_L2_gen"]["verdict"] == "even-only repair carried by H22", one["M2_L2_gen"]
+    only16 = world(lambda kd, k, hs: k == 16 and kd == "even")
+    assert only16["M2_L2_gen"]["verdict"] == "even-only k = 16 repairs; H22's role not shown"
+    parity = world(lambda kd, k, hs: kd in ("even", "even_noH22") and k >= 8)
+    assert parity["M2_L2_gen"]["verdict"] == "parity holds", parity["M2_L2_gen"]
+    assert h22["M3_gen"] and h22["sanity_correct"] and h22["M1a_no_layer_repairs_gen"] is True
+    assert h22["M5_specific"] and h22["M6"] and h22["M7"] == "not run"
+    assert world(lambda *a: False, base=0.5)["M1b_four_of_five_delta"] == "untestable"
 
 
 # ---------------------------------------------------------------- run
@@ -337,6 +427,8 @@ def main():
     t0 = time.time()
     r14.selftest()
     print(f"r14 selftest {time.time()-t0:.1f}s", flush=True)
+    decide_selftest()
+    print("r15 decide selftest OK", flush=True)
     for t, want in R14_CASES:
         assert CLS(t) == want == r14.classify(t), (t, CLS(t), want)
     assert make_classifier("4.3", "4.28")("4.30 is larger than 4.28") == "correct"
@@ -344,6 +436,9 @@ def main():
         sys.exit("--force-pair/--repo are smoke-only (need --limit)")
     if not os.environ.get("R15_GIT_SHA"):
         sys.exit("FATAL: set R15_GIT_SHA")
+    r15_sha = r14.sha256(__file__)
+    if not a.limit and r15_sha != os.environ.get("R15_EXPECTED_SHA256"):
+        sys.exit(f"FATAL: R15 script sha256 {r15_sha} != R15_EXPECTED_SHA256")
     r14_sha = r14.sha256(R14_PATH)
     if not a.limit and r14_sha != R14_EXPECTED_SHA256:
         sys.exit(f"FATAL: R14 script sha256 {r14_sha} != expected {R14_EXPECTED_SHA256}")
@@ -453,6 +548,9 @@ def main():
               f"reverse_five={res['reverse']['five']['class']}", flush=True)
         save()
 
+    run["decisions_before_M7"] = decide(run, res)
+    save()
+
     # M7 generalization
     pairs = gen_pairs()[: (3 if a.limit else 100)]
     res["generalization"] = []
@@ -462,11 +560,13 @@ def main():
         row = {"big": big, "small": small, "formats": {}}
         for k, pr in f2.items():
             txt = m.generate(pr)
-            row["formats"][k] = {"class": cls(txt), "output": txt, "hit_max_new": m.last_hit_max}
+            row["formats"][k] = {"class": cls(txt), "output": txt, "hit_max_new": m.last_hit_max,
+                                 "says_less": bool(RE_LESS.search(txt))}
         if row["formats"]["chat"]["class"] == "bug" and row["formats"]["simple"]["class"] == "correct":
             Dg = m.capture(f2["simple"], five)
             txt = m.generate(f2["chat"], [(L, list(range(nH)), Dg[L]) for L in five])
-            row["five_layer_repair"] = {"class": cls(txt), "output": txt}
+            row["five_layer_repair"] = {"class": cls(txt), "output": txt, "hit_max_new": m.last_hit_max,
+                                        "says_less": bool(RE_LESS.search(txt))}
         res["generalization"].append(row)
         save()
     run["decisions"] = decide(run, res)
