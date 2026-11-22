@@ -158,6 +158,18 @@ R8 subsets are correct 0 times in `post_wo/prefill`, against 83 of 441 for the r
 protocol, and the GPU and library versions differ from March, when hardware was not recorded. The verdicts
 below rest on configurations far from any borderline subset.
 
+### Hardware replication (planned 2026-11-22, before submitting)
+
+Gus asked for a same-hardware check. Same script (sha256 1ce5b0cc…348d), same `run.sbatch`, partition
+overridden on the command line to `a100_tandon`. Pre-2026 experiments in this repo name A100-SXM4-80GB;
+R8's own hardware and library versions are unrecorded. Estimate ≈1.1 GPU-h.
+Reading, fixed now:
+- Reproduction gate ≥ 950 on A100: supports the hardware explanation for the L40S shortfall.
+- Still < 950: says nothing new about the cause, since March's torch/transformers versions are unknown too.
+  The waiver stands either way.
+- Verdicts: if any pre-registered verdict differs between L40S and A100, report both and treat that
+  verdict as hardware-sensitive. Otherwise report it as replicated on two GPU types.
+
 ### Verdicts (pre-registered wording)
 
 - `pre_wo/prefill_right` (primary): **Layer-10 repair fails under true-head prompt-only patching with right
