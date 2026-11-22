@@ -5,6 +5,7 @@
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v2.md
 **Design review:** round 3 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v3.md
 **Design review:** round 4 FIXES NEEDED (2 small) — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v4.md
+**Design review:** PASS (round 5) — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v5.md
 **Script:** `9_8_research/reviewer_experiments/exp_R14_cross_model_true_heads/run_experiment.py`
 **Job:** `run.sbatch` (same folder). One job, one GPU, all models sequentially, on **`a100_tandon`**: the
 September 2025 runs name A100-SXM4-80GB, and R13 showed L40S vs A100 flips borderline outcomes (R8
@@ -162,7 +163,8 @@ problems found while designing this:
     appears late; parity emergence not separable"; repair present, parity fails → "supported"; parity
     holds → "refuted".
   - If step143000's outputs differ from the main run — the 4,095 subset outputs (`matches_main_run`) or
-    the six screen outputs (`screen_matches_main_run`, always compared) — every verdict carries
+    the six screen outputs (`screen_matches_main_run`, compared whenever both screens exist) — every
+    verdict past "no interpretable full-subset run" carries
     "(not interpreted: step143000 differs from the main run; INBOX)".
   Earlier checkpoints are descriptive.
 - **Descriptive only:** three-way class counts by size, the even-majority vs odd-majority rate gap, single heads, count of correct subsets by size, layer sweep, per-checkpoint counts.
