@@ -37,6 +37,17 @@ BRANCHES = [
         "old protocol re-run on A100: R8 1,000/1,000 exact",
         "verdicts identical on L40S and A100 (0 primary diffs)",
     ]),
+    ("Do Mistral's head claims hold?", "answered", [
+        "NO — no single head or subset repairs (R15)",
+        "0 of 1,024 single heads; 0 of 524 subsets at L2/L17",
+        "only layer 7 repairs; draft named 2, 17, 13, 10, 11",
+        "5-layer repair not specific: 7/10 random sets too",
+    ]),
+    ("Do Pythia/Gemma have the effect?", "partial", [
+        "Gemma base & IT: no format-dependent bug (R14)",
+        "Pythia L6 true-head repair fails; Sept not reproduced",
+        "Pythia old-protocol gate 7/10 (INBOX 2)",
+    ]),
     ("What made the old head results?", "partial", [
         "post-W_O block patch + decode-step writes, jointly",
         "post_wo prompt-only: even-16 correct, all blocks not",

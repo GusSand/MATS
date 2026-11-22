@@ -4621,10 +4621,17 @@ H22 and the five layers get count-matched controls. All rules are computed in `d
 Design review: four rounds, PASS. docs/experiments/11-22_mistral7b_true_head_patching.md
 
 ### Jobs
-- 24092912 — `run.sbatch`, a100_tandon, commit e1c139e — PENDING.
+- 24092912 — `run.sbatch`, a100_tandon, commit e1c139e — COMPLETED in 47 min (ga006).
 
 ### Results (no interpretation)
-None yet.
+- Verified by a fresh subagent: VERIFIED-WITH-FLAGS; every label and decision recomputes.
+  docs/reviews/11-22_mistral7b_true_head_patching_verify.md
+- Bug present in chat; qa and simple correct. S is not supported (comparative unresolved at 64 tokens).
+- Only layer 7's all-head transplant repairs. No single head (0/1,024) and no subset at layers 2 or 17
+  (0/524) repairs. H22 is not special.
+- The five-layer transplant repairs, but 7 of 10 random 5-layer sets do too.
+- The reverse transplant leaves simple correct. Δ is untestable (baseline +3.75).
+- Generalization bug counts 6/2/0/2 against the draft's 2/19/0/0. 3 of 3 genuine tested pairs repaired.
 
 ## 2026-11-22: R16 does the layer-10 position-0 write explain R13's L40S vs A100 gap? (submitted)
 

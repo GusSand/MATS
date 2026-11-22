@@ -1,6 +1,6 @@
 # R15 — Testing the Mistral-7B head claims with true per-head, prompt-only patching
 
-**Status:** SUBMITTED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–3)
+**Status:** DONE (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–3)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v2.md
 **Design review:** round 3 FIXES NEEDED (1 small) — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v3.md
@@ -137,4 +137,28 @@ Generation reading: success = *correct*. Δ reading (only when testable): succes
 
 ## Results
 
-(none yet)
+Job 24092912 (A100 ga006, commit e1c139e; R15 sha256 1fba89a4…, R14 sha256 20819e06…), raw outputs in
+`results/r15_24092912/`. Verified from raw text by a fresh subagent: VERIFIED-WITH-FLAGS. All 2,073 labels
+and every decision recompute exactly (docs/reviews/11-22_mistral7b_true_head_patching_verify.md). Gates and
+the sanity transplant pass.
+
+| Claim | Verdict | Numbers |
+|---|---|---|
+| S format profile | **not supported** | chat bug, qa and simple correct, comparative gives no answer within 64 tokens (unresolved, not clean). Inside the chat template, 3 of 4 wordings err in substance. |
+| M1a no single layer repairs | **refuted** | only layer 7 repairs. The draft's layers 2, 17, 13, 10 and 11 each still give the bug. |
+| M1b / M2-Δ / M3b (Δ readings) | **untestable** | chat baseline Δ = +3.75. Δ is not meaningful for chat: its reply names 9.8 first whether it is right or wrong. |
+| M2 even-only at ℓ = 2, 17 | **not supported** | 0 correct among the 262 subsets per layer (even, odd, mixed, without H22). Even-16 does not repair. |
+| M3 H22 the only fixing head | **false** | 0 of 1,024 single heads repair, at any layer. |
+| M4 H22 across layers | **false** | H22 at the five layers and at all 32 layers: bug. 0 of 32 heads repair in either config. |
+| M5 five-layer transplant | **holds, not specific** | it repairs, but 7 of 10 random 5-layer sets also repair. |
+| M6 reverse does not induce the bug | **holds** | simple stays correct. Δ drops (12.37 → 3.00) where the draft says it increases. |
+| M7 generalization | bug counts chat 6 / comparative 2 / qa 0 / simple 2 (draft 2/19/0/0); "3 of 4 eligible repaired" | In substance: one chat "bug" (8.5 vs 8.12) is correct, and its "failed repair" is a mislabel. One real chat bug (9.7 vs 9.12) was labelled *neither* and not patched. So 3 of 3 genuine tested pairs repaired. The comparative count is unreliable at 64 tokens. |
+
+Flags (substance, no verdict changes):
+- 187 patched outputs say "9.8 is smaller than 9.11", which is the bug, but are labelled *neither*. Every
+  success criterion is *correct*, so no decision moves. Single-head and parity patches barely change the
+  output at all (2 and 4 distinct texts).
+- The right alignment is exact on the question tokens, but the recipient's last 4 positions (` [/INST]`)
+  receive the donor's `\n Answer :` state. The layer-7 and multi-layer repairs may come from that tail
+  rather than from question processing; this would fit 7/10 random 5-layer sets repairing.
+
