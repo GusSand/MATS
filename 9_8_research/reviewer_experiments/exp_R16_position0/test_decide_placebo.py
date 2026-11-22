@@ -48,8 +48,22 @@ assert m.decide(var, copy, other, D, exposed, placebo_moved=0, placebo_valid=Fal
 half = {k: R(False) if i < 20 else R(True) for i, k in enumerate(keys)}
 assert m.decide(half, copy, other, D, exposed, placebo_moved=0)["verdict"] == "explains part of the gap (r = 20/40)"
 assert m.decide(half, copy, other, D, exposed, placebo_moved=20)["verdict"] == "not distinguishable from fragility"
+assert m.decide(half, copy, other, D, exposed, placebo_moved=0, placebo_valid=False)["verdict"] == "not distinguishable from fragility (no valid placebo)"
+k10 = keys[:10]; c10 = {k: copy[k] for k in k10}; o10 = {k: other[k] for k in k10}
+v3 = {k: R(False) if i < 3 else R(True) for i, k in enumerate(k10)}
+v = m.decide(v3, c10, o10, k10, set(k10), placebo_moved=0)["verdict"]
+assert "fragility" not in v and v.startswith("partial, below the placebo margin"), v
+assert m.decide(v3, c10, o10, k10, set(k10), placebo_moved=2)["verdict"] == "not distinguishable from fragility"
 half2 = dict(half); half2.update({f"o{i}": R(False) for i in range(5)})
 assert m.decide(half2, copy2, other2, D, exposed, placebo_moved=0)["verdict"] == "perturbs broadly"
 moved_all_new = dict(var); moved_all_new.update({f"o{i}": R(False) for i in range(5)})
 assert m.decide(moved_all_new, copy2, other2, D, exposed, placebo_moved=0)["verdict"] == "perturbs broadly"
-print("dense placebo, rule-3 invalid placebo, rule-5 placebo and N_new branches: OK")
+# one tiny unplaceable source among many normal ones: still valid (round 4)
+blk = torch.full((1, 4096), 0.15).half(); blk[0, 0:128] = (torch.rand(128) * 0.1 + 0.1).half()
+blk[0, 7] = 2e-4
+st = torch.zeros(1, 4096); st[0, 7] = 1.2e-7
+for j in (11, 20, 33, 47, 60, 71, 85, 99, 110, 120):
+    st[0, j] = float(m.ulp_step(blk[0, j:j+1], True)[0]) - float(blk[0, j])
+_, info3 = m.make_placebo(blk, st)
+assert info3["unplaced"] == [7] and info3["unplaced_step_fraction"] < 0.01 and info3["valid"], info3
+print("dense placebo, tiny-unplaced tolerance, rule-3/5 placebo and N_new branches: OK")

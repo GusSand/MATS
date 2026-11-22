@@ -1,8 +1,8 @@
-# CPU smoke (excerpt), 2026-11-22T16:24:32Z, R16 sha256 26a1d253cd453ac2…; R13's random-weight tiny Llama (tiny32); mechanics only (copy gates fail by design: CPU vs GPU references)
+# CPU smoke (excerpt), 2026-11-22T16:30:03Z, R16 sha256 bd47abab36eb02c1…; R13's random-weight tiny Llama (tiny32); mechanics only (copy gates fail by design: CPU vs GPU references)
 # unit test: python -I test_decide_placebo.py run_experiment.py
 placebo: copy-relative change at [939] same block, same size, opposite of d0: {'src': 1000, 'dst': 939, 'step': -1.52587890625e-05}
 decide: all branches as pre-registered
-dense placebo, rule-3 invalid placebo, rule-5 placebo and N_new branches: OK
+dense placebo, tiny-unplaced tolerance, rule-3/5 placebo and N_new branches: OK
 # command: R13_MODEL=<scratch>/tiny32 R16_GIT_SHA=smoke python -I run_experiment.py --gpu a100 --limit 40 --synthetic-delta --out <tmp>/a
 [transformers] `torch_dtype` is deprecated! Use `dtype` instead!
 [a100] capture vs live: {'buggy': {'shape': [1, 21, 256], 'pos0_equal': True, 'all_equal': True}, 'clean': {'shape': [1, 19, 256], 'pos0_equal': True, 'all_equal': True}}  d0 max 1.862645149230957e-09 nonzero 1 blocks [1]
@@ -11,13 +11,13 @@ dense placebo, rule-3 invalid placebo, rule-5 placebo and N_new branches: OK
 [a100/prefill/placebo] 40 configs, 2s
 [a100/prefill] gate {'n': 40, 'text_equal_to_r13': 0, 'ok': False}
 [a100/prefill/keep0] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': 0, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 83}, 'verdict': 'refuted by construction: no D config is exposed to the posi
-[a100/prefill/placebo] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 83}, 'verdict': 'descriptive', 'gate_unexposed_identical': True}
+[a100/prefill/placebo] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 83}, 'verdict': 'descriptive', 'moved_exposed': 0, 'gate_unexposed_iden
 [a100/all_steps/copy] 40 configs, 2s
 [a100/all_steps/keep0] 40 configs, 2s
 [a100/all_steps/placebo] 40 configs, 2s
 [a100/all_steps] gate {'n': 40, 'text_equal_to_r13': 0, 'ok': False}
 [a100/all_steps/keep0] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': 0, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 441}, 'verdict': 'refuted by construction: no D config is exposed to the p
-[a100/all_steps/placebo] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 441}, 'verdict': 'descriptive', 'gate_unexposed_identical': True}
+[a100/all_steps/placebo] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 441}, 'verdict': 'descriptive', 'moved_exposed': 0, 'gate_unexposed_i
 # command: R13_MODEL=<scratch>/tiny32 R16_GIT_SHA=smoke python -I run_experiment.py --gpu l40s --delta <tmp>/a/position0.pt --limit 40 --out <tmp>/b
 [transformers] `torch_dtype` is deprecated! Use `dtype` instead!
 [l40s] capture vs live: {'buggy': {'shape': [1, 21, 256], 'pos0_equal': True, 'all_equal': True}, 'clean': {'shape': [1, 19, 256], 'pos0_equal': True, 'all_equal': True}}  d0 max 0.0 nonzero 0 blocks []
@@ -29,7 +29,7 @@ dense placebo, rule-3 invalid placebo, rule-5 placebo and N_new branches: OK
 [l40s/prefill] gate {'n': 40, 'text_equal_to_r13': 0, 'ok': False}
 [l40s/prefill/inject] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': 0, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 120}, 'verdict': 'refuted by construction: no D config is exposed to the po
 [l40s/prefill/donorA100] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 120}, 'verdict': 'descriptive'}
-[l40s/prefill/placebo] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 120}, 'verdict': 'descriptive', 'gate_unexposed_identical': True}
+[l40s/prefill/placebo] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 120}, 'verdict': 'descriptive', 'moved_exposed': 0, 'gate_unexposed_ide
 [l40s/all_steps/copy] 40 configs, 2s
 [l40s/all_steps/inject] 40 configs, 2s
 [l40s/all_steps/donorA100] 40 configs, 2s
@@ -37,6 +37,6 @@ dense placebo, rule-3 invalid placebo, rule-5 placebo and N_new branches: OK
 [l40s/all_steps] gate {'n': 40, 'text_equal_to_r13': 0, 'ok': False}
 [l40s/all_steps/inject] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': 0, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 499}, 'verdict': 'refuted by construction: no D config is exposed to the 
 [l40s/all_steps/donorA100] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 499}, 'verdict': 'descriptive'}
-[l40s/all_steps/placebo] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 499}, 'verdict': 'descriptive', 'gate_unexposed_identical': True}
+[l40s/all_steps/placebo] {'D': 0, 'D_exposed': 0, 'n_scored': 0, 'moved': 0, 'r': None, 'moved_over_all_D': [0, 0], 'N_new': 0, 'outside_to_correct': 0, 'outside_to_not_correct': 0, 'unexposed_text_identical': [37, 37], 'text_equal_other_gpu_r13': 0, 'placebo_moved': None, 'r8_correct': {'variant': 0, 'own_copy': 0, 'other_gpu': 499}, 'verdict': 'descriptive', 'moved_exposed': 0, 'gate_unexposed_i
 # negative test: l40s without --delta must refuse
 FATAL: --delta (A100 position0.pt) required for the L40S job

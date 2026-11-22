@@ -3,7 +3,7 @@
 Experiment R16: does the layer-10 position-0 write explain R13's L40S vs A100 gap?
 =================================================================================
 Experiment file: docs/experiments/11-22_llama8b_position0_gpu_gap.md
-Design review round 1: docs/reviews/11-22_llama8b_position0_gpu_gap_design.md
+Design reviews: docs/reviews/11-22_llama8b_position0_gpu_gap_design*.md (rounds 1-4)
 
 Imports R13's script unchanged (sha256 checked); R13's hook is untouched. Variants change only the donor:
   A100  copy (gate) | keep0: donor[:,0] := buggy0 | placebo: clean0_A with keep0's steps (-d0) applied at
@@ -69,11 +69,15 @@ def ulp_step(x, up):
     return b.view(x.dtype)
 
 
+UNPLACED_TOL = 0.01   # placebo valid if unplaced steps carry <= 1% of total |step| (review round 4)
+
+
 def make_placebo(base0, step):
     """base0 (this GPU's copy donor position 0) with the test variant's per-coordinate steps (-d0 for keep0 on
     A100, +dA for inject on L40S) applied at OTHER coordinates of the same blocks. A target qualifies only if
     the step lands exactly and nonzero there: fp16(x[c2] + s) - x[c2] == s. Sources without a qualifying free
-    target are recorded as unplaced; the placebo is valid only if every move is placed (review round 3)."""
+    target are recorded as unplaced; the placebo is valid if the unplaced steps carry at most UNPLACED_TOL
+    of the total |step| (review rounds 3-4)."""
     import torch
     flat_b, flat_s = base0.reshape(-1).clone(), step.reshape(-1)
     nz = [int(i) for i in torch.nonzero(flat_s).flatten()]
@@ -98,7 +102,10 @@ def make_placebo(base0, step):
         taken.add(c2)
         moves.append({"src": c, "dst": c2, "step": float(s_)})
         flat_b[c2] = new
-    return flat_b.view_as(base0), {"moves": moves, "unplaced": unplaced, "valid": not unplaced and bool(moves)}
+    tot = float(flat_s.abs().sum())
+    frac = float(sum(abs(float(flat_s[c])) for c in unplaced)) / tot if tot else 1.0
+    return flat_b.view_as(base0), {"moves": moves, "unplaced": unplaced, "unplaced_step_fraction": frac,
+                                   "valid": bool(moves) and frac <= UNPLACED_TOL}
 
 
 def blocks_nonzero(d0):
@@ -152,8 +159,10 @@ def decide(var, copy, other_ref, D, exposed, placebo_moved=None, label=True, pla
         v = "perturbs broadly"
     elif not placebo_valid:
         v = "not distinguishable from fragility (no valid placebo)"
-    elif 2 * (moved - pm) < n:
+    elif 2 * pm >= moved:                                      # placebo moves at least half as many
         v = "not distinguishable from fragility"
+    elif 2 * (moved - pm) < n:
+        v = f"partial, below the placebo margin (r = {moved}/{n}, r_pl = {pm}/{n})"
     else:
         v = f"explains part of the gap (r = {moved}/{n})"
     out["verdict"] = v
@@ -318,13 +327,15 @@ def main():
             if suffix and gate["ok"]:
                 continue
             pr = decide(out["placebo"], copy, ref_other, Dset, exposed, label=False)
+            pr["moved_exposed"] = sum(out["placebo"][k]["correct"] == ref_other[k]["correct"]
+                                      for k in Dset if k in exposed)
             cell["placebo" + suffix] = pr
             for vname in variants:
                 if vname in ("copy", "placebo"):
                     continue
                 descriptive = vname in ("donorA100", "a100clean0")
                 cell[vname + suffix] = decide(out[vname], copy, ref_other, Dset, exposed,
-                                              placebo_moved=None if descriptive else pr["moved"],
+                                              placebo_moved=None if descriptive else pr["moved_exposed"],
                                               label=not descriptive, placebo_valid=plinfo["valid"])
         if scope == "all_steps":
             refs = r13.reference_outcomes(r8, r1)
