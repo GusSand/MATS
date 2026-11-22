@@ -1,0 +1,21 @@
+# CPU smoke (excerpt), 2026-11-22T16:03:17Z; R13's random-weight tiny Llama (tiny32); mechanics only (gates fail by design: CPU vs GPU references)
+# command: R13_MODEL=<scratch>/tiny32 R16_GIT_SHA=smoke python -I run_experiment.py --gpu a100 --limit 6 --out <tmp>/a
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[a100] position-0 clean-buggy max|diff| = 0.0  nonzero entries = 0
+[a100/prefill/copy] 6 configs, 0s
+[a100/prefill/keep0] 6 configs, 0s
+[a100/prefill] gate {'n': 6, 'text_equal_to_r13': 0, 'class_equal_to_r13': 5, 'ok': False}  keep0: {'D_size': 0, 'moved': 0, 'r': None, 'N_new': 0, 'verdict': 'no gap to explain (D empty)', 'r8_correct_variant': 0, 'r8_correct_own_copy': 0, 'r8_correct_other_gpu': 83}
+[a100/all_steps/copy] 6 configs, 0s
+[a100/all_steps/keep0] 6 configs, 0s
+[a100/all_steps] gate {'n': 6, 'text_equal_to_r13': 0, 'class_equal_to_r13': 4, 'ok': False}  keep0: {'D_size': 0, 'moved': 0, 'r': None, 'N_new': 0, 'verdict': 'no gap to explain (D empty)', 'r8_correct_variant': 0, 'r8_correct_own_copy': 0, 'r8_correct_other_gpu': 441}
+# command: R13_MODEL=<scratch>/tiny32 R16_GIT_SHA=smoke python -I run_experiment.py --gpu l40s --delta <tmp>/a/position0.pt --limit 6 --out <tmp>/b
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[l40s] position-0 clean-buggy max|diff| = 0.0  nonzero entries = 0
+[l40s/prefill/copy] 6 configs, 0s
+[l40s/prefill/inject] 6 configs, 0s
+[l40s/prefill] gate {'n': 6, 'text_equal_to_r13': 0, 'class_equal_to_r13': 5, 'ok': False}  inject: {'D_size': 0, 'moved': 0, 'r': None, 'N_new': 0, 'verdict': 'no gap to explain (D empty)', 'r8_correct_variant': 0, 'r8_correct_own_copy': 0, 'r8_correct_other_gpu': 120}
+[l40s/all_steps/copy] 6 configs, 0s
+[l40s/all_steps/inject] 6 configs, 0s
+[l40s/all_steps] gate {'n': 6, 'text_equal_to_r13': 0, 'class_equal_to_r13': 4, 'ok': False}  inject: {'D_size': 0, 'moved': 0, 'r': None, 'N_new': 0, 'verdict': 'no gap to explain (D empty)', 'r8_correct_variant': 0, 'r8_correct_own_copy': 0, 'r8_correct_other_gpu': 499}
+# negative test: l40s without --delta must refuse
+FATAL: --delta (A100 position0.pt) required for the L40S job

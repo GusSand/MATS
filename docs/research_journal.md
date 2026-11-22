@@ -4598,3 +4598,23 @@ Design review: five rounds, PASS. docs/experiments/11-22_pythia_gemma_true_head_
 ### Results (no interpretation)
 None yet.
 
+## 2026-11-22: R15 Mistral-7B head claims, tested with true per-head patching (submitted)
+
+### Research question
+Do the v2 draft's Mistral-7B-Instruct-v0.2 claims hold when we measure them ourselves? The claims are
+format profile, layers 2/17/13/10/11, even-only vs odd-only, H22 dominance, five-layer transplant,
+asymmetry and generalization. They came from Nam by email with no code, so this tests them and cannot
+reproduce the numbers.
+
+### Method
+Prompt-only true-head patching (R14's Patcher), snapshot-pinned model, A100, 64 tokens. The parity rule
+excludes H22 (an even head) and uses a Fisher test. Δ readings are used only where the unpatched chat Δ ≤ 0.
+H22 and the five layers get count-matched controls. All rules are computed in `decide()`.
+Design review: four rounds, PASS. docs/experiments/11-22_mistral7b_true_head_patching.md
+
+### Jobs
+- 24092912 — `run.sbatch`, a100_tandon, commit e1c139e — PENDING.
+
+### Results (no interpretation)
+None yet.
+

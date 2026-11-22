@@ -1,6 +1,6 @@
 # R15 — Testing the Mistral-7B head claims with true per-head, prompt-only patching
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–3)
+**Status:** SUBMITTED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–3)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v2.md
 **Design review:** round 3 FIXES NEEDED (1 small) — fresh subagent, 2026-11-22 — docs/reviews/11-22_mistral7b_true_head_patching_design_v3.md
@@ -10,6 +10,7 @@ patching code; the job refuses to start unless R14's and R15's sha256 equal `R14
 `R15_EXPECTED_SHA256`, computed at submit time from the committed files). `decide()` has its own synthetic
 selftest, run at every start. All decision rules are computed in the script (`decide`) into `run.json`.
 **Job:** `run.sbatch` (same folder), `a100_tandon`.
+**Slurm job:** 24092912 (commit e1c139e, `a100_tandon`, R15 sha256 1fba89a4…, R14 sha256 20819e06…). Log `/scratch/gs157/MATS/logs/24092912_r15_mistral.log`; results `/scratch/gs157/MATS/results/r15_24092912/`.
 **Decision:** Gus, 2026-11-22: "the nam result can we run that ourselves after downloading the model?"
 
 ## Research question
