@@ -260,8 +260,9 @@ def rules(s, family):
                                     and b["max_D"] == abs(b["D_even_minus_odd"]))   # no split scores higher
     r["parity_holds"] = all(r[k] for k in ("parity_a_all_even", "parity_b_all_odd_not",
                                            "parity_c_even_only_gt_odd_only", "parity_d_split_specific"))
+    r["parity_interpreted"] = r["repair"] and r["parity_holds"]   # what a write-up may quote
     if family == "gemma":
-        r["gemma_parity_independent"] = bool(s["all_even"]) and bool(s["all_odd"])
+        r["gemma_parity_independent"] = r["repair"] and bool(s["all_even"]) and bool(s["all_odd"])
         r["pythia_style_parity_descriptive"] = parity_verdict(s, r)   # Gemma's rule is the one above
     else:
         r["verdict"] = parity_verdict(s, r)
@@ -655,7 +656,9 @@ def late_training_verdict(c143, c120):
     if not ok(c143):
         return "untestable: no interpretable full-subset run at step143000"
     caveat = " (not interpreted: step143000 differs from the main run; INBOX)" \
-        if c143.get("matches_main_run") is False else ""
+        if (c143.get("matches_main_run") is False or c143.get("screen_matches_main_run") is False) else ""
+    if not c143["rules"]["repair"]:
+        return "untestable: all-heads patch does not repair at step143000; head rules not interpreted" + caveat
     if not c143["rules"]["parity_holds"]:
         return "not supported: parity does not hold at step143000" + caveat
     if not c120 or "error" in c120:
@@ -697,7 +700,7 @@ def dynamics(a, out_dir):
     order = FULL_SUBSET_CHECKPOINTS[::-1] + [c for c in CHECKPOINTS if c not in FULL_SUBSET_CHECKPOINTS]
     cks = order[:2] if a.limit else order
     for ck in cks:
-        r = {}
+        r = {"matches_main_run": None, "matches_main_run_reason": "checkpoint errored"}
         out["checkpoints"][ck] = r   # filled in place, so a crash keeps whatever was recorded
         try:
             dynamics_checkpoint(a, out, r, ck, L, main_pair, main_cfgs, main_screen, out_dir)
@@ -869,11 +872,15 @@ def selftest():
     mm["matches_main_run"] = False
     assert lt(mm, ck(True, True, False)).endswith("(not interpreted: step143000 differs from the main run; INBOX)")
     assert lt(ck(True, True, True), {"error": "boom"}).startswith("untestable: step120000 errored")
+    assert lt(ck(True, False, True), ck(True, True, False)).startswith("untestable: all-heads patch does not repair")
+    sm = ck(True, True, True)
+    sm["screen_matches_main_run"] = False
+    assert lt(sm, ck(True, True, False)).endswith("differs from the main run; INBOX)")
     g = ck(True, True, False)
     g["gates"]["ok"] = False
     assert lt(ck(True, True, True), g).startswith("untestable: step120000 gates failed")
     print("selftest OK: classifier (%d cases), rules on %d synthetic truths, noise test "
-          "({6,8,10}: %d/40 false passes; >=3 even: %d/40), late-training verdict (9 cases)"
+          "({6,8,10}: %d/40 false passes; >=3 even: %d/40), late-training verdict (11 cases)"
           % (len(cases), truths, late, true_par))
 
 

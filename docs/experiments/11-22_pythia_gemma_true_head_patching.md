@@ -1,9 +1,10 @@
 # R14 — True per-head patching in Pythia-160M and Gemma-2B (9.8 vs 9.11)
 
-**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–3)
+**Status:** PLANNED (pre-registered 2026-11-22, before any compute; amended after design review rounds 1–4)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v2.md
 **Design review:** round 3 FIXES NEEDED — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v3.md
+**Design review:** round 4 FIXES NEEDED (2 small) — fresh subagent, 2026-11-22 — docs/reviews/11-22_pythia_gemma_true_head_patching_design_v4.md
 **Script:** `9_8_research/reviewer_experiments/exp_R14_cross_model_true_heads/run_experiment.py`
 **Job:** `run.sbatch` (same folder). One job, one GPU, all models sequentially, on **`a100_tandon`**: the
 September 2025 runs name A100-SXM4-80GB, and R13 showed L40S vs A100 flips borderline outcomes (R8
@@ -149,19 +150,20 @@ problems found while designing this:
   alone (fails), {6, 8, 10} needed (fails), all six even needed (holds), any two even (holds), and a
   seeded noise test: with 1% of outputs flipped, {6, 8, 10} may pass in at most 2 of 40 seeds (observed 1)
   and "≥ 3 even heads" must pass in at least 36 of 40 (observed 40).
-- **Gemma parity-independence holds:** even-4 and odd-4 both correct. The split rank (d) over Gemma's 35
+- **Gemma parity-independence holds:** the all-heads patch repairs, and even-4 and odd-4 are both correct. The split rank (d) over Gemma's 35
   bipartitions is reported as descriptive (top 5% of 35 means a unique maximum).
 - **Pythia late-training claim** ("parity appears only in the final 15%"), computed by
   `late_training_verdict`:
   - step143000 has no phenomenon / gate failure / error → "untestable".
+  - the all-heads patch does not repair at step143000 → "untestable … head rules not interpreted".
   - parity fails at step143000 → "not supported".
   - Given parity at step143000, step120000: error → "untestable"; no correct/bug pair → "untestable";
     gates failed → "untestable"; pair present but the all-heads patch does not repair → "repair itself
     appears late; parity emergence not separable"; repair present, parity fails → "supported"; parity
     holds → "refuted".
-  - If step143000's outputs differ from the main run, every verdict carries "(not interpreted:
-    step143000 differs from the main run; INBOX)". The six screen outputs are also compared with the main
-    run's, always, as `screen_matches_main_run`.
+  - If step143000's outputs differ from the main run — the 4,095 subset outputs (`matches_main_run`) or
+    the six screen outputs (`screen_matches_main_run`, always compared) — every verdict carries
+    "(not interpreted: step143000 differs from the main run; INBOX)".
   Earlier checkpoints are descriptive.
 - **Descriptive only:** three-way class counts by size, the even-majority vs odd-majority rate gap, single heads, count of correct subsets by size, layer sweep, per-checkpoint counts.
 
@@ -175,6 +177,10 @@ Total ≈ 0.7 GPU-h; walltime 3 h on `a100_tandon`.
 
 - Rule (d)'s "no split scores higher" clause costs power under heavy per-subset noise (graded parity
   70/10/40 passed 1 of 23 repairing seeds in the round-3 simulation). Such a result lands in verdict 6.
+- Residual false positives (round-4 simulation, 40 seeds): "any 2 of {6, 8, 10}" still gives "parity
+  holds" in 4/40 seeds at 1% output noise, 2/40 at 3% and 10%; {6, 8, 10} needed in 1/40.
+- `parity_holds` is computed whatever the repair outcome; the field to quote is `parity_interpreted`
+  (repair and parity).
 - Rules (a) and (b) each rest on one output (all-even, all-odd). In simulation a noisy parity effect passes
   (d) far more often than (a). Size-wise class counts are reported next to them.
 - If the screen pair is F3 → F1 (Pythia's fp32 CPU smoke gave this), the result concerns F1, not the
