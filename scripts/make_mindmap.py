@@ -34,7 +34,8 @@ BRANCHES = [
         "NO — true-head prompt patch of all 32 heads fails (R13)",
         "prefill_right (primary): 0 of 1,307 configs correct",
         "prefill left-aligned: all 0, even-16 0, rand8 23/200",
-        "old protocol re-run: 942/1,000 R8 agree (gate waived)",
+        "old protocol re-run on A100: R8 1,000/1,000 exact",
+        "verdicts identical on L40S and A100 (0 primary diffs)",
     ]),
     ("What made the old head results?", "partial", [
         "post-W_O block patch + decode-step writes, jointly",

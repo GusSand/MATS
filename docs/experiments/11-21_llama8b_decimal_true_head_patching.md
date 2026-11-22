@@ -1,6 +1,6 @@
 # R13 — True per-head patching at Layer 10 (Llama-3.1-8B-Instruct, 9.8 vs 9.11)
 
-**Status:** DONE. Reproduction gate (942/1,000 < 950) waived by Gus 2026-11-22 (docs/decisions.md). Pre-registered 2026-11-21 before compute.
+**Status:** DONE. L40S gate (942/1,000 < 950) waived by Gus 2026-11-22; A100 replication passes the gate 1,000/1,000 and gives the same verdicts. Pre-registered 2026-11-21 before compute.
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design_v2.md
 **Design review:** PASS — fresh subagent, 2026-11-21 — docs/reviews/11-21_llama8b_decimal_true_head_patching_design_v3.md
@@ -170,6 +170,21 @@ Reading, fixed now:
 - **Slurm job:** 24084222 (commit 10e89d6, `a100_tandon`). Results `/scratch/gs157/MATS/results/r13_24084222/`.
 - Verdicts: if any pre-registered verdict differs between L40S and A100, report both and treat that
   verdict as hardware-sensitive. Otherwise report it as replicated on two GPU types.
+
+### Hardware replication result (job 24084222, A100-SXM4-80GB, ga004)
+
+Same script (sha256 1ce5b0cc…), snapshot, torch, transformers and driver; submitted with
+`sbatch --partition=a100_tandon --export=ALL,R13_GIT_SHA=10e89d6 run.sbatch`. Raw outputs:
+`results/r13_24084222/`. Verified: docs/reviews/11-21_llama8b_decimal_true_head_patching_verify_a100.md.
+- **Reproduction gate passes exactly:** R8 1,000/1,000, R1 rand8 200/200, pairs 60/60, odd-only 5/5; reference
+  totals 202, 297, 13 and 21/0 reproduced. Supports the hardware explanation for the L40S shortfall.
+- **All three verdicts replicate on two GPU types.** Primary cell: 0 class changes between GPUs. Left cell: 2
+  (`pair23_odd`, `rand8_072`), no rule affected (odd-pair count 7/30 vs 6/30, (d) −0.120 vs −0.115). decode_only: 0.
+- All 103 class changes across cells go bug (L40S) → correct (A100). Near-boundary descriptive counts are
+  GPU-dependent and are reported with their GPU: `post_wo/prefill` R8 subsets 120/1,000 (A100) vs 83 (L40S);
+  pairs E&!O 7 vs 4.
+- BOS max-abs diff 6.1e-5 on A100 (one fp16 ULP; 0.0 on L40S): kernel numerics, immaterial to verdicts.
+- The all-steps identity control again equals unpatched (same deviation as L40S).
 
 ### Verdicts (pre-registered wording)
 

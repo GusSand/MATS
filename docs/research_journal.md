@@ -4568,5 +4568,11 @@ hardware. Pre-registered verdicts now apply:
   when post-W_O blocks are patched and the hook keeps writing at decode steps.
 
 ### A100 replication (2026-11-22)
-- 24084222 — same script and job file, `--partition=a100_tandon`, commit 10e89d6 — PENDING.
-  How to read it was fixed before submitting (experiment file, "Hardware replication").
+- 24084222 — same script and job file, `--partition=a100_tandon`, commit 10e89d6 — COMPLETED in 1 h 01 min
+  (ga004, A100-SXM4-80GB). How to read it was fixed before submitting.
+- Result: the old protocol reproduces R8/R1 exactly, 1,000/1,000, 200/200, 60/60. The L40S shortfall was the GPU.
+- Every pre-registered verdict is the same on A100. The primary cell has no outcome change between GPUs.
+- All 103 outcome changes between GPUs go bug on L40S to correct on A100, so near-boundary counts depend on the
+  GPU (`post_wo/prefill` R8 subsets: 120 vs 83 of 1,000). The paper reports them with the GPU named.
+- Verified by a fresh subagent: VERIFIED-WITH-FLAGS, no discrepancies.
+  docs/reviews/11-21_llama8b_decimal_true_head_patching_verify_a100.md
