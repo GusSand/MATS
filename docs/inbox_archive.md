@@ -11,3 +11,11 @@ Answered INBOX items, moved here verbatim once applied. Append-only.
    Trade-off: the alternative is rerunning the old protocol on other GPUs (~15 GPU-min each) hoping to
    hit 950, but March's hardware is unrecorded, so a miss there settles nothing.
    → answer (2026-11-22): waive.
+
+2. **What to do with the non-Llama head claims?** Audit (docs/reviews/11-22_cross_model_head_scripts_audit.md):
+   every Pythia and Gemma head/parity claim used the same post-W_O hook left on during generation (both bugs).
+   The Mistral head claims (H22, even-only at ℓ=2,17) have no code or results anywhere; they came from Nam by email.
+   **Recommendation:** rerun Pythia-160M and Gemma-2B (IT) with the R13 protocol (small models, under 1 GPU-h
+   each, with design review first), and drop the Mistral head claims unless Nam's code turns up.
+   Trade-off: dropping Pythia/Gemma instead is faster but leaves Llama as the only model in the head section.
+   → answer (2026-11-22): rerun.
