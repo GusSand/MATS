@@ -1,6 +1,6 @@
-# CPU smoke (excerpt: '[' lines, selftests, errors), 2026-11-22T15:57:07Z, commit a354921; random tiny Mistral (18 layers, 32 q / 8 kv heads, head_dim 4), Llama test tokenizer + toy [INST] template; mechanics only
-# R15 sha256 9f7b34cc0931dbd4…, R14 sha256 20819e0620464ec3…
-# run 1, no-pair path: R15_GIT_SHA=a354921 python -I run_experiment.py --repo <scratch>/tinymistral --limit --out <tmp>/a
+# CPU smoke (excerpt: '[' lines, selftests, errors), 2026-11-22T16:01:41Z, commit 0460eaa; random tiny Mistral (18 layers, 32 q / 8 kv heads, head_dim 4), Llama test tokenizer + toy [INST] template; mechanics only
+# R15 sha256 1fba89a41bec6887…, R14 sha256 20819e0620464ec3…
+# run 1, no-pair path: R15_GIT_SHA=0460eaa python -I run_experiment.py --repo <scratch>/tinymistral --limit --out <tmp>/a
 selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (11 cases)
 r14 selftest 5.1s
 r15 decide selftest OK
@@ -8,7 +8,7 @@ r15 decide selftest OK
 [decisions] {'S': False, 'M7_bug_counts': {'chat': 0, 'comparative': 0, 'qa': 0, 'simple': 0}, 'M7_n_pairs': 3, 'M7_eligible': 0, 'M7_repaired': 0, 'M7_repair_transfers': False, 'M7_report_as': '0 of 0 eligible pairs repaired', 'note': 'no pair: M1-M6 not run'}
 # run 2, forced pair: ... --limit --force-pair simple,chat --out <tmp>/b
 selftest OK: classifier (18 cases), rules on 8 synthetic truths, noise test ({6,8,10}: 1/40 false passes; >=3 even: 40/40), late-training verdict (11 cases)
-r14 selftest 5.2s
+r14 selftest 5.5s
 r15 decide selftest OK
 [pair] simple -> chat
 [gate] head isolation {'head': 1, 'changed_heads': [1], 'ok': True}
@@ -18,4 +18,4 @@ r15 decide selftest OK
 [M3] layer 2, 0s; correct heads: []
 [M3] layer 17, 1s; correct heads: []
 [M4-M6] five=neither random5=['neither', 'neither', 'neither'] h22_five=neither reverse_five=neither
-[decisions] {'S': False, 'M7_bug_counts': {'chat': 0, 'comparative': 0, 'qa': 0, 'simple': 0}, 'M7_n_pairs': 3, 'M7_eligible': 0, 'M7_repaired': 0, 'M7_repair_transfers': False, 'M7_report_as': '0 of 0 eligible pairs repaired', 'delta_testable': False, 'delta_baseline_chat': 11.118171691894531, 'sanity_correct': False, 'M1_correct_layers': [], 'M1_delta_pos_layers': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], 'M1a_no_layer_repairs_gen': 'uninterpretable: the all-layers sanity
+[decisions] {'S': False, 'M7_bug_counts': {'chat': 0, 'comparative': 0, 'qa': 0, 'simple': 0}, 'M7_n_pairs': 3, 'M7_eligible': 0, 'M7_repaired': 0, 'M7_repair_transfers': False, 'M7_report_as': '0 of 0 eligible pairs repaired', 'delta_testable': False, 'delta_baseline_chat': 11.118171691894531, 'sanity_correct': False, 'M1_correct_layers': [], 'M1_delta_pos_layers': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], 'M1a_no_layer_repairs_gen': 'uninterpretable: no layer repairs and 
