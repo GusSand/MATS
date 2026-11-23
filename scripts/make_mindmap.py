@@ -59,7 +59,8 @@ BRANCHES = [
         "read out by layer-14 attention into the answer",
         "specific direction (L9-14), not a verse/date concept",
         "needs Q: + ' Which' together; read out at layer 14",
-        "post hoc: site = last fractional token (6/6 big-first)",
+        "R19 held out: big-first, end-of-question token 33/37",
+        "small-first: LFT or final ':' per question; 14/116",
     ]),
     ("Does position 0 explain the GPU gap?", "answered", [
         "NO: A100 keep0 gives 119 of 120 R8, not 83",

@@ -1,11 +1,12 @@
 # R19 — Does the format flip live at the question's last fractional token, in both number orders?
 
-**Status:** SUBMITTED (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–2)
+**Status:** DONE (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–2)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_last_fraction_design.md
 **Design review:** PASS WITH MINOR FIXES (round 2, fixes applied) — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_last_fraction_design_v2.md
 **Script:** `9_8_research/reviewer_experiments/exp_R19_last_fraction/run_experiment.py`. It imports R18's script by
 path (sha256 must start `1c5e555b`) for the pair classifier, unbatched generation and resid capture, and R17's
 `Model` through R18.
+**Verification:** VERIFIED-WITH-FLAGS — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_last_fraction_verify.md
 **Job:** `run.sbatch` (`a100_tandon`, 3 h walltime). **Slurm job:** 24227404, commit c1d4a42. Log `/scratch/gs157/MATS/logs/24227404_r19_lastfrac.log`; results `/scratch/gs157/MATS/results/r19_24227404/`.
 Expected script sha256: `a4effdba53010f882d4c00ce243fc8618105acc9a7bece3047f9b3979a03b20e`.
 **Decision:** Gus, 2026-11-23: "yes. keep designing and running until we find smth."
@@ -121,4 +122,56 @@ Reported, no label:
 
 ## Results
 
-(none yet)
+Job 24227404 (A100 ga024, 19 min, commit c1d4a42). Raw: `results/r19_24227404/run.json`. All gates pass. The canonical
+LFT r reproduces R17 exactly, and batched vs unbatched classes agree 128/128. A fresh verifier recomputed the
+screen, the seeded sample (201 rows, in order), every skip, margin, repair flag, rate, interval and label: no
+discrepancies. An independent classifier agreed on all 494 checked texts.
+
+**Screen.** 9,600 questions.
+- Simple wrong 17.7%, Q&A wrong 20.6%, both wrong 16.6%.
+- Format-dependent 389 (4.1%): big-first 48, small-first 341. By wording: W1 107, W2 123, W3 159.
+- Reverse-dependent (Q&A fixes it) 105, of which 90 are big-first.
+
+**Pre-registered label: "holds for big_first only".** Small-first does not merely fail to hold: its LFT rate
+(0.12, upper CI 0.19) is below the 0.2 "not supported" threshold.
+
+| Stratum (outside R18's grid) | n | LFT repairs | OFT repairs |
+|---|---|---|---|
+| big-first | 37 | **33 (0.89; 95% CI 0.75–0.96)** | 0 (0–0.09) |
+| small-first | 116 | 14 (0.12; 0.07–0.19) | 0 (0–0.03) |
+| R18 grid, big-first (reported separately) | 6 | 6 | 0 |
+| R18 grid, small-first | 33 | 10 | 0 |
+
+**Big-first.**
+- The LFT is the argmax position in 37/37 held-out questions (and 6/6 in the grid). Median best-band r is 0.98
+  (mean 1.04, mostly at layer 9); every other position, including the mismatched-token ones, averages ≤ 0.08.
+- Random controls average ≈ 0.003; reverse r averages 2.4.
+- The smallest primary margin among repairs is 0.35, and every repair also passes the same-layer margin.
+- The 4 misses: r 0.49, r 0.42, a control mean of 0.2046 (just over 0.2), and one generation that stays the bug.
+- By wording: W1 4/4, W2 16/19, W3 13/14.
+
+**Small-first.**
+- Argmax position: the LFT in 61 questions, the final ":" (LFT+3) in 55, never anywhere else. Mean best-band r:
+  LFT 0.32, ":" 0.31.
+- Per question the two are anti-correlated (−0.78). No question has both ≥ 0.5, so the flip sits at one or the
+  other, varying by question; about 0.2–0.4 of r is not located in the prompt (likely at the answer-prefix tokens,
+  which are not mapped).
+- The ":" site was never tested by generation or controls; 16 questions have ":" at r ≥ 0.5 with a ≥ 0.3 margin on
+  the map alone.
+
+**Verifier flags.**
+1. Site identity. In big-first the LFT is also the multi-digit token and the token before "?". The small-first
+   null at the multi-digit token (OFT ≈ 0.04) removes the "11-token" reading, so the site is positional (the end of
+   the question). LFT vs "token before ?" remains confounded.
+2. Scope. The big-first result covers 48 of 4,800 big-first questions, and in big-first Q&A fixes more questions
+   than it breaks (90 vs 48). The canonical prompt sits in that minority. Neither stratum speaks to the dominant
+   error, which appears in both formats.
+3. r > 1 (mean 1.04, reverse 2.4) means overshoot beyond the clean run's logit difference, not "more than the full
+   gap restored".
+4. Big-first W1 has n = 4; generality across wordings rests on W2 (19) and W3 (14).
+5. R18's post hoc small-first rate (grid 0.30 vs held-out 0.12) was partly selection.
+
+**Reading.** Pre-registered and held out: when the bigger number comes first, the Q&A-format flip is carried by the
+residual stream at the end of the question (the last fractional token, before "?") at layers 9–14, and essentially
+nowhere else in the prompt (37/37 argmax, 33/37 repairs). When the smaller number comes first, the flip sits either
+at that token or at the final ":" depending on the question, and no single site repairs reliably.
