@@ -11,8 +11,9 @@ Z 10..19 x 2 orders, simple vs Q&A. Imports R18 (sha256 checked) for its classif
 and R17's Model through R18.
 
 Per eligible question: resid patches (simple -> Q&A, offset 2) at the LFT and at the other fractional token (OFT),
-layers 4..14 (primary band 9..14); at each site's best primary-band layer: prefill-only generation, 5 random same-norm
-directions, and every other prompt position as competitors; reverse direction reported.
+layers 4..14 (primary band 9..14). Every prompt position at every band layer is the competitor map (always computed);
+primary margin = the site's best band r - max over all other positions and band layers. At each site's best band
+layer (if r >= 0.5): prefill-only generation, 5 random same-norm directions, reverse direction.
 Exit code 2 on any gate failure or exception.
 """
 
@@ -41,7 +42,8 @@ BAND = list(range(9, 15))                  # primary band (R18: specific directi
 OFFSET = 2
 R_REPAIR, R_CONTROL, MARGIN = 0.5, 0.2, 0.3
 N_CTRL = 5
-MAX_PER_ORDER = 120
+MAX_PER_ORDER = 120                      # non-grid questions per order (the decision sample)
+MAX_GRID_PER_ORDER = 40                  # R18-grid overlap per order, analysed and reported separately
 MIN_PER_ORDER = 10
 BATCH = 64
 SEED = 19
@@ -102,7 +104,8 @@ def decide(strata):
         n = len(rows)
         kl, ko = sum(r["lft_repair"] for r in rows), sum(r["oft_repair"] for r in rows)
         if n < MIN_PER_ORDER:
-            out[k] = {"n": n, "lft_repairs": kl, "oft_repairs": ko, "label": "descriptive only"}
+            out[k] = {"n": n, "lft_repairs": kl, "oft_repairs": ko, "lft_ci95": wilson(kl, n),
+                      "oft_ci95": wilson(ko, n), "label": "descriptive only"}
             desc.append(k)
             continue
         lr, orr = kl / n, ko / n
@@ -179,6 +182,16 @@ def provenance(model_name, r18_sha):
 
 
 def main():
+    try:
+        _main()
+    except SystemExit:
+        raise
+    except Exception:
+        traceback.print_exc()
+        sys.exit(2)
+
+
+def _main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--smoke", action="store_true", help="tiny model on CPU: small screen, forced B rows")
@@ -375,10 +388,16 @@ def body(a, run, path, r17, r18):
     if a.smoke:
         fd = qs[:4]
     rows = []
+    picks = []
     for o in ("big_first", "small_first"):
-        pool = [q for q in fd if q["order"] == o]
+        pool = [q for q in fd if q["order"] == o and (a.smoke or not in_r18_grid(q))]
         random.Random(SEED).shuffle(pool)
-        for q in pool[:MAX_PER_ORDER]:
+        picks += pool[:MAX_PER_ORDER]
+        grid_pool = [q for q in fd if q["order"] == o and in_r18_grid(q)]
+        random.Random(SEED).shuffle(grid_pool)
+        picks += grid_pool[:MAX_GRID_PER_ORDER]
+    for q in picks:
+        if True:
             rows.append(analyse_question(M, r18, gen, q, layers, band, a.smoke))
             if len(rows) % 20 == 0:
                 run["rows"] = rows
@@ -391,7 +410,8 @@ def body(a, run, path, r17, r18):
     run["decision"] = decide(strata)
     ov = {o: [r for r in rows if r["order"] == o and "skipped" not in r and r["in_r18_grid"]] for o in strata}
     run["r18_grid_overlap"] = {o: {"n": len(v), "lft_repairs": sum(r["lft_repair"] for r in v),
-                                   "oft_repairs": sum(r["oft_repair"] for r in v)} for o, v in ov.items()}
+                                   "oft_repairs": sum(r["oft_repair"] for r in v),
+                                   "lft_ci95": wilson(sum(r["lft_repair"] for r in v), len(v))} for o, v in ov.items()}
     run["unbatched_recheck"] = {o: {"n": sum(r["order"] == o for r in rows),
                                     "failed_eligibility": sum(r["order"] == o and r.get("skipped") == "unbatched eligibility"
                                                               for r in rows)} for o in strata}

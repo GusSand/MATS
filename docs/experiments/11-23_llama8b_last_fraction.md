@@ -1,11 +1,12 @@
 # R19 — Does the format flip live at the question's last fractional token, in both number orders?
 
-**Status:** DESIGN (pre-registered 2026-11-23, before any compute; amended after design review round 1)
+**Status:** DESIGN (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–2)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_last_fraction_design.md
+**Design review:** PASS WITH MINOR FIXES (round 2, fixes applied) — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_last_fraction_design_v2.md
 **Script:** `9_8_research/reviewer_experiments/exp_R19_last_fraction/run_experiment.py`. It imports R18's script by
 path (sha256 must start `1c5e555b`) for the pair classifier, unbatched generation and resid capture, and R17's
 `Model` through R18.
-**Job:** `run.sbatch` (`a100_tandon`, 3 h walltime).
+**Job:** `run.sbatch` (`a100_tandon`, 3 h walltime). Expected script sha256: `a4effdba53010f882d4c00ce243fc8618105acc9a7bece3047f9b3979a03b20e`.
 **Decision:** Gus, 2026-11-23: "yes. keep designing and running until we find smth."
 
 ## Background and hypothesis
@@ -39,9 +40,11 @@ token (LFT), whichever number it belongs to. The other fractional token (OFT) ca
 - **Screen:** greedy, 20 tokens, left-padded batches of 64, classified with R18's classifier. *Format-dependent* =
   simple correct and Q&A bug. Batching can differ numerically from single runs, so a seeded sample of 64 questions
   is re-run unbatched (gate), and every analysed question is re-checked unbatched (eligibility).
-- **Sample:** per order, a seeded random sample (seed 19) of up to 120 format-dependent questions.
-- **Held-out rule:** R18's grid (W1 with Y ∈ 6..9 and Z ∈ 10..13) generated the hypothesis. Its questions can be
-  sampled, but they are excluded from the decision and reported separately.
+- **Sample:** per order, a seeded random sample (seed 19) of up to 120 format-dependent questions outside R18's grid
+  (the decision sample).
+- **Held-out rule:** R18's grid (W1 with Y ∈ 6..9 and Z ∈ 10..13) generated the hypothesis. Up to 40 of its
+  format-dependent questions per order are analysed the same way and reported separately (with Wilson intervals); they
+  never enter the decision.
 - **Expected n:** R18's rates suggest about 10% of small-first and about 2% of big-first questions are
   format-dependent. That gives ≈ 480 small-first (sample capped at 120) and roughly 20–90 big-first, before
   exclusions and eligibility. Big-first may therefore fall below n = 10 (then it is descriptive).
@@ -55,8 +58,8 @@ token (LFT), whichever number it belongs to. The other fractional token (OFT) ca
   - Δ_buggy < 0 < Δ_clean, gap ≥ 0.5.
 - **Per eligible question,** *resid* patches (simple → Q&A, offset 2) at the LFT and at the OFT, layers 4–14. The
   primary band is layers 9–14 (R18: the direction is specific there); a site's best layer is chosen within it.
-- **Position map (always computed):** every prompt position except BOS, at every band layer (15 positions for W1/W2,
-  16 for W3, × 6 layers). This includes the two mismatched-token positions ("Which", "Answer"), which makes the
+- **Position map (always computed):** every prompt position except BOS, at every band layer (16 positions for W1/W2 and 17 for W3,
+  i.e. 15/16 competitors besides the site, × 6 layers). This includes the two mismatched-token positions ("Which", "Answer"), which makes the
   test conservative; the teacher-forced " X." answer tokens are not prompt positions and are not included.
 - **Margin (primary)** = the site's r at its best band layer − the largest r of any other position at any band
   layer. The same-layer margin and the best competitor (position, layer, token, r) are also reported.
@@ -74,12 +77,13 @@ token (LFT), whichever number it belongs to. The other fractional token (OFT) ca
 Report-only (not a gate, since every analysed question is re-checked unbatched): batched vs unbatched agreement on
 64 seeded questions × 2 formats; and, per order, how many sampled candidates fail the unbatched re-check.
 
-An exception at any point is recorded in `run.json` (with the rows so far) and the job exits 2. A wrong R18
+Any exception exits 2; after `run.json` exists, it is recorded there (with the rows so far). A wrong R18
 sha256, or a script whose sha256 differs from the committed one (checked in `run.sbatch`), also exits 2.
 
 ## Pre-registered decision rule
 
-Per order stratum (eligible questions outside R18's grid): n, LFT and OFT repair rates with Wilson 95% intervals.
+Per order stratum (eligible questions outside R18's grid): n, LFT and OFT repair rates with Wilson 95% intervals
+(also for descriptive strata).
 A stratum *holds* if n ≥ 10, LFT rate ≥ 0.5 and LFT − OFT ≥ 0.3. (Each repair already needs a 0.3 margin over every
 other position, so LFT − OFT ≥ 0.3 is nearly implied.) First match:
 
