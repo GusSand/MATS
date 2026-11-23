@@ -1,8 +1,9 @@
 # R18 — What does the "11" token carry, what puts it there, and does the site generalize?
 
-**Status:** DESIGN (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–2)
+**Status:** DESIGN (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–3)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_design_v2.md
+**Design review:** PASS WITH MINOR FIXES (round 3, fixes applied) — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_design_v3.md
 **Script:** `9_8_research/reviewer_experiments/exp_R18_eleven_token/run_experiment.py`. It imports R17's script by
 path (sha256 must start `6bf85484…`) for its hooks, captures, teacher-forced logits and prefill-only generation.
 **Job:** `run.sbatch` (`a100_tandon`, 3 h walltime).
@@ -120,7 +121,8 @@ Each question's gap is reported (r is coarser when the gap is small).
 3. **Baseline:** Δ_buggy < 0 < Δ_clean, gap ≥ 1.
 4. **R17 baseline equal:** Δ_clean and Δ_buggy within 0.04 (about 2 fp16 ulps) of R17's (1.171875, −0.90625);
    bitwise equality is recorded. R17's torch, transformers and GPU strings are recorded next to R18's.
-5. **R17 reproduction:** resid at the "11" token, layers 4–14, reproduces R17's r within 0.02 at every layer.
+5. **R17 reproduction:** resid at the "11" token, layers 4–14, reproduces R17's r within 0.03 at every layer
+   (≈ 0.06 on Δ; consistent with gate 4's tolerance).
 6. **Hooks clean** (before) and **hooks removed** (after): unpatched recipient logits bitwise equal.
 7. **E canonical classes:** the token-built R17 donor generates correct and the recipient a bug.
 8. **C contexts:** at least 2 sentences per category tokenize to end in "9", ".", "11", in both versions.
@@ -139,6 +141,9 @@ and the job exits 2.
      "11" from elsewhere lacks it. It does not by itself say "salience"; that needs D.
   3. every category mean < 0.2 → "context-bound: no foreign 11 repairs";
   4. otherwise → "mixed".
+  Filler check (primary version): per-sentence r is grouped by its filler text (groups with ≥ 2 sentences). If the
+  label is "content" and the spread of the filler-group means exceeds the category gap (decimal − max other), the
+  label becomes "mixed (filler confound…)". Group means and spread are reported.
   The same rule is applied to the original short contexts (secondary).
 - **Transluce reading** (both pre-registered):
   - reverse: the mean of the three category means of reverse r (verse, date, version) ≥ 0.5 and the decimal
@@ -174,7 +179,9 @@ and the job exits 2.
 
 - C asks whether the "11" state can be swapped between readings. It cannot name neurons; that is stage 2.
 - Length matching puts each "11" at the recipient's position, but the filler text differs from the question frame.
-  "Context-bound" may therefore reflect the frame, not the reading.
+  "Context-bound" may therefore reflect the frame, not the reading. Short sentences (mostly verse and version) get
+  longer fillers, so filler and category are partly confounded; hence the filler check above.
+- B's comparison positions are the prompt positions; the teacher-forced " X." tokens are not among them.
 - R2/R4 (legacy) found no other format-dependent decimal pair with the canonical prompt words. B may have few
   eligible questions. If so it reports descriptively, and the paper states the scope.
 

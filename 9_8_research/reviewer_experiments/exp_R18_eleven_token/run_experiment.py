@@ -188,8 +188,8 @@ def decide_C(sent_r):
 
 
 def decide_transluce(rev_cat, cos_concept, cos_base_max):
-    """cos_base_max: the 95th percentile of |cos| under the label-permutation null (primary baseline)."""
-    """Pre-registered Transluce reading: verse/date/version 11s induce the bug in the donor (reverse), decimal 11s
+    """cos_base_max: the 95th percentile of |cos| under the label-permutation null (primary baseline).
+    Pre-registered Transluce reading: verse/date/version 11s induce the bug in the donor (reverse), decimal 11s
     do not; and d (donor - recipient) points away from the verse/date/version direction beyond the baseline."""
     nondec = [rev_cat[k] for k in ("verse", "date", "version")]
     rev_ok = sum(nondec) / 3 >= 0.5 and rev_cat["decimal"] <= 0.2
@@ -435,7 +435,7 @@ def body(a, run, path, r17):
         lg = M.logits(r_ids, [("resid", L, {zpos_r: cap_d[L][zpos_d]})])
         repro[L] = rr(lg)
     gates["r17_reproduction"] = {"r": repro, "ref": r17_ref,
-                                 "ok": r17_ref is not None and all(abs(repro[L] - r17_ref[L]) < 0.02 for L in layers)}
+                                 "ok": r17_ref is not None and all(abs(repro[L] - r17_ref[L]) <= 0.03 for L in layers)}
     gates["hooks_clean"] = {"ok": bool(torch.equal(M.logits(r_ids), lg_r))}
     dump(run, path)
     print("gates:", {k: v["ok"] for k, v in gates.items()}, flush=True)
@@ -548,7 +548,19 @@ def body(a, run, path, r17):
             corr = sxy / (sxx * syy) ** 0.5 if sxx > 0 and syy > 0 else None
         else:
             corr = None
-        C_sum[version] = {**decide_C(sent_r), "reverse_mean_r": rev, "corr_r_vs_pos11": corr}
+        dc_ = decide_C(sent_r)
+        # filler confound (pre-registered): group per-sentence r by the filler text before the sentence
+        groups = {}
+        for r_ in rows:
+            groups.setdefault(r_["text"][: len(r_["text"]) - len(r_["sent"])].strip(), []).append(r_["fwd_mean"])
+        gm = {k: sum(v) / len(v) for k, v in groups.items() if len(v) >= 2}
+        spread = (max(gm.values()) - min(gm.values())) if len(gm) >= 2 else 0.0
+        cmn = dc_["category_mean"]
+        cat_gap = cmn["decimal"] - max(cmn[k] for k in ("verse", "date", "version"))
+        if version == "matched" and dc_["label"].startswith("content") and spread > cat_gap:
+            dc_["label"] = "mixed (filler confound: filler-group spread exceeds the category gap)"
+        C_sum[version] = {**dc_, "reverse_mean_r": rev, "corr_r_vs_pos11": corr,
+                          "filler_group_means": gm, "filler_group_spread": spread}
     run["C_summary"] = C_sum                       # "matched" is the pre-registered primary
     dump(run, path)
     print("C:", {v: C_sum[v]["label"] for v in C_sum}, C_sum["matched"]["category_mean"], flush=True)
