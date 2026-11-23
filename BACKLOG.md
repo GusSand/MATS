@@ -2,6 +2,10 @@
 
 Claude's queue. Top = next. Add, reorder, and close freely.
 
+- [ ] R17 (stage 1): design review → commit → submit → verify. docs/experiments/11-23_llama8b_localization_map.md
+- [ ] Stage 2: head-level search (true heads, attribution patching then exact patches) at the layers R17 triggers
+- [ ] Stage 3: Mistral layer-7 head subsets + [/INST]-tail alignment control
+
 - [ ] R13 follow-ups deferred from design review v3 (optional 2–7): assert/record 17/19 token lengths
       and the right-align map; save run.json after isolation/BOS checks and on cell abort; first-token
       id/logit diff for equivalence; document --smoke/--limit gating; BOS-diff tolerance
