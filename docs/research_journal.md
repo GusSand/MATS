@@ -4686,3 +4686,6 @@ VERIFIED-WITH-FLAGS, no computation errors. Label "localized": resid at the "11"
 
 ### 2026-11-23 — R18 submitted (docs/experiments/11-23_llama8b_eleven_token.md)
 Prompted by Gus's pointer to Transluce's Monitor post (verse/date/version neurons on 9.11). Design reviews: round 1 FIXES NEEDED (D rule near-vacuous, C label overclaim, Transluce prediction unregistered, length confound, E not linked to site, B single comparison), round 2 FIXES NEEDED (run-on filler fragments, prereg text corrupted by my scripted edit, combined label missing, cosine baseline), round 3 PASS WITH MINOR FIXES (filler check, gate-5 tolerance). Slurm job 24219672 (a100_tandon), commit ddad516.
+
+### 2026-11-23 — R18 done (docs/experiments/11-23_llama8b_eleven_token.md), verification pending
+Job 24219672 COMPLETED (17 min, A100 ga008), all gates pass (R17 reproduced). Raw labels: D "specific direction" (8/11 layers; real ‖d‖ ≈ 0.1 of ‖h‖; logit 8 up, 11 down); C "mixed" (date 11s repair ≈0.56, version 11s anti-repair ≈−0.55, decimal ≈0.04, verse ≈0.17; filler spread 0.88); Transluce rule not supported; E: the error needs both "Q:" and " Which" (Q×space interaction −1.85 on Δ); A: 39/640 grid questions format-dependent (Which swap fixes 4); B "site does not generalize" (Z 6/39 vs Y 17/39). Fresh verifier running.
