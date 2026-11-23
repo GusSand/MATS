@@ -54,6 +54,12 @@ BRANCHES = [
         "decode-step BOS writes alone: 0 of 1,307 correct",
         "pre_wo all-steps: all 32 correct, even-16 not",
     ]),
+    ("Where does Llama decide 9.8 vs 9.11?", "partial", [
+        "resid at the '11' token, layers 4-14 (r 0.55-0.85)",
+        "read out by layer-14 attention into the answer",
+        "' Which' -> 'Which' at layer 0 alone repairs",
+        "open: specific content vs salience of '11'",
+    ]),
     ("Does position 0 explain the GPU gap?", "answered", [
         "NO: A100 keep0 gives 119 of 120 R8, not 83",
         "A100 donor on L40S: 86 of 83, gap is receiver-side",
