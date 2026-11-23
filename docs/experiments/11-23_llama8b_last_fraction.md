@@ -1,12 +1,13 @@
 # R19 — Does the format flip live at the question's last fractional token, in both number orders?
 
-**Status:** DESIGN (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–2)
+**Status:** SUBMITTED (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–2)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_last_fraction_design.md
 **Design review:** PASS WITH MINOR FIXES (round 2, fixes applied) — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_last_fraction_design_v2.md
 **Script:** `9_8_research/reviewer_experiments/exp_R19_last_fraction/run_experiment.py`. It imports R18's script by
 path (sha256 must start `1c5e555b`) for the pair classifier, unbatched generation and resid capture, and R17's
 `Model` through R18.
-**Job:** `run.sbatch` (`a100_tandon`, 3 h walltime). Expected script sha256: `a4effdba53010f882d4c00ce243fc8618105acc9a7bece3047f9b3979a03b20e`.
+**Job:** `run.sbatch` (`a100_tandon`, 3 h walltime). **Slurm job:** 24227404, commit c1d4a42. Log `/scratch/gs157/MATS/logs/24227404_r19_lastfrac.log`; results `/scratch/gs157/MATS/results/r19_24227404/`.
+Expected script sha256: `a4effdba53010f882d4c00ce243fc8618105acc9a7bece3047f9b3979a03b20e`.
 **Decision:** Gus, 2026-11-23: "yes. keep designing and running until we find smth."
 
 ## Background and hypothesis
