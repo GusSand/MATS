@@ -4674,3 +4674,6 @@ Rewrote ~/github/phd_thesis/preamble/surgeon_dilemma (abstract, intro, setup/met
 
 ### 2026-11-23 — Gus: search for a real repair instead of withdrawing; R17 designed
 Gus doesn't want a correction paper. Corrected that 2604.16697 (Surgical Repair, secure-code steering) is unaffected apart from citing Even Heads; only Even Heads (2508.19414) carries the head claims. Plan: (1) R17 full component × layer × position patching map on Llama with a teacher-forced 8-vs-11 logit metric and generation confirmation; (2) head-level search only where R17 points; (3) Mistral layer-7 decomposition plus an [/INST]-tail control. R17 pre-registered, CPU smoke OK (tiny random Llama with the real Llama-3 tokenizer); design review round 1 running.
+
+### 2026-11-23 — R17 submitted (docs/experiments/11-23_llama8b_localization_map.md)
+Design reviews: round 1 FIXES NEEDED (12: no-op patch gates, input-substitution exclusion, 4th-token gate, flip-triggered generation checks, controls, positive control…), round 2 FIXES NEEDED (shift control was a biased veto → random-direction-only veto; final-norm positive control; near-input flag), round 3 PASS WITH MINOR FIXES (near-input out of rule 2/stage 2; cells saved on crash; gates inside try). All applied; CPU smoke OK. Slurm job 24213609 (a100_tandon), commit 623c45f.

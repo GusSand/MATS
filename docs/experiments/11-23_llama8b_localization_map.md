@@ -1,12 +1,13 @@
 # R17 — Where does Llama-3.1-8B decide 9.8 vs 9.11? A corrected activation-patching map
 
-**Status:** DESIGN (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–3)
+**Status:** SUBMITTED (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–3)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_localization_map_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_localization_map_design_v2.md
 **Design review:** PASS WITH MINOR FIXES (round 3, fixes applied) — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_localization_map_design_v3.md
 **Script:** `9_8_research/reviewer_experiments/exp_R17_localization_map/run_experiment.py`. It imports R13's script
 by path only for the R8/R1 classifier (`is_correct`, `is_bug`); R13's sha256 must equal `1ce5b0cc…`.
 **Job:** `run.sbatch` (`a100_tandon`, 2 h walltime).
+**Slurm job:** 24213609, commit 623c45f, R17 sha256 6bf85484…, R13 sha256 1ce5b0cc…. Log `/scratch/gs157/MATS/logs/24213609_r17_map.log`; results `/scratch/gs157/MATS/results/r17_24213609/`.
 **Decision:** Gus, 2026-11-23: "yup let's do this" (stage 1 of a three-stage search for what does repair the error
 under correct patching, instead of withdrawing the Even Heads paper).
 
