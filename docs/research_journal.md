@@ -4695,3 +4695,6 @@ VERIFIED-WITH-FLAGS, no computation errors. Labels: C mixed, Transluce not suppo
 
 ### 2026-11-23 — R19 submitted (docs/experiments/11-23_llama8b_last_fraction.md)
 Pre-registered test of R18's post hoc "last fractional token" site on 9,600 questions (3 wordings, both orders), R18 grid held out. Design reviews: round 1 FIXES NEEDED (competitors scored only at the site's best layer — blocking; held-out questions; descriptive-stratum labels), round 2 PASS WITH MINOR FIXES. Literature search (paperclip) for other fixes: concept-neuron suppression (Transluce / PCD, dates), knowledge-shortcut data pruning (versions), reflexive prompting, code-form planning; none tests a targeted activation fix. Slurm job 24227404 (a100_tandon), commit c1d4a42.
+
+### 2026-11-23 — R19 done (docs/experiments/11-23_llama8b_last_fraction.md), verification pending
+Job 24227404 COMPLETED (19 min, A100 ga024), gates pass (R17 reproduced). Screen: 9,600 questions; 389 format-dependent (48 big-first, 341 small-first), 105 reverse. Raw label "holds for big_first only": held-out big-first LFT repairs 33/37 (0.89, CI 0.75–0.96), OFT 0/37, LFT the argmax position in every question (median r 0.98); R18-grid overlap 6/6. Small-first LFT 14/116 (0.12); position map suggests the decision is split between the LFT and the final ':' (LFT+3). Fresh verifier running.
