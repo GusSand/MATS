@@ -1,12 +1,13 @@
 # R18 — What does the "11" token carry, what puts it there, and does the site generalize?
 
-**Status:** DESIGN (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–3)
+**Status:** SUBMITTED (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–3)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_design_v2.md
 **Design review:** PASS WITH MINOR FIXES (round 3, fixes applied) — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_design_v3.md
 **Script:** `9_8_research/reviewer_experiments/exp_R18_eleven_token/run_experiment.py`. It imports R17's script by
 path (sha256 must start `6bf85484…`) for its hooks, captures, teacher-forced logits and prefill-only generation.
 **Job:** `run.sbatch` (`a100_tandon`, 3 h walltime).
+**Slurm job:** 24219672, commit ddad516, R18 sha256 1c5e555b…, R17 sha256 6bf85484…. Log `/scratch/gs157/MATS/logs/24219672_r18_eleven.log`; results `/scratch/gs157/MATS/results/r18_24219672/`.
 **Decision:** Gus, 2026-11-23: "yes keep working on this", after R17 (VERIFIED-WITH-FLAGS) and his pointer to the
 Transluce Monitor post (https://transluce.org/observability-interface).
 

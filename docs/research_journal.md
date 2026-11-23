@@ -4683,3 +4683,6 @@ Job 24213609 COMPLETED in 3 min (A100 ga007), all 10 gates pass (Δ_clean +1.17,
 
 ### 2026-11-23 — R17 verified (docs/experiments/11-23_llama8b_localization_map.md)
 VERIFIED-WITH-FLAGS, no computation errors. Label "localized": resid at the "11" token repairs at L4,6–8,10–14; read-out by L14 attention into the answer prefix. Flags: it's the Q:/" Which" upstream difference, not answer format (p13 can't see "A:"); salience of "11" not excluded by a single-seed random control; mlp L3 isolated; stage-2 fallback layers weak. Next: R18 (salience vs content controls, " Which" tokenization, other pairs/paraphrases, head tracing into p13 and the L14 reader).
+
+### 2026-11-23 — R18 submitted (docs/experiments/11-23_llama8b_eleven_token.md)
+Prompted by Gus's pointer to Transluce's Monitor post (verse/date/version neurons on 9.11). Design reviews: round 1 FIXES NEEDED (D rule near-vacuous, C label overclaim, Transluce prediction unregistered, length confound, E not linked to site, B single comparison), round 2 FIXES NEEDED (run-on filler fragments, prereg text corrupted by my scripted edit, combined label missing, cosine baseline), round 3 PASS WITH MINOR FIXES (filler check, gate-5 tolerance). Slurm job 24219672 (a100_tandon), commit ddad516.
