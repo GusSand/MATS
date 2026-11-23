@@ -57,8 +57,9 @@ BRANCHES = [
     ("Where does Llama decide 9.8 vs 9.11?", "partial", [
         "resid at the '11' token, layers 4-14 (r 0.55-0.85)",
         "read out by layer-14 attention into the answer",
-        "' Which' -> 'Which' at layer 0 alone repairs",
-        "open: specific content vs salience of '11'",
+        "specific direction (L9-14), not a verse/date concept",
+        "needs Q: + ' Which' together; read out at layer 14",
+        "post hoc: site = last fractional token (6/6 big-first)",
     ]),
     ("Does position 0 explain the GPU gap?", "answered", [
         "NO: A100 keep0 gives 119 of 120 R8, not 83",

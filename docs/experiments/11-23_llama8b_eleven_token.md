@@ -1,11 +1,12 @@
 # R18 — What does the "11" token carry, what puts it there, and does the site generalize?
 
-**Status:** SUBMITTED (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–3)
+**Status:** DONE (pre-registered 2026-11-23, before any compute; amended after design review rounds 1–3)
 **Design review:** round 1 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_design.md
 **Design review:** round 2 FIXES NEEDED — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_design_v2.md
 **Design review:** PASS WITH MINOR FIXES (round 3, fixes applied) — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_design_v3.md
 **Script:** `9_8_research/reviewer_experiments/exp_R18_eleven_token/run_experiment.py`. It imports R17's script by
 path (sha256 must start `6bf85484…`) for its hooks, captures, teacher-forced logits and prefill-only generation.
+**Verification:** VERIFIED-WITH-FLAGS — fresh subagent, 2026-11-23 — docs/reviews/11-23_llama8b_eleven_token_verify.md
 **Job:** `run.sbatch` (`a100_tandon`, 3 h walltime).
 **Slurm job:** 24219672, commit ddad516, R18 sha256 1c5e555b…, R17 sha256 6bf85484…. Log `/scratch/gs157/MATS/logs/24219672_r18_eleven.log`; results `/scratch/gs157/MATS/results/r18_24219672/`.
 **Decision:** Gus, 2026-11-23: "yes keep working on this", after R17 (VERIFIED-WITH-FLAGS) and his pointer to the
@@ -198,4 +199,55 @@ About 1 GPU-hour; walltime 3 h.
 
 ## Results
 
-(none yet)
+Job 24219672 (A100 ga008, 17 min, commit ddad516). Raw: `results/r18_24219672/run.json`. All gates pass. Δ_clean and
+Δ_buggy are bitwise equal to R17's, and R17's p13 r values reproduce bitwise. A fresh verifier recomputed every number
+and label from the stored rows (and re-classified all 1,920 A texts with an independent classifier): no discrepancies.
+
+**Pre-registered labels.**
+
+| Part | Label | Key numbers |
+|---|---|---|
+| C (length-matched, primary) | **mixed** | category mean forward r: decimal 0.04, verse 0.17, date 0.56, version −0.55; permutation p 0.55; filler-group spread 0.88 |
+| C (original, secondary) | mixed | −0.06 / 0.74 / 0.81 / −0.28 |
+| Transluce reading | **does not support** | reverse: decimal 1.02 (> 0.2), others 1.07; cos(d, concept) −0.04 vs permutation p95 0.08 |
+| D | **specific direction** | specific at 8/11 layers (7–14); generic 0; 3·SD secondary 6 (9–14). ‖d‖/‖h‖ ≈ 0.09–0.13; real patch raises logit(8) by 0.7–1.0 and lowers logit(11) by 0.4–0.7 |
+| Combined | a specific direction carries the difference | |
+| B | **site does not generalize** | 39 eligible; Z repairs 6 (0.15), Y 17 (0.44) |
+
+**E (descriptive).** Only the two `Q:` + " Which" prompts generate the bug. Every other prompt's argmax is "8".
+- Main effects on Δ: `Q:` −0.43, " Which" −1.28, `A:` −0.32. Q×space interaction −1.85.
+- Neutral 2-token prefix + " Which": the "11" state is almost the recipient's (site r 0.06), yet Δ = +0.08 and the
+  output is an 8-leaning multiple-choice listing, not the bug. The `Q:` content acts largely downstream of, or in
+  parallel with, the "11" site (Q: − neutral2: site r −0.06, Δ −0.98).
+
+**A (descriptive).** 640 questions:
+- simple 453 correct / 187 bug; Q&A 418 / 222; Q&A with "Which" 407 / 233.
+- 183 are bugs in both formats; 39 are format-dependent (simple correct, Q&A bug); 4 go the other way.
+- The "Which" swap fixes 4 of the 39.
+- Order dominates: 33 of the 39 are small-first.
+
+**Verifier flags and post hoc observations (not pre-registered).**
+1. **B is driven by answer order.**
+   - All 6 Z repairs are exactly the 6 big-first questions (9.8/9.11, 7.6/7.11, 8.8/8.10, …), with Z r ≈ 1.0 at
+     layers 6–14.
+   - In the 33 small-first questions Z r ≈ 0, and the strongest competing position is donor position 13, the *last*
+     fractional token before "?" (which is Y there). Y repairs 15 of 33.
+   - Post hoc reading: the decision sits at the last fractional token of the question, whichever number it belongs
+     to (big-first n = 6). This needs a pre-registered test.
+2. **D "specific" holds cleanly at layers 9–14, marginally at 7–8, not at 4–6.**
+   - At 4–6 the in-manifold maxima beat the real patch (all from pairs that include "Let x = 9.11"), and the random
+     maxima come close.
+   - The direction has no named content (cos with the concept axis ≈ 0).
+3. **C patterns are post hoc and confounded.**
+   - Date "11"s repair (8/8 sentences positive across both versions, mostly from layers 12–14 with overshoot r > 1).
+   - Version "11"s push toward the bug (8/8 negative; reverse r 1.5–2.6). "Let x = 9.11" is also strongly bug-ward.
+   - n = 4 per category, confounded with template and layer. They are hypotheses, not findings. Any foreign "11"
+     disrupts the donor (decimal reverse ≈ 1.0).
+4. **Sufficiency is scoped to the `Q:` frame.** A recipient-like "11" state without `Q:` does not produce the bug.
+5. **Scope.** Format dependence is 6% of the grid; R17/R18 localize a format-triggered flip, not the decimal bug.
+
+**Reading.** On the canonical prompt, the format flip is carried by a specific, small direction in the residual
+stream of the question's last fractional token ("11"), clearly at layers 9–14. It requires the `Q:` + " Which"
+combination and is read out at layer 14. The same site repairs every big-first format-dependent question in the grid
+(n = 6, post hoc). In small-first questions the last fractional token (the single digit) is the better site. There is
+no evidence that the state encodes a verse or date reading.
