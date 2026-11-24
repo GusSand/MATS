@@ -1,12 +1,12 @@
 # R20 — Can a steering vector at the end of the question fix the decimal error on held-out questions?
 
-**Status:** PRE-REGISTERED (2026-11-24, before any compute; amended after design review rounds 1–2)
+**Status:** RUNNING (pre-registered 2026-11-24, before any compute; amended after design review rounds 1–2)
 **Design review:** PASS WITH MINOR FIXES (round 1, fixes applied) — fresh subagent, 2026-11-24 — docs/reviews/11-24_llama8b_steering_fix_design.md
 **Design review:** PASS WITH MINOR FIXES (round 2, fixes applied) — fresh subagent, 2026-11-24 — docs/reviews/11-24_llama8b_steering_fix_design_v2.md
 **Script:** `9_8_research/reviewer_experiments/exp_R20_steering_fix/run_experiment.py`. It imports R19's script by path
 (full sha256 `a4effdba…3b20e` checked) for the question set and wordings, R18 (through R19) for the pair classifier,
 and R17's `Model` hooks (through R18).
-**Job:** `run.sbatch` (`a100_tandon`, 4 h walltime). **Slurm job:** —
+**Job:** `run.sbatch` (`a100_tandon`, 4 h walltime). **Slurm job:** 24373179, commit 995daa2. Log `/scratch/gs157/MATS/logs/24373179_r20_steer.log`; results `/scratch/gs157/MATS/results/r20_24373179/`.
 Expected script sha256: `effa9b292313395ab19519a0f810a021d76e53f656d6dd1e72b7ed7966fcf5f1`.
 **Decision:** Gus, 2026-11-24: "try r20" (after R19; standing instruction "keep designing and running until we find smth").
 
