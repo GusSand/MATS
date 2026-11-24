@@ -7,6 +7,7 @@
 (full sha256 `a4effdba…3b20e` checked) for the question set and wordings, R18 (through R19) for the pair classifier,
 and R17's `Model` hooks (through R18).
 **Verification:** VERIFIED-WITH-FLAGS — fresh subagent, 2026-11-24 — docs/reviews/11-24_llama8b_steering_fix_verify.md
+**Verification:** VERIFIED-WITH-FLAGS — fresh subagent, blind (raw outputs and pre-run criteria only), 2026-11-24 — docs/reviews/11-24_llama8b_steering_fix_verify_blind.md
 **Job:** `run.sbatch` (`a100_tandon`, 4 h walltime). **Slurm job:** 24373179, commit 995daa2. Log `/scratch/gs157/MATS/logs/24373179_r20_steer.log`; results `/scratch/gs157/MATS/results/r20_24373179/`.
 Expected script sha256: `effa9b292313395ab19519a0f810a021d76e53f656d6dd1e72b7ed7966fcf5f1`.
 **Decision:** Gus, 2026-11-24: "try r20" (after R19; standing instruction "keep designing and running until we find smth").
@@ -199,3 +200,15 @@ big-first questions; R20 does not turn it into a usable repair.
 That quoted only three of the nine random vectors (the verifier's examples) and was not checked against run.json. The
 full set is above: 0–25. With 3 random vectors per config and this much spread, "best of 3 random" is also a noisy
 control, so cb's 102 vs 83 and fd's 95 vs 91 should not be read as clear margins in either direction.
+
+**Blind re-verification (2026-11-24).** The first verifier had seen the script and the intended interpretation, so a
+second one worked from the raw outputs and the pre-run criteria only. All three labels reproduce. It adds:
+- fd vs its label null (95 vs 91) is a tie: 107 vs 103 discordant rows, McNemar p = .84. fd passes rule 2 by 4 rows.
+- cb vs random0 (102 vs 83) is not a clear difference: 138 vs 119 paired, p = .26.
+- fmt is the only direction that meets H1's three stated criteria (significant net, beats its randoms, breaks ≤ 2%).
+  It was not the primary, has no label null, flips 76 of 78 changed answers toward the second number, and its net (62)
+  is far below dropping "Q:" (144).
+- Rows are correlated (640 number pairs, 8 X values), so the sign tests and intervals overstate precision. Clustered
+  intervals still leave every net above 0.
+- Not verifiable from the file: dev generation texts and the vectors were not saved, although the pre-registration listed
+  dev generations.
