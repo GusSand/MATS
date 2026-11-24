@@ -1,6 +1,7 @@
 # R21 — Is R13's one-way L40S vs A100 gap a shared logit-margin offset?
 
-**Status:** PRE-REGISTERED 2026-11-24, before any compute (amended after design review rounds 1–2)
+**Status:** DONE 2026-11-24 — VERIFIED (PASS WITH CAVEATS)
+**Verification:** PASS WITH CAVEATS — fresh subagent, 2026-11-24 — docs/reviews/11-24_llama8b_gpu_margin_offset_verify.md
 **Design review:** FIXED — fresh subagent, 2026-11-24 — docs/reviews/11-24_llama8b_gpu_margin_offset_design.md
 **Design review:** FIXED (round 2) — fresh subagent, 2026-11-24 — docs/reviews/11-24_llama8b_gpu_margin_offset_design_v2.md
 **Script:** `9_8_research/reviewer_experiments/exp_R21_gpu_margin/run_experiment.py` (measurement, one job per GPU)
@@ -145,4 +146,53 @@ Per GPU: 2 cells × ~620 s (R16's per-cell time) plus logits and hidden-state co
 
 ## Results
 
-None yet.
+Jobs 24375606 (A100-SXM4-80GB, ga004, 21:53) and 24375607 (L40S, gl044, 23:35), both COMPLETED 0:0.
+Results in `exp_R21_gpu_margin/results/r21_a100_24375606`, `r21_l40s_24375607`; `analyze.py` output
+`results/verdicts.json` (analyze sha256 a2c8b2e7…).
+
+**Gates.** All pass on both GPUs: copy 1,307/1,307 per cell, unpatched text, class 1,307/1,307, lens
+(max err 0.0156), determinism 50/50 plus unpatched bit-identical. `t_dec` = 3 in every config.
+
+**Pre-registered verdict: rule 2, "offset present, does not alone predict which configs flip", in both cells.**
+Primary margin is m in both cells (zero share 1.2% and 2.8%).
+
+| | prefill (D = 40) | all_steps (D = 60) |
+|---|---|---|
+| Δ on m: pos / neg / zero | 1,291 / 0 / 16 | 1,271 / 0 / 36 |
+| median Δ on m (c) | 0.03125 | 0.03125 |
+| Δ on lens_final: pos / neg | 1,307 / 0 | 1,307 / 0 |
+| median Δ on lens_final | 0.0334 | 0.0290 |
+| D_pred / hit, m (recall, precision) | 18 / 17 (0.425, 0.944) | 29 / 28 (0.467, 0.966) |
+| D_pred / hit, lens_final | 44 / 31 (0.775, 0.705) | 60 / 48 (0.800, 0.800) |
+| verdict on lens_final (not primary) | rule 2 | rule 1 |
+| reverse flips observed / expected under H0, m | 0 / 7.0 | 0 / 14.7 |
+| reverse flips observed / expected under H0, lens_final | 0 / 14.0 | 0 / 33.7 |
+| permutation: mean D recovered (m), mean reverse flips | 19.6 of 40, 0 | 25.0 of 60, 0 |
+| H0 density, m: m_L40S in (−w,0) / (0,w), w = 0.03125 | 18 / 10 | 29 / 33 |
+
+Unpatched: m_A100 = −0.890625, m_L40S = −0.9375, Δ = +0.046875 (lens_final Δ = +0.0438).
+
+Logit-lens median Δ (index l = hidden_states[l], index 0 = embeddings): |·| ≤ 0.012 through index 22,
+then 0.052 / 0.046 at index 23 (output of decoder layer 22, 0-based), ≥ 0.029 at every later index, peak
+0.129 / 0.114 at index 30. `first_layer_abs_ge_half_c` = 23 in both cells.
+
+**Ties (descriptive, found after the run).** "8" = id 23, "11" = id 806. In 25 of 40 prefill and 37 of 60
+all_steps D configs, the A100's fp16 logits for "8" and "11" are exactly equal, and argmax returns the lower
+id, "8". No D config ties on L40S. All 40/40 and 60/60 D configs satisfy m_A100 ≥ 0 > m_L40S. Non-D ties also
+all decode "8" (A100: 1 and 2; L40S: 15 and 28).
+
+**Post-hoc, not the verdict.** The pre-registered D_pred uses a strict `0 < m_L + c`, which drops configs
+landing exactly on a tie. Most misses sit there (19 of 23 in prefill, 29 of 32 in all_steps). With `0 ≤`, m
+gives prefill recall 0.90, precision 0.77 (D_pred 47); all_steps recall 0.95, precision 0.79 (D_pred 72).
+That would meet rule 1 in both cells. It was not pre-registered and does not replace the verdict.
+
+## Learnings
+
+- The A100 shifts the "8" − "11" margin toward "8" in every one of 1,307 configs, by about 0.03 logits
+  (≈ 2 fp16 steps at this logit size). No config moves the other way. H0 (two-sided noise) is rejected.
+- The shift appears in the current step's residual at decoder layer 22 and stays through the top.
+- About 60% of the flips are exact fp16 ties on the A100 that argmax breaks toward the lower token id.
+  The strict inequality in rule 1 missed them; that, not a wide spread of Δ, is why m lands on rule 2.
+- Caveats (verifier): the H0 reverse-flip expectation excludes L40S ties (m_L = 0), so 7.0 / 14.7 are
+  conservative; the `top2_gap` field lists id 806 first on ties while argmax is 23; lens_final all_steps
+  meets rule 1 at exactly 0.800.

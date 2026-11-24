@@ -74,6 +74,12 @@ BRANCHES = [
         "inject gate failed (4 of 1,466 coords): raw only",
         "placebo invalid on both GPUs: fragility not tested",
     ]),
+    ("Why do all GPU flips go one way?", "answered", [
+        "R21: A100 shifts 8-vs-11 margin toward 8, all configs",
+        "~0.03 logits; 0 of 1,307 move the other way",
+        "~60% of flips are exact fp16 ties, broken to '8'",
+        "shift appears at decoder layer 22 (logit lens)",
+    ]),
 ]
 
 STATUS = {
