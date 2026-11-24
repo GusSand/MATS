@@ -4727,3 +4727,4 @@ docs/experiments/11-24_llama8b_gpu_margin_offset.md
 
 ### Results (no interpretation)
 None yet.
+R20 job 24373179 finished (32 min, all gates pass); results pulled to exp_R20_steering_fix/results/r20_24373179, verification pending (docs/experiments/11-24_llama8b_steering_fix.md).
