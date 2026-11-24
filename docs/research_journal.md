@@ -4728,3 +4728,4 @@ docs/experiments/11-24_llama8b_gpu_margin_offset.md
 ### Results (no interpretation)
 None yet.
 R20 job 24373179 finished (32 min, all gates pass); results pulled to exp_R20_steering_fix/results/r20_24373179, verification pending (docs/experiments/11-24_llama8b_steering_fix.md).
+R20 verified (VERIFIED-WITH-FLAGS, docs/reviews/11-24_llama8b_steering_fix_verify.md; docs/experiments/11-24_llama8b_steering_fix.md). Primary fd: "net-positive but damaging (<= prompt swap)" (net 95, breaks 4.3%, label null 91); cb same label (net 102, breaks 2.4%, a random direction 83; cb fixes the canonical prompt); fmt "small net improvement (<= prompt swap)" (net 62, breaks 0.26%). Prompt swap (drop "Q:") net 144. fd is an order bias toward the second-named number (351/359 changed rows). Flag: R19's site (big-first, LFT, L9–14) was effectively untested; dev had no big-first fd. Conclusion: no fixed steering vector beats dropping "Q:".

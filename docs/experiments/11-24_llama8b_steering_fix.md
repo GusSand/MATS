@@ -1,11 +1,12 @@
 # R20 — Can a steering vector at the end of the question fix the decimal error on held-out questions?
 
-**Status:** RUNNING (pre-registered 2026-11-24, before any compute; amended after design review rounds 1–2)
+**Status:** DONE (pre-registered 2026-11-24, before any compute; amended after design review rounds 1–2)
 **Design review:** PASS WITH MINOR FIXES (round 1, fixes applied) — fresh subagent, 2026-11-24 — docs/reviews/11-24_llama8b_steering_fix_design.md
 **Design review:** PASS WITH MINOR FIXES (round 2, fixes applied) — fresh subagent, 2026-11-24 — docs/reviews/11-24_llama8b_steering_fix_design_v2.md
 **Script:** `9_8_research/reviewer_experiments/exp_R20_steering_fix/run_experiment.py`. It imports R19's script by path
 (full sha256 `a4effdba…3b20e` checked) for the question set and wordings, R18 (through R19) for the pair classifier,
 and R17's `Model` hooks (through R18).
+**Verification:** VERIFIED-WITH-FLAGS — fresh subagent, 2026-11-24 — docs/reviews/11-24_llama8b_steering_fix_verify.md
 **Job:** `run.sbatch` (`a100_tandon`, 4 h walltime). **Slurm job:** 24373179, commit 995daa2. Log `/scratch/gs157/MATS/logs/24373179_r20_steer.log`; results `/scratch/gs157/MATS/results/r20_24373179/`.
 Expected script sha256: `effa9b292313395ab19519a0f810a021d76e53f656d6dd1e72b7ed7966fcf5f1`.
 **Decision:** Gus, 2026-11-24: "try r20" (after R19; standing instruction "keep designing and running until we find smth").
@@ -146,4 +147,49 @@ Reported, no label:
 
 ## Results
 
-(pending)
+Job 24373179 (A100, 32 min, commit 995daa2). Raw: `results/r20_24373179/run.json`. All gates pass; the baseline
+matches R19's screen in 100% of classes, and the subset-batched baselines differ from the full pass on 0 rows. Batched
+vs single-row steered classes agree 64/64. A fresh verifier recomputed every number and label from the raw classes and
+re-classified all saved texts with an independent classifier (0–1 disagreements per direction; no label changes).
+
+**Headline (primary = fd, highest dev net): "net-positive but damaging (<= prompt swap)".** No fixed vector is a
+usable fix: none beats simply dropping "Q:" (net +144; +152 with the verifier's first-line classifier).
+
+Test, Q&A format, 3,840 questions (3,098 baseline-correct):
+
+| Direction (config) | Fixes | Breaks | Net | Break rate (95% CI) | Best control net | Label |
+|---|---|---|---|---|---|---|
+| fd (LFT, L4, α 4) | 227 | 132 | 95 | 4.3% (3.6–5.0) | 91 (label null) | net-positive but damaging (<= prompt swap) |
+| cb (LFT, L6, α 2) | 175 | 73 | 102 | 2.4% (1.9–3.0) | 83 (random) | net-positive but damaging (<= prompt swap) |
+| fmt (":", L9, α 1) | 70 | 8 | 62 | 0.26% (0.13–0.51) | 6 (random) | small net improvement (<= prompt swap) |
+| prompt swap (no steering) | 179 | 35 | 144 | 1.1% | — | comparator |
+
+- **fd is an order bias, i.e. the pre-registered "format swap" boring hypothesis, overshot.** 351 of its 359 changed
+  rows move toward the second-named number: small-first 224 fixed / 5 broken; big-first 3 fixed / 127 broken (95 of
+  them both-correct questions, which the prompt swap never breaks). It agrees with the simple-format class on 160/212
+  discordant questions and breaks 33/35 reverse-dependent ones. Its label null (≈ a generic format push; cos with fd
+  0.935, cos(fd, fmt) 0.95) scores 91, so selecting format-dependent questions adds almost nothing.
+- **cb** fixes 81/563 both-bug questions (the dominant error) and 93/177 format-dependent ones, but breaks 2.4% and
+  barely beats one random direction (102 vs 83). Its label null is degenerate (−583), so the random directions are the
+  relevant control. It is the only vector that fixes the canonical 9.8 vs 9.11 Q&A prompt (fd and fmt do not).
+- **fmt** is the only direction well above its controls (62 vs 6) and nearly harmless, but small: about 43% of the
+  prompt swap's net, and its fixes are small-first format-dependent questions only (big-first net −7).
+- All three lean the same way (more fixes in small-first than big-first). Random same-norm directions at the LFT also
+  move answers mainly along this first/second-number axis, in either direction.
+- W3 (unseen wording) nets: fmt 23, fd 37, cb 26 — no wording-specific failure.
+- fd applied to simple-format prompts: 157 fixed / 128 broken.
+
+**Verifier flags.**
+1. R19's site was effectively not tested. Dev had no big-first format-dependent questions, and no chosen config is at
+   R19's layers (9–14) at the LFT (best dev proxy nets there: 0, 10, 0). Big-first format-dependent questions are
+   fragile (random directions fix 19–25 of 27). So R20 says nothing about whether R19's per-question patch carries
+   information a mean direction lacks.
+2. The proxy grid (teacher-forced Δ) is poorly aligned with generation at large α (fmt ":" L9 α 4: proxy rank 1, then
+   1,136 breaks of 1,280 on dev).
+3. The R18 classifier calls some simple-format answers with an "Explanation:" line bugs; this shifts the prompt-swap
+   comparator from 144 to 152 and changes no label.
+
+**Reading.** A fixed vector learned from training questions can move errors, but it does not fix them: the best ones
+act mostly as a push toward the second-named number, trading big-first answers for small-first ones, and none beats
+removing "Q:" from the prompt. The R19 localization is a diagnosis of where the format flip is carried in
+big-first questions; R20 does not turn it into a usable repair.

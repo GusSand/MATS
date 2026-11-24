@@ -62,6 +62,12 @@ BRANCHES = [
         "R19 held out: big-first, end-of-question token 33/37",
         "small-first: LFT or final ':' per question; 14/116",
     ]),
+    ("Can a fixed steering vector fix it?", "answered", [
+        "R20: NO usable fix; none beats dropping 'Q:' (+144)",
+        "fd +95, 4.3% breaks: order bias (2nd number)",
+        "cb +102, 2.4% breaks; one random dir +83",
+        "fmt clean (0.26%) but small: +62",
+    ]),
     ("Does position 0 explain the GPU gap?", "answered", [
         "NO: A100 keep0 gives 119 of 120 R8, not 83",
         "A100 donor on L40S: 86 of 83, gap is receiver-side",
