@@ -4721,5 +4721,9 @@ R13's script, unchanged, with model.generate wrapped to return logits and hidden
 (permutation, H0 density) pre-registered. Design review: two rounds, both PASS WITH MINOR FIXES, all applied.
 docs/experiments/11-24_llama8b_gpu_margin_offset.md
 
+### Jobs
+- 24375606 — `run.sbatch`, A100, ga004, commit e89ad0a — PENDING.
+- 24375607 — `run.sbatch`, L40S, gl044, commit e89ad0a — PENDING.
+
 ### Results (no interpretation)
 None yet.

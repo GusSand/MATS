@@ -8,6 +8,9 @@ and `analyze.py` (pre-registered rules, CPU). The run script imports R13's scrip
 `1ce5b0cc…`, the hash both R13 runs and R16 used. R13's hook and generation code are untouched.
 **Jobs:** `run.sbatch`, submitted twice and independently: A100 (`a100_tandon`, pinned to `ga004`, R13's A100 node)
 and L40S (`l40s_public`, pinned to `gl044`, R13's L40S node).
+**Slurm jobs:** 24375606 (A100, ga004) and 24375607 (L40S, gl044), commit e89ad0a, R21 sha256 c76475e9…,
+R13 sha256 1ce5b0cc…. Logs `/scratch/gs157/MATS/logs/<job>_r21_margin.log`; results
+`/scratch/gs157/MATS/results/r21_<gpu>_<job>/`.
 **Decision:** Gus, 2026-11-24 ("check", in reply to the proposal to find where the two GPUs' runs diverge and
 why all differences go one way).
 
