@@ -4705,3 +4705,21 @@ VERIFIED-WITH-FLAGS, no computation errors. Pre-registered, held out: big-first 
 ## 2026-11-24 — R20 pre-registered: a fixed steering vector as a fix (docs/experiments/11-24_llama8b_steering_fix.md)
 Gus: "try r20". R20 tests whether a fixed vector (learned on train X's, added at the LFT or final ":" at one layer, prefill only) fixes Q&A errors on held-out X's and an unseen wording without breaking correct answers. Three directions (fmt label-free, fd, cb correct−bug), dev proxy grid then dev generation, test once per direction against 3 random directions, a matched label null and −v; the prompt swap (drop "Q:") is the comparator. Design reviews: round 1 PASS WITH MINOR FIXES (subset-batched baselines, label nulls, prompt-swap qualifier, break threshold 0.02, texts saved), round 2 PASS WITH MINOR FIXES (fd null ≈ fmt noted, qualifier only on labels 3–6, compute estimate). CPU smoke OK.
 Submitted: Slurm job 24373179 (a100_tandon), commit 995daa2, script sha256 effa9b29… (docs/experiments/11-24_llama8b_steering_fix.md).
+
+## 2026-11-24: R21 is R13's one-way L40S vs A100 gap a shared logit-margin offset? (pre-registered)
+
+### Research question
+All 103 R13 class changes between GPUs go bug (L40S) → correct (A100). R16 ruled out the layer-10 position-0
+write. In all 100 D configs of the two post_wo cells, the texts split right after " 9." ("8" vs "11"). Is the
+gap a near-constant shift of that one margin, shared across configs? Where in depth does it appear? Gus's
+decision ("check").
+
+### Method
+R13's script, unchanged, with model.generate wrapped to return logits and hidden states. Per config, the
+"8" − "11" margin at the decision step and a 33-point logit-lens profile; post_wo/prefill and post_wo/all_steps,
+1,307 configs each, on ga004 (A100) and gl044 (L40S). Gates: copy, class, lens, determinism. Rules and controls
+(permutation, H0 density) pre-registered. Design review: two rounds, both PASS WITH MINOR FIXES, all applied.
+docs/experiments/11-24_llama8b_gpu_margin_offset.md
+
+### Results (no interpretation)
+None yet.
