@@ -181,8 +181,9 @@ Test, Q&A format, 3,840 questions (3,098 baseline-correct):
 
 **Verifier flags.**
 1. R19's site was effectively not tested. Dev had no big-first format-dependent questions, and no chosen config is at
-   R19's layers (9–14) at the LFT (best dev proxy nets there: 0, 10, 0). Big-first format-dependent questions are
-   fragile (random directions fix 19–25 of 27). So R20 says nothing about whether R19's per-question patch carries
+   R19's layers (9–14) at the LFT (best dev proxy nets there: 0, 10, 0). Random same-norm directions fix
+   0, 0, 0 (at fmt's config), 21, 19, 0 (fd's) and 25, 6, 15 (cb's) of the 27 big-first format-dependent questions, so
+   their effect is highly variable. So R20 says nothing about whether R19's per-question patch carries
    information a mean direction lacks.
 2. The proxy grid (teacher-forced Δ) is poorly aligned with generation at large α (fmt ":" L9 α 4: proxy rank 1, then
    1,136 breaks of 1,280 on dev).
@@ -193,3 +194,8 @@ Test, Q&A format, 3,840 questions (3,098 baseline-correct):
 act mostly as a push toward the second-named number, trading big-first answers for small-first ones, and none beats
 removing "Q:" from the prompt. The R19 localization is a diagnosis of where the format flip is carried in
 big-first questions; R20 does not turn it into a usable repair.
+
+**Correction (2026-11-24, after the results commit c946c55).** Flag 1 first said "random directions fix 19–25 of 27".
+That quoted only three of the nine random vectors (the verifier's examples) and was not checked against run.json. The
+full set is above: 0–25. With 3 random vectors per config and this much spread, "best of 3 random" is also a noisy
+control, so cb's 102 vs 83 and fd's 95 vs 91 should not be read as clear margins in either direction.
